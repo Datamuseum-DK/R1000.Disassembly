@@ -30,8 +30,11 @@
    ----------------
 '''
 
+import pascal_pseudo_ins
+
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
+    pascal_pseudo_ins.add_pascal_pseudo_ins(cx)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
