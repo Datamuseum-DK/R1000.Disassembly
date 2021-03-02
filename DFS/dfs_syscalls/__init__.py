@@ -26,47 +26,11 @@
 #
 
 '''
-   FS generic stuff
-   ----------------
+    DFS system calls (KERNEL & FS)
+    ==============================
 '''
 
-from pyreveng import assy
+from .base import DfsSysCalls
 
-import pyreveng.cpu.m68020 as m68020
-
-import pascal_pseudo_ins
-import dfs_syscalls
-
-#######################################################################
-
-FS_DESC = '''
-KERNCALL        vect,>J         |1 0 1 0 0 0 0 0| vect          |
-'''
-
-class FsIns(m68020.m68020_ins):
-    ''' Kernel specific (pseudo-)instructions'''
-
-    def assy_vect(self):
-        ''' vector number '''
-        return assy.Arg_imm(self['vect'])
-
-#######################################################################
-
-def round_0(cx):
-    ''' Things to do before the disassembler is let loose '''
-    pascal_pseudo_ins.add_pascal_pseudo_ins(cx)
-    cx.it.load_string(FS_DESC, FsIns)
-    cx.dfs_syscalls = dfs_syscalls.DfsSysCalls(hi=cx.m.bu32(0x10004))
-    cx.dfs_syscalls.round_0(cx)
-
-def round_1(cx):
-    ''' Let the disassembler loose '''
-    cx.codeptr(0x10004)
-    cx.dfs_syscalls.round_1(cx)
-
-def round_2(cx):
-    ''' Spelunking in what we alrady found '''
-    cx.dfs_syscalls.round_2(cx)
-
-def round_3(cx):
-    ''' Discovery, if no specific hints were encountered '''
+from .kerncalls import _x
+from .fscalls import _fs

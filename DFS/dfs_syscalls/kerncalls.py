@@ -26,47 +26,18 @@
 #
 
 '''
-   FS generic stuff
-   ----------------
+    DFS KERNEL calls
+    ================
 '''
 
-from pyreveng import assy
+from .base import DfsKernCall
 
-import pyreveng.cpu.m68020 as m68020
+DfsKernCall(0x02, "KC02_Disk_IO")
+DfsKernCall(0x05, "KC05_Write_Console")
+DfsKernCall(0x10, "KC10_Panic")
+DfsKernCall(0x15, "KC15_Diag_Bus")
+DfsKernCall(0x16, "KC16_Clock_Margin")
+DfsKernCall(0x17, "KC17_Power_Margin")
+DfsKernCall(0x1c, "KC1c_ProtCopy(src.P, dst.P, len.W)")
 
-import pascal_pseudo_ins
-import dfs_syscalls
-
-#######################################################################
-
-FS_DESC = '''
-KERNCALL        vect,>J         |1 0 1 0 0 0 0 0| vect          |
-'''
-
-class FsIns(m68020.m68020_ins):
-    ''' Kernel specific (pseudo-)instructions'''
-
-    def assy_vect(self):
-        ''' vector number '''
-        return assy.Arg_imm(self['vect'])
-
-#######################################################################
-
-def round_0(cx):
-    ''' Things to do before the disassembler is let loose '''
-    pascal_pseudo_ins.add_pascal_pseudo_ins(cx)
-    cx.it.load_string(FS_DESC, FsIns)
-    cx.dfs_syscalls = dfs_syscalls.DfsSysCalls(hi=cx.m.bu32(0x10004))
-    cx.dfs_syscalls.round_0(cx)
-
-def round_1(cx):
-    ''' Let the disassembler loose '''
-    cx.codeptr(0x10004)
-    cx.dfs_syscalls.round_1(cx)
-
-def round_2(cx):
-    ''' Spelunking in what we alrady found '''
-    cx.dfs_syscalls.round_2(cx)
-
-def round_3(cx):
-    ''' Discovery, if no specific hints were encountered '''
+_x = 0

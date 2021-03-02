@@ -30,15 +30,65 @@
    --------------------
 '''
 
+from pyreveng import assy
+import pyreveng.cpu.m68020 as m68020
+
 import ioc_hardware
+
+#######################################################################
+
+KERNEL_DESC = '''
+PANIC.W         tvect,>R        |0 1 0 1|0 0 0 0|1 1 1 1|1 0 1 0| w                             |
+'''
+
+class KernelIns(m68020.m68020_ins):
+    ''' Kernel specific (pseudo-)instructions'''
+
+    def assy_tvect(self):
+        ''' vector number/message '''
+        return assy.Arg_imm(self['w'])
+
+#######################################################################
+
+def vector_line_a(cx):
+    ''' Follow the LINE_A vector to find KERNCALL entrypoints '''
+    a = cx.m.bu32(0x28)
+    for i, j in (
+        (0x00, 0x48), (0x01, 0xe7), (0x02, 0x80), (0x03, 0x04),
+        (0x1a, 0x4e), (0x1b, 0xb0), (0x1c, 0x05),
+    ):
+        if cx.m[a + i] != j:
+            print("Line_a mismatch", "0x%x" % i, "0x%x" % j, "0x%x" % cx.m[a+i])
+            return
+    if cx.m[a + 0x1d] == 0xa1:
+        tbl = cx.m.bu16(a + 0x1e)
+    elif cx.m[a + 0x1d] == 0xb1:
+        tbl = cx.m.bu32(a + 0x1e)
+    else:
+        print("Line_a mismatch", "0x1d", "(0xa1/0xb1)", "0x%x" % cx.m[a+0x1d])
+        return
+
+    cx.m.set_label(tbl, "KERNCALL_VECTORS")
+    for sc in range(32):
+        i = tbl + sc * 4
+        y = cx.codeptr(i)
+        cx.m.set_block_comment(
+            y.dst,
+            "PTR @ 0x%x KERNCALL 0x%x" % (i, sc)
+        )
+
+
+#######################################################################
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
     ioc_hardware.add_symbols(cx.m)
+    cx.it.load_string(KERNEL_DESC, KernelIns)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
     cx.vectors(0x400)
+    vector_line_a(cx)
 
 def round_2(cx):
     ''' Spelunking in what we alrady found '''

@@ -32,9 +32,14 @@
 
 import pascal_pseudo_ins
 
+import dfs_syscalls
+
+
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
     pascal_pseudo_ins.add_pascal_pseudo_ins(cx)
+    cx.dfs_syscalls = dfs_syscalls.DfsSysCalls()
+    cx.dfs_syscalls.round_0(cx)
 
 def round_1(cx):
     ''' Let the disassembler loose '''

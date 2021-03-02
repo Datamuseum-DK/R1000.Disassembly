@@ -26,47 +26,45 @@
 #
 
 '''
-   FS generic stuff
-   ----------------
+    DFS FS calls
+    ============
 '''
 
-from pyreveng import assy
+from .base import DfsFsCall
 
-import pyreveng.cpu.m68020 as m68020
-
-import pascal_pseudo_ins
-import dfs_syscalls
+DfsFsCall(0x102f0, "ToUpper(str *)")
+DfsFsCall(0x105a4, "Read_fc0c(word *)")
+DfsFsCall(0x105aa, "Read_fc00(byte *)")
+DfsFsCall(0x105da, "Write_fc01(byte)")
+DfsFsCall(0x105e0, "Read_fc01(byte *)")
+DfsFsCall(0x105e6, "Set_fc04_to_01()")
 
 #######################################################################
 
-FS_DESC = '''
-KERNCALL        vect,>J         |1 0 1 0 0 0 0 0| vect          |
-'''
+def fs_call_doc(asp):
 
-class FsIns(m68020.m68020_ins):
-    ''' Kernel specific (pseudo-)instructions'''
+    asp.set_block_comment(0x10204,'''DISK-I/O
+========
 
-    def assy_vect(self):
-        ''' vector number '''
-        return assy.Arg_imm(self['vect'])
+D1 = 2 -> READ
+D1 = 3 -> WRITE
+(Other registers may be significant too)
 
-#######################################################################
+STACK+a: LWORD desc pointer
+STACK+6: LWORD src/dst pointer
+STACK+4: WORD (zero)
 
-def round_0(cx):
-    ''' Things to do before the disassembler is let loose '''
-    pascal_pseudo_ins.add_pascal_pseudo_ins(cx)
-    cx.it.load_string(FS_DESC, FsIns)
-    cx.dfs_syscalls = dfs_syscalls.DfsSysCalls(hi=cx.m.bu32(0x10004))
-    cx.dfs_syscalls.round_0(cx)
+Desc+00:        0x0100
+Desc+02:        0x0000
+Desc+04:        0x0002
+Desc+06:        0x0000
+Desc+08:        0x0080
+Desc+0a:        0x0002
+Desc+0c:        0x____ cylinder
+Desc+0e:        0x__ head
+Desc+0f:        0x__ sector
 
-def round_1(cx):
-    ''' Let the disassembler loose '''
-    cx.codeptr(0x10004)
-    cx.dfs_syscalls.round_1(cx)
+CHS is 512 byte sectors
+''')
 
-def round_2(cx):
-    ''' Spelunking in what we alrady found '''
-    cx.dfs_syscalls.round_2(cx)
-
-def round_3(cx):
-    ''' Discovery, if no specific hints were encountered '''
+_fs = 0
