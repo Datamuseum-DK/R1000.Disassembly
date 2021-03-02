@@ -34,6 +34,7 @@ from pyreveng import assy, data
 import pyreveng.cpu.m68020 as m68020
 
 import ioc_hardware
+import ioc_eeprom_exports
 import dfs_syscalls
 
 #######################################################################
@@ -78,6 +79,27 @@ def vector_line_a(cx):
         cx.m.set_block_comment(y.dst, "(From PTR @ 0x%x)" % (i))
         cx.m.set_label(y.dst, syscall.name)
 
+#######################################################################
+
+def hunt_vectors(cx):
+    ''' hunt code pointed to by dynamic assignment to vectors '''
+    cand = set()
+    cands = -1
+    while len(cand) != cands:
+        cands = len(cand)
+        for node in cx.m:
+            if cx.m.bu16(node.lo) != 0x21fc:
+                continue
+            src = cx.m.bu32(node.lo + 2)
+            dst = cx.m.bu16(node.lo + 6)
+            if dst & 0x8000:
+                continue
+            if dst > 0x400 or dst & 3:
+                continue
+            cx.disass(src)
+            cand.add((src, dst))
+    for i,j in cand:
+        cx.m.set_line_comment(i, "Via vector at 0x%x" % j)
 
 #######################################################################
 
@@ -86,6 +108,7 @@ def round_0(cx):
     ioc_hardware.add_symbols(cx.m)
     cx.it.load_string(KERNEL_DESC, KernelIns)
     cx.dfs_syscalls = dfs_syscalls.DfsSysCalls()
+    ioc_eeprom_exports.add_flow_check(cx)
 
     cx.dataptr(0x408)
 
@@ -101,6 +124,7 @@ def round_1(cx):
 
 def round_2(cx):
     ''' Spelunking in what we alrady found '''
+    hunt_vectors(cx)
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
