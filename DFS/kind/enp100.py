@@ -26,29 +26,47 @@
 #
 
 '''
-   All objects
-   -----------
+   ENP100 TCP/IP code
+   ------------------
 '''
 
-from pyreveng import data
+from pyreveng import data, discover
+
+#######################################################################
+
+def flow_check(asp, ins):
+    for f in ins.flow_out:
+        if f.to in (
+            0xe001706c,
+        ):
+            if asp.bu16(ins.lo - 6) == 0x4879:  # PEA.L
+                 i = asp.bu32(ins.lo - 4)
+                 y = data.Txt(asp, i, align=1, splitnl=True)
+
+#######################################################################
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
-
-    # Look for SCCS-identifiers at the beginning
-    for a, b in cx.m.gaps():
-        for i in range(a, b - 3):
-            if cx.m.bu32(i) == 0x40282329:
-                for j in range(i, b):
-                    if cx.m[j] in (0x00, 0x10, 0x22, 0x3e, 0x5c):
-                        break
-                y = data.Txt(cx.m, i, j, label=False)
+    cx.flow_check.append(flow_check)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
+    cx.disass(0xe0004000)
+    cx.disass(0xe0004010)
+    for a in range(0xe001c92c, 0xe001c9d0, 4):
+        cx.codeptr(a)
 
 def round_2(cx):
     ''' Spelunking in what we alrady found '''
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
+    for a, b in cx.m.gaps():
+        for i in range(a, b, 4):
+            if not cx.m[i] == 0xe0:
+                continue
+            j = cx.m.bu32(i)
+            if a <= j < b:
+                if cx.m.bu16(j) == 0x4e56:
+                    cx.disass(j)
+    discover.Discover(cx)

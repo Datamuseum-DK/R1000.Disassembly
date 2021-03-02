@@ -143,9 +143,9 @@ def flow_check(asp, ins):
         return
     for f in ins.flow_out:
         if f.to in (
-           0x80002010,
-           0x80002028,
-           0x80002aa8
+            0x80002010,
+            0x80002028,
+            0x80002aa8
         ):
             y = data.Txt(asp, ins.hi, label=False, align=2, splitnl=True)
             ins.dstadr = y.hi
