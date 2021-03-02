@@ -73,10 +73,9 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True):
         "ident." + ident,
     ):
         if not os.path.isfile(i.replace(".", "/") + ".py"):
-            print("-", i)
             continue
         contrib.append(importlib.import_module(i))
-        print("+", i)
+        print("  import", i)
 
     for turnus in range(4):
         i = "round_%d" % turnus
