@@ -30,8 +30,11 @@
    --------------------
 '''
 
+import ioc_hardware
+
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
+    ioc_hardware.add_symbols(cx.m)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
