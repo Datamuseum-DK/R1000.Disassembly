@@ -26,26 +26,55 @@
 #
 
 '''
-   All objects
-   -----------
+   First quarter of IOC EEPROM
+   ---------------------------
 '''
 
-from pyreveng import data
+import ioc_eeprom_exports
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
 
-    # Look for SCCS-identifiers at the beginning
-    for a, b in cx.m.gaps():
-        for i in range(a, min(b, a + 0x500) - 3):
-            if cx.m.bu32(i) == 0x40282329:
-                y = data.Txt(cx.m, i, term=(0x5c,), label=False)
-
 def round_1(cx):
     ''' Let the disassembler loose '''
+    cx.codeptr(0x80000004)
+
+    for i in ioc_eeprom_exports.IOC_EEPROM_PART0_EXPORTS:
+        cx.disass(i)
+
+    for a, b in (
+        (0x80000020, "IOC_20_XXX"),
+        (0x80000088, "_TEST_FAILED"),
+        (0x800000d8, "OUTSTR_PRESERVE_D0(A0)"),
+        (0x800000f8, "OUTSTR_SMASH_D0(A0)"),
+        (0x80000142, "OUTSTR_OK()"),
+        (0x8000014c, "OUTSTR_CRNL()"),
+        (0x8000015e, "DELAY(D0)"),
+        (0x8000016c, "CHECKSUM_FUNC"),
+        (0x800001e4, "CHECKSUM_EEPROM"),
+        (0x800001f6, None),
+        (0x80000208, None),
+        (0x8000021a, None),
+        (0x80001524, None),
+        (0x80001566, None),
+        (0x800015a8, None),
+        (0x800015d4, None),
+        (0x80001628, None),
+        (0x80001672, None),
+        (0x800016a2, None),
+        (0x800016c2, None),
+    ):
+        cx.disass(a)
+        cx.m.set_line_comment(a, "Manual")
+        if b:
+            cx.m.set_label(a, b)
 
 def round_2(cx):
     ''' Spelunking in what we alrady found '''
+    ioc_eeprom_exports.add_exports(
+        cx.m,
+        ioc_eeprom_exports.IOC_EEPROM_PART0_EXPORTS
+    )
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''

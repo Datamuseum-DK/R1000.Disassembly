@@ -33,6 +33,7 @@
 import os
 import sys
 import importlib
+import hashlib
 
 from pyreveng import listing
 import pyreveng.cpu.m68020 as m68020
@@ -52,9 +53,14 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True):
         if verbose:
             print(input_file, err)
         return
+
     first_adr = None
     for first_adr,_j  in cx.m.gaps():
         break
+
+    tryout = []
+    tryout.append("all")
+
     kind = {
         0x00000000: "kernel",
         0x00010000: "fs",
@@ -66,16 +72,27 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True):
     }.get(first_adr)
     print(input_file, "0x%x" % first_adr, kind, ident)
 
+    tryout.append("kind." + kind)
+
+    tryout.append("ident." + ident)
+
+    if kind == "ioc":
+        # IOC consists of four quite individual parts
+        for a in range(4):
+            tryout.append("kind.ioc_part_%d" % a)
+            b = 0x80000000 + 0x2000 * a
+            i = hashlib.sha256(cx.m.bytearray(b, 0x2000)).hexdigest()[:16]
+            tryout.append("ident." + i)
+
     contrib = []
-    for i in (
-        "all",
-        "kind." + kind,
-        "ident." + ident,
-    ):
+    for i in tryout:
         if not os.path.isfile(i.replace(".", "/") + ".py"):
+            print("  no", i)
             continue
         contrib.append(importlib.import_module(i))
         print("  import", i)
+
+
 
     for turnus in range(4):
         i = "round_%d" % turnus

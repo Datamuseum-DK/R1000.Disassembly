@@ -63,8 +63,9 @@ class DfsSysCall():
         y = list(cx.m.find(self.adr))
         if len(y) == 1:
             ins = y[0]
-            if len(ins.flow_out) == 1:
-                f = ins.flow_out[0]
+            i = getattr(ins, "flow_out", [])
+            if len(i) == 1:
+                f = i[0]
                 if isinstance(f.to, int):
                     self.set_block_comment(cx, f.to)
 

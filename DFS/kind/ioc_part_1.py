@@ -26,26 +26,52 @@
 #
 
 '''
-   All objects
-   -----------
+   Second quarter of IOC EEPROM
+   ----------------------------
 '''
 
-from pyreveng import data
+from pyreveng import mem, data, assy
+import pyreveng.cpu.m68020 as m68020
+
+import ioc_eeprom_exports
+
+BASE = 0x80002000
+SIZE = 0x2000
+
+#######################################################################
+
+IOC_PART2_SPEC = '''
+OUTTEXT         outtxt,>J       | 4E | 96 |
+'''
+
+class IocPart2Ins(m68020.m68020_ins):
+    ''' Pseudo-instructions '''
+
+    def assy_outtxt(self):
+        ''' inline text '''
+        if self.lo < BASE or self.hi > BASE + SIZE:
+            raise assy.Invalid()
+        y = data.Txt(self.lang.m, self.hi, align=2, label=False, splitnl=True)
+        self.dstadr = y.hi
+
+#######################################################################
+
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
-
-    # Look for SCCS-identifiers at the beginning
-    for a, b in cx.m.gaps():
-        for i in range(a, min(b, a + 0x500) - 3):
-            if cx.m.bu32(i) == 0x40282329:
-                y = data.Txt(cx.m, i, term=(0x5c,), label=False)
+    cx.add_ins(IOC_PART2_SPEC, IocPart2Ins)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
+    for i in ioc_eeprom_exports.IOC_EEPROM_PART1_EXPORTS:
+        cx.disass(i)
 
 def round_2(cx):
     ''' Spelunking in what we alrady found '''
+    ioc_eeprom_exports.add_exports(
+        cx.m,
+        ioc_eeprom_exports.IOC_EEPROM_PART1_EXPORTS
+    )
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
