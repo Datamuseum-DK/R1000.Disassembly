@@ -32,39 +32,28 @@
 
 from .base import DfsFsCall
 
+DfsFsCall(0x10284, "?string_lit2something")
+DfsFsCall(0x1028c, "?muls_d3_d4_to_d3")        # ref: FS.0 0x107ea
+DfsFsCall(0x10290, "?mulu_d3_d4_to_d3")        # ref: FS.0 0x107f4
+DfsFsCall(0x10294, "?divs_d3_d4")              # ref: FS.0 0x1080a
+DfsFsCall(0x10298, "?divu_d3_d4")              # ref: FS.0 0x10816
+DfsFsCall(0x1029c, "?malloc(LONG)")            # ref: FS.0 0x10816
+DfsFsCall(0x102a8, "?free(LONG, PTR)")
+DfsFsCall(0x102b8, "?alloc_str()")
+DfsFsCall(0x102c4, "?fill_str(WORD, WORD, PTR)")
+DfsFsCall(0x102d0, "?strcat(STR, STR)")
 DfsFsCall(0x102f0, "ToUpper(str *)")
+DfsFsCall(0x10384, "?read_from_file")          # ref: DBUSULOAD.M200
+DfsFsCall(0x103b0, "?exec_command()")
+DfsFsCall(0x103d0, "?wr_console_c(CHAR)")
+DfsFsCall(0x103d8, "?wr_console_s(STR)")
+DfsFsCall(0x1047e, "?exp_xmit(EXP.L,NODE.B)")
+DfsFsCall(0x10496, "?experiment_close")        # ref: FS.0 0x18f4e
+DfsFsCall(0x1056e, "?open_file")               # ref: BOOTINFO.M200
 DfsFsCall(0x105a4, "Read_fc0c(word *)")
 DfsFsCall(0x105aa, "Read_fc00(byte *)")
 DfsFsCall(0x105da, "Write_fc01(byte)")
 DfsFsCall(0x105e0, "Read_fc01(byte *)")
 DfsFsCall(0x105e6, "Set_fc04_to_01()")
-
-#######################################################################
-
-def fs_call_doc(asp):
-
-    asp.set_block_comment(0x10204,'''DISK-I/O
-========
-
-D1 = 2 -> READ
-D1 = 3 -> WRITE
-(Other registers may be significant too)
-
-STACK+a: LWORD desc pointer
-STACK+6: LWORD src/dst pointer
-STACK+4: WORD (zero)
-
-Desc+00:        0x0100
-Desc+02:        0x0000
-Desc+04:        0x0002
-Desc+06:        0x0000
-Desc+08:        0x0080
-Desc+0a:        0x0002
-Desc+0c:        0x____ cylinder
-Desc+0e:        0x__ head
-Desc+0f:        0x__ sector
-
-CHS is 512 byte sectors
-''')
 
 _fs = 0

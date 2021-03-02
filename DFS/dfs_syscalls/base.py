@@ -37,12 +37,20 @@ SYSCALLS = {}
 class DfsSysCall():
     ''' Base class for system-calls'''
 
-    def __init__(self, adr, name):
+    def __init__(self, adr, name, bcmt=None):
         self.adr = adr
         self.name = name
+        self.bcmt = bcmt
+
+    def set_block_comment(self, cx, adr):
+        cx.m.set_block_comment(adr, self.name)
+        if self.bcmt:
+            cx.m.set_block_comment(adr, "=" * len(self.name))
+            cx.m.set_block_comment(adr, self.bcmt)
 
     def round_0(self, cx):
         cx.m.set_label(self.adr, self.name)
+        self.set_block_comment(cx, self.adr)
 
     def round_1(self, cx):
         try:
@@ -50,7 +58,6 @@ class DfsSysCall():
         except mem.MemError:
             return
         cx.disass(self.adr)
-        cx.m.set_block_comment(self.adr, self.__doc__)
 
     def round_2(self, cx):
         y = list(cx.m.find(self.adr))
@@ -59,26 +66,25 @@ class DfsSysCall():
             if len(ins.flow_out) == 1:
                 f = ins.flow_out[0]
                 if isinstance(f.to, int):
-                    cx.m.set_label(f.to, "_" + self.name)
-                    cx.m.set_block_comment(f.to, self.__doc__)
+                    self.set_block_comment(cx, f.to)
 
 class DfsKernCall(DfsSysCall):
     ''' KERNEL system-call '''
-    def __init__(self, number, name=None):
+    def __init__(self, number, name=None, **kwargs):
         SYSCALLS[number] = self
         adr = 0x10200 + 2 * number
         if name is None:
-            name = "KC_%02x" % number
-        super().__init__(adr, name)
+            name = "KERNCALL_%02x" % number
+        super().__init__(adr, name, **kwargs)
 
 class DfsFsCall(DfsSysCall):
     ''' FS system-call '''
 
-    def __init__(self, adr, name=None):
+    def __init__(self, adr, name=None, **kwargs):
         if name is None:
             name = "FSCALL_%x" % adr
         SYSCALLS[adr] = self
-        super().__init__(adr, name)
+        super().__init__(adr, name, **kwargs)
 
 class DfsSysCalls():
     ''' ... '''

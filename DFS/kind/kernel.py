@@ -34,6 +34,7 @@ from pyreveng import assy
 import pyreveng.cpu.m68020 as m68020
 
 import ioc_hardware
+import dfs_syscalls
 
 #######################################################################
 
@@ -72,10 +73,10 @@ def vector_line_a(cx):
     for sc in range(32):
         i = tbl + sc * 4
         y = cx.codeptr(i)
-        cx.m.set_block_comment(
-            y.dst,
-            "PTR @ 0x%x KERNCALL 0x%x" % (i, sc)
-        )
+        syscall = cx.dfs_syscalls[sc]
+        syscall.set_block_comment(cx, y.dst)
+        cx.m.set_block_comment(y.dst, "(From PTR @ 0x%x)" % (i))
+        cx.m.set_label(y.dst, syscall.name)
 
 
 #######################################################################
@@ -84,6 +85,7 @@ def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
     ioc_hardware.add_symbols(cx.m)
     cx.it.load_string(KERNEL_DESC, KernelIns)
+    cx.dfs_syscalls = dfs_syscalls.DfsSysCalls()
 
 def round_1(cx):
     ''' Let the disassembler loose '''

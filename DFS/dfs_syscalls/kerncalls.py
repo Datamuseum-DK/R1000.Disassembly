@@ -32,7 +32,32 @@
 
 from .base import DfsKernCall
 
-DfsKernCall(0x02, "KC02_Disk_IO")
+DfsKernCall(
+    0x02,
+    "KC02_Disk_IO",
+    bcmt='''
+D1 = 2 -> READ
+D1 = 3 -> WRITE
+(Other registers may be significant too)
+
+STACK+a: LWORD desc pointer
+STACK+6: LWORD src/dst pointer
+STACK+4: WORD (zero)
+
+Desc+00:        0x0100
+Desc+02:        0x0000
+Desc+04:        0x0002
+Desc+06:        0x0000
+Desc+08:        0x0080
+Desc+0a:        0x0002
+Desc+0c:        0x____ cylinder
+Desc+0e:        0x__ head
+Desc+0f:        0x__ sector
+
+CHS is 512 byte sectors
+'''
+    )
+
 DfsKernCall(0x05, "KC05_Write_Console")
 DfsKernCall(0x10, "KC10_Panic")
 DfsKernCall(0x15, "KC15_Diag_Bus")
