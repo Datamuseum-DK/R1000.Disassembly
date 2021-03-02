@@ -67,6 +67,15 @@ def round_0(cx):
     for a in range(0x1a2aa, 0x1a43a, 0x14):
         data.Txt(cx.m, a, a + 0x14, label=False)
 
+    cx.m.set_label(0x18479, "ExpDestinations[16]")
+    for a in range(0x18479, 0x18519, 10):
+        data.Txt(cx.m, a, a + 10, label=False)
+
+    cx.m.set_label(0x18519, "ExpStatus[10]")
+    for a in range(0x18519, 0x1857d, 10):
+        data.Txt(cx.m, a, a + 10, label=False)
+
+
 def round_1(cx):
     ''' Let the disassembler loose '''
 

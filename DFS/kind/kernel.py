@@ -30,7 +30,7 @@
    --------------------
 '''
 
-from pyreveng import assy
+from pyreveng import assy, data
 import pyreveng.cpu.m68020 as m68020
 
 import ioc_hardware
@@ -86,6 +86,13 @@ def round_0(cx):
     ioc_hardware.add_symbols(cx.m)
     cx.it.load_string(KERNEL_DESC, KernelIns)
     cx.dfs_syscalls = dfs_syscalls.DfsSysCalls()
+
+    cx.dataptr(0x408)
+
+    y = data.Const(cx.m, 0x410, 0x416, "%d", cx.m.bu16, 2)
+    cx.m.set_line_comment(y.lo, "Version number")
+
+    cx.dataptr(0x416)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
