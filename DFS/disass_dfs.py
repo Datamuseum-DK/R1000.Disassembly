@@ -54,9 +54,11 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True):
             print(input_file, err)
         return
 
-    first_adr = None
-    for first_adr,_j  in cx.m.gaps():
-        break
+    high = 0
+    low = 1<<32
+    for i, j  in cx.m.gaps():
+        high = max(high, j)
+        low = min(low, i)
 
     tryout = []
     tryout.append("all")
@@ -69,8 +71,8 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True):
         0x00070000: "resha",
         0x80000000: "ioc",
         0xe0004000: "enp100",
-    }.get(first_adr)
-    print(input_file, "0x%x" % first_adr, kind, ident)
+    }.get(low)
+    print(input_file, "0x%x" % low, kind, ident)
 
     tryout.append("kind." + kind)
 
@@ -85,14 +87,16 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True):
             tryout.append("ident." + i)
 
     contrib = []
+    cx.m.set_block_comment(low, "R1000.Disassembly modules:")
     for i in tryout:
-        if not os.path.isfile(i.replace(".", "/") + ".py"):
+        try:
+            contrib.append(importlib.import_module(i))
+        except ModuleNotFoundError:
+            cx.m.set_block_comment(low, "  no " + i)
             print("  no", i)
             continue
-        contrib.append(importlib.import_module(i))
         print("  import", i)
-
-
+        cx.m.set_block_comment(low, "  import " + i)
 
     for turnus in range(4):
         i = "round_%d" % turnus
@@ -101,7 +105,15 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True):
             if k:
                 k(cx)
 
-    listing.Listing(cx.m, fn=output_file)
+    listing.Listing(
+        cx.m,
+        fn=output_file,
+        align_blank=True,
+        align_xxx=True,
+        ncol=8,
+        lo=low,
+        hi=high
+    )
 
 def main():
     ''' Standard __main__ function '''
