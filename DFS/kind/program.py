@@ -34,16 +34,26 @@ import pascal_pseudo_ins
 
 import dfs_syscalls
 
+def flow_check(asp, ins):
+    ''' Quench the "No Memory..." messges from trying to disassemble FS '''
+    for f in ins.flow_out:
+        syscall = dfs_syscalls.base.SYSCALLS.get(f.to)
+        if syscall:
+            f.to = None
+            syscall.flow_check(asp, ins)
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
     pascal_pseudo_ins.add_pascal_pseudo_ins(cx)
     cx.dfs_syscalls = dfs_syscalls.DfsSysCalls()
     cx.dfs_syscalls.round_0(cx)
+    cx.flow_check.append(flow_check)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
     y = cx.codeptr(0x20004)
+    z = cx.codeptr(0x20018)
+    z = cx.codeptr(0x2001c)
     cx.m.set_label(y.dst, "START")
     # XXX: should be done through flow-check
     cx.disass(y.dst + 10)
