@@ -38,6 +38,7 @@ class DfsSysCall():
     ''' Base class for system-calls'''
 
     def __init__(self, adr, name, bcmt=None):
+        SYSCALLS[adr] = self
         self.adr = adr
         self.name = name
         self.bcmt = bcmt
@@ -47,6 +48,9 @@ class DfsSysCall():
         if self.bcmt:
             cx.m.set_block_comment(adr, "=" * len(self.name))
             cx.m.set_block_comment(adr, self.bcmt)
+
+    def flow_check(self, asp, ins):
+        return
 
     def round_0(self, cx):
         cx.m.set_label(self.adr, self.name)
@@ -84,7 +88,6 @@ class DfsFsCall(DfsSysCall):
     def __init__(self, adr, name=None, **kwargs):
         if name is None:
             name = "FSCALL_%x" % adr
-        SYSCALLS[adr] = self
         super().__init__(adr, name, **kwargs)
 
 class DfsSysCalls():

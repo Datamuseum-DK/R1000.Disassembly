@@ -30,6 +30,8 @@
     ============
 '''
 
+from pyreveng import data
+
 from .base import DfsFsCall
 
 DfsFsCall(0x10284, "?string_lit2something")
@@ -49,6 +51,36 @@ DfsFsCall(0x103d0, "?wr_console_c(CHAR)")
 DfsFsCall(0x103d8, "?wr_console_s(STR)")
 DfsFsCall(0x1047e, "?exp_xmit(EXP.L,NODE.B)")
 DfsFsCall(0x10496, "?experiment_close")        # ref: FS.0 0x18f4e
+
+class Fs10568(DfsFsCall):
+    ''' Run an experiment with parameters on stack ? '''
+    def __init__(self):
+        super().__init__(0x10568, "?run_experiment()")
+
+    def flow_check(self, asp, ins):
+        if hasattr(ins, "fixed_10568"):
+            return
+        ins.flow_out = []
+        ins.flow_R()
+        ptr = ins.hi
+        exp_name_len = asp[ins.hi + 2]
+        data.Const(asp, ptr, ptr + 3)
+        ptr += 3
+        y = data.Txt(asp, ptr, ptr + exp_name_len, label=False)
+        ptr += exp_name_len
+        narg = asp[ptr + 2] + asp[ptr + 3]
+        z = data.Const(asp, ptr, ptr + 4 + narg)
+        ptr = z.hi
+        lbl = "exp_" + y.txt + "("
+        asp.set_label(ins.lo, lbl + ")")
+        # ins.compact = True
+        if ptr & 1 and not asp[ptr]:
+            z = data.Const(asp, ptr, ptr + 1)
+            z.typ = ".PAD"
+        ins.fixed_10568 = True
+
+Fs10568()
+
 DfsFsCall(0x1056e, "?open_file")               # ref: BOOTINFO.M200
 DfsFsCall(0x105a4, "Read_fc0c(word *)")
 DfsFsCall(0x105aa, "Read_fc00(byte *)")
