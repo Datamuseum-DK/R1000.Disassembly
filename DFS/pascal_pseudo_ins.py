@@ -29,7 +29,7 @@
    ==========================
 '''
 
-from pyreveng import assy, data
+from pyreveng import assy, data, code
 import pyreveng.cpu.m68020 as m68020
 
 #######################################################################
@@ -47,9 +47,11 @@ class PascalIns(m68020.m68020_ins):
     ''' PASCAL pseudo instructions '''
 
     def assy_dreg(self):
+        ''' data register '''
         return "D%d" % self['d']
 
     def assy_areg(self):
+        ''' address register '''
         if self['a'] != self['b']:
             raise assy.Invalid()
         return "A%d" % self['a']
@@ -73,11 +75,13 @@ class PascalPushtxtIns(m68020.m68020_ins):
     ''' pushtxt pseudo-instructions '''
 
     def assy_areg(self):
+        ''' address register '''
         if self['a'] != self['b']:
             raise assy.Invalid()
         return "A%d" % self['a']
 
     def assy_pushtxt(self):
+        ''' XXX: Use PIL instead ? '''
         if len(self.lim) == 5 and self.lim[0].assy[0] == "+PTA":
             sreg = self.lim[0]['sreg']
             lim = self.lim[-4:]
@@ -122,7 +126,46 @@ class PascalPushtxtIns(m68020.m68020_ins):
 
 #######################################################################
 
+PASCAL_SWITCH_DESC = '''
+SWITCH		sw		|0 0 1 1|dreg1|0| 3B |0|dreg2|0 0 0 0| 06 | &
+				| 4E | FB |0|dreg3|0 0 0 0| 02 |
+'''
+
+class PascalSwitchIns(m68020.m68020_ins):
+    ''' PASCAL switch pseudo instructions '''
+
+    def assy_sw(self):
+        ''' Decode switch table '''
+        dreg = self['dreg1']
+        if dreg != self['dreg2']:
+            raise assy.Invalid()
+        if dreg != self['dreg3']:
+            raise assy.Invalid()
+        ptr = self.hi
+        fin = self.lang.m.bu16(self.hi) + self.hi
+        n = 0
+        while ptr < fin:
+            i = self.lang.m.bu16(ptr)
+            d = self.hi + i
+            fin = min(fin, d)
+            self += code.Jump(cond="0x%x" % n, to=d)
+            data.Const(
+                self.lang.m,
+                ptr,
+                ptr + 2,
+                size=2,
+                func=self.lang.m.bu16
+            )
+            self.lang.m.set_line_comment(ptr, "[0x%x] -> 0x%x" % (n, d))
+            self.lang.m.set_label(d, "switch@0x%x[0x%x]" % (self.lo, n))
+            ptr += 2
+            n += 1
+        return "D%d.W" % dreg
+
+#######################################################################
+
 def add_pascal_pseudo_ins(cx):
     ''' Augment disassembler with PASCAL pseudo instructions '''
     cx.add_ins(PASCAL_DESC, PascalIns)
     cx.add_ins(PASCAL_PUSHTXT_DESC, PascalPushtxtIns)
+    cx.add_ins(PASCAL_SWITCH_DESC, PascalSwitchIns)
