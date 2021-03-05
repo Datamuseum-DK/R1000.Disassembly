@@ -34,6 +34,7 @@ import os
 import sys
 import importlib
 import hashlib
+import dotplot
 
 from pyreveng import listing
 import pyreveng.cpu.m68020 as m68020
@@ -44,7 +45,7 @@ MYDIR = os.path.split(__file__)[0]
 
 FILENAME = os.path.join(MYDIR, "FS_0.M200")
 
-def disassemble_file(input_file, output_file="/tmp/_", verbose=True):
+def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
     ''' Disassemble a single file '''
     cx = m68020.m68020()
     try:
@@ -112,8 +113,10 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True):
         align_xxx=True,
         ncol=8,
         lo=low,
-        hi=high
+        hi=high,
+        **kwargs
     )
+    return cx
 
 def main():
     ''' Standard __main__ function '''
@@ -124,9 +127,11 @@ def main():
     elif len(sys.argv) > 1:
         assert "-AutoArchaeologist" not in sys.argv
         for i in sys.argv[1:]:
-            disassemble_file(i)
+            cx = disassemble_file(i)
+            dotplot.dot_plot(cx)
     else:
-        disassemble_file(FILENAME)
+        cx = disassemble_file(FILENAME, pil=True)
+        dotplot.dot_plot(cx)
 
 if __name__ == '__main__':
     main()

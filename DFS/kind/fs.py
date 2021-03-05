@@ -61,7 +61,9 @@ def round_0(cx):
 
 def round_1(cx):
     ''' Let the disassembler loose '''
-    cx.codeptr(0x10004)
+    y = cx.codeptr(0x10004)
+    cx.m.set_label(y.dst, "START")
+    cx.m.set_block_comment(y.dst, "START")
     cx.dfs_syscalls.round_1(cx)
 
 def round_2(cx):
@@ -70,3 +72,12 @@ def round_2(cx):
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
+    for sc in cx.dfs_syscalls:
+        i = cx.m.bu16(sc.adr)
+        if i == 0x6000:
+            j = sc.adr + 2 + cx.m.bs16(sc.adr + 2)
+        elif i == 0x4ef9:
+            j = cx.m.bu32(sc.adr + 2)
+        else:
+            continue
+        cx.m.set_label(j, "_" + sc.name)

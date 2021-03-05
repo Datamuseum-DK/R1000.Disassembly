@@ -39,18 +39,43 @@ DfsFsCall(0x1028c, "?muls_d3_d4_to_d3")        # ref: FS.0 0x107ea
 DfsFsCall(0x10290, "?mulu_d3_d4_to_d3")        # ref: FS.0 0x107f4
 DfsFsCall(0x10294, "?divs_d3_d4")              # ref: FS.0 0x1080a
 DfsFsCall(0x10298, "?divu_d3_d4")              # ref: FS.0 0x10816
-DfsFsCall(0x1029c, "?malloc(LONG)")            # ref: FS.0 0x10816
-DfsFsCall(0x102a8, "?free(LONG, PTR)")
-DfsFsCall(0x102b8, "?alloc_str()")
+DfsFsCall(0x1029c, "Malloc(&Void, Long)")
+DfsFsCall(0x102a8, "?Free(PTR, LONG)")
+DfsFsCall(0x102b8, "?NewString(&String)")
+DfsFsCall(0x102bc, "FreeString(String)")
+DfsFsCall(0x102c0, "AppendChar(String, Char)")
 DfsFsCall(0x102c4, "?fill_str(WORD, WORD, PTR)")
-DfsFsCall(0x102d0, "?strcat(STR, STR)")
-DfsFsCall(0x102f0, "ToUpper(str *)")
+DfsFsCall(0x102c8, "StringEqual(&Byte, String1, String2)")
+DfsFsCall(0x102cc, "StringDup(&String1, String2)")
+DfsFsCall(0x102d0, "StringCat(&String1, String2, String3)")
+DfsFsCall(0x102e4, "LongInt2String(&String1, LongInt)")
+DfsFsCall(0x102ec, "String2LongInt(&Byte, &LongInt, String)")
+DfsFsCall(0x102f0, "ToUpper(&String1, String2)")
+DfsFsCall(0x102f4, "?LeftPad(Word, String, &String)")
+DfsFsCall(0x10310, "ConvertTimestamp(String, &Void, &Void)")
+DfsFsCall(0x10324, "IsGreater(Int64, Int64)")
+DfsFsCall(0x10328, "IsSmaller(Int64, Int64)")
+DfsFsCall(0x1032c, "IsEqual(Int64, Int64)")
+DfsFsCall(0x10330, "BitAnd(&Int64, Int64, Int64)")
+DfsFsCall(0x10334, "BitOr(&Int64, Int64, Int64)")
+DfsFsCall(0x10338, "BitNot(&Int64, Int64)")
+DfsFsCall(0x10340, "BitXor(&Int64, Int64, Int64)")
+DfsFsCall(0x1036c, "Disk_IO(Byte, Word lba, Long, &void, &void)")
+DfsFsCall(0x10380, "Open(String, Word, Byte, &void, &void)")
 DfsFsCall(0x10384, "?read_from_file")          # ref: DBUSULOAD.M200
+DfsFsCall(0x103a0, "FsErrMsgStr(&String, Byte)")
 DfsFsCall(0x103b0, "?exec_command()")
-DfsFsCall(0x103d0, "?wr_console_c(CHAR)")
-DfsFsCall(0x103d8, "?wr_console_s(STR)")
+DfsFsCall(0x103b8, "PopProgram(Byte, String)")
+DfsFsCall(0x103d0, "WriteConsole(Char)")
+DfsFsCall(0x103d4, "ReadChar(&char)")
+DfsFsCall(0x103d8, "WriteConsole(String)")
+DfsFsCall(0x103dc, "WriteConsoleCrLf(void)")
+DfsFsCall(0x103e0, "WriteLnConsole(String)")
+DfsFsCall(0x103e4, "AskConsoleString(&String1, String2)")
+DfsFsCall(0x103e8, "?AskOnConsole()")
 DfsFsCall(0x1047e, "?exp_xmit(EXP.L,NODE.B)")
 DfsFsCall(0x10496, "?experiment_close")        # ref: FS.0 0x18f4e
+DfsFsCall(0x10610, "Check_FC07(&Byte)")
 
 class Fs10568(DfsFsCall):
     ''' Run an experiment with parameters on stack ? '''

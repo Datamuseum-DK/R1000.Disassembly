@@ -35,11 +35,18 @@ import pyreveng.cpu.m68020 as m68020
 #######################################################################
 
 PASCAL_DESC = '''
-STACKCHECK	-		| BF | D5 | 62 | 06 | 44 | FC | 00 | 02 | 4E | 76 | {
+STACKCHECK	-		| BF | D5 | &
+				| 62 | 06 | &
+				| 44 | FC | 00 | 02 | &
+				| 4E | 76 | {
 }
-CHKSTR		areg		|1 0 1 1| a   |1|1 1 1 0|1| b   | FF | FC | 67 | 02 | 4E | 4D | {
+CHKSTR		areg		|1 0 1 1| a   |1|1 1 1 0|1| b   | FF | FC | &
+				| 67 | 02 | &
+				| 4E | 4D | {
 }
-CHKSTRLEN	dreg		|0 0 0 0|1 1 0 0|1 0 0 0|0| d   | 00 | 00 | 00 | 7D | 63 | 02 | 4E | 4F | {
+CHKSTRLEN	dreg		| 0C8 |0| d   | 00 | 00 | 00 | 7D | &
+				| 63 | 02 | &
+				| 4E | 4F | {
 }
 '''
 
@@ -145,9 +152,10 @@ class PascalSwitchIns(m68020.m68020_ins):
         fin = self.lang.m.bu16(self.hi) + self.hi
         n = 0
         while ptr < fin:
-            i = self.lang.m.bu16(ptr)
+            i = self.lang.m.bs16(ptr)
             d = self.hi + i
-            fin = min(fin, d)
+            if i > 0:
+                fin = min(fin, d)
             self += code.Jump(cond="0x%x" % n, to=d)
             data.Const(
                 self.lang.m,

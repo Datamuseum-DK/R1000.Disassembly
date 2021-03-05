@@ -39,11 +39,11 @@ def round_0(cx):
     for a in range(0x116ca, 0x116ee, 0x3):
         data.Txt(cx.m, a, a + 0x3, label=False)
 
-    cx.m.set_label(0x12f12, 'disk_error_messages')
+    cx.m.set_label(0x12f12, 'error_messages')
     for a in range(0x12f12, 0x130f2, 0x1e):
         data.Txt(cx.m, a, a + 0x1e, label=False)
 
-    cx.m.set_label(0x1312a, 'disk_error2_messages')
+    cx.m.set_label(0x1312a, 'error_messages2')
     for a in range(0x1312a, 0x1330a, 0x1e):
         data.Txt(cx.m, a, a + 0x1e, label=False)
 
@@ -75,9 +75,15 @@ def round_0(cx):
     for a in range(0x18519, 0x1857d, 10):
         data.Txt(cx.m, a, a + 10, label=False)
 
+    cx.m.set_label(0x11a36, "Str2Int(String, &LongInt, Long, Long, &Byte)")
+    cx.m.set_label(0x11ab4, "Month(String, &LongInt, &Void)")
+    cx.m.set_label(0x1330a, "ReportError(Byte error, Byte mode, String)")
+    cx.m.set_label(0x1371a, "NameI(Char*, &void)")
+
 
 def round_1(cx):
     ''' Let the disassembler loose '''
+    cx.disass(0x11a36)
 
 def round_2(cx):
     ''' Spelunking in what we alrady found '''

@@ -33,6 +33,7 @@
 from pyreveng import mem
 
 SYSCALLS = {}
+KERNCALLS = {}
 
 class DfsSysCall():
     ''' Base class for system-calls'''
@@ -76,7 +77,7 @@ class DfsSysCall():
 class DfsKernCall(DfsSysCall):
     ''' KERNEL system-call '''
     def __init__(self, number, name=None, **kwargs):
-        SYSCALLS[number] = self
+        KERNCALLS[number] = self
         adr = 0x10200 + 2 * number
         if name is None:
             name = "KERNCALL_%02x" % number
@@ -97,7 +98,7 @@ class DfsSysCalls():
         self.hi = hi
         for number in range(0x40):
             adr = 0x10200 + number + 2
-            if number not in SYSCALLS:
+            if number not in KERNCALLS:
                 DfsKernCall(number)
         for adr in range(0x10280, 0x10460, 4):
             if adr not in SYSCALLS:
@@ -121,5 +122,8 @@ class DfsSysCalls():
     def __getitem__(self, adr):
         return SYSCALLS[adr]
 
+    def get(self, adr):
+        return SYSCALLS.get(adr)
+
     def __iter__(self):
-        yield from sorted(SYSCALLS.items())
+        yield from SYSCALLS.values()

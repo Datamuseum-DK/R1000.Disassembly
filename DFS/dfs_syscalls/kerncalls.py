@@ -34,7 +34,7 @@ from .base import DfsKernCall
 
 DfsKernCall(
     0x02,
-    "KC02_Disk_IO",
+    "KC02_Start_Disk_IO",
     bcmt='''
 D1 = 2 -> READ
 D1 = 3 -> WRITE
@@ -58,6 +58,7 @@ CHS is 512 byte sectors
 '''
     )
 
+DfsKernCall(0x03, "KC03_Wait_Disk_IO")
 DfsKernCall(0x05, "KC05_Write_Console")
 DfsKernCall(0x10, "KC10_Panic")
 DfsKernCall(0x15, "KC15_Diag_Bus")
