@@ -90,6 +90,9 @@ class Ucode():
     def __iter__(self):
         yield from self.uins[0x100:]
 
+    def __len__(self):
+        return len(self.uins[0x100:])
+
 def main():
     ''' ... '''
     i = Ucode()

@@ -81,6 +81,9 @@ class Explain():
     }
 
     micro_events = {
+        # Emulator trace
+        0x145: "UE_MACHINE_STARTUP",
+
         # R1000_SCHEMATIC_SEQ.PDF p65
         0x180: "UE_MEM_EXP",
         0x188: "UE_ECC",
@@ -129,7 +132,18 @@ class Explain():
             if name[0] == '<':
                 yield name
             else:
-                yield name.ljust(16) + " " + hexval.rjust(4) + " " + str(expl)
+                yield name.ljust(20) + " " + hexval.rjust(4) + " " + str(expl)
+
+    def defaults_text(self):
+        for fld, val in self.defaults.items():
+            if "parity" in fld:
+                continue
+            fmt = "0x%x"
+            i = getattr(self, fld, None)
+            if not i:
+                yield fld.ljust(20) + " " + (fmt % val).rjust(6)
+            else:
+                yield fld.ljust(20) + " " + (fmt % val).rjust(6) + " " + i(val)
 
     defaults_doc = {
         "typ_a_adr": 0,             # R1000_SCHEMATIC_TYP p5
