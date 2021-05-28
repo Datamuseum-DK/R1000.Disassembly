@@ -54,36 +54,20 @@ y14		-			|0 0 0 1 0 1 0 0|
 y15		-			|0 0 0 1 0 1 0 1|
 y16		-			|0 0 0 1 0 1 1 0|
 CALL		subr,>C			|0 0 0 1 1 0| x |
-x1C		-			|0 0 0 1 1 1 0 0|
-x1D		-			|0 0 0 1 1 1 0 1|
-x1F		-			|0 0 0 1 1 1 1 1|
-x20		-			|0 0 1 0 0 0 0 0|
-x21		-			|0 0 1 0 0 0 0 1|
-x22		-			|0 0 1 0 0 0 1 0|
-x24		-			|0 0 1 0 0 1 0 0|
-x25		-			|0 0 1 0 0 1 0 1|
-x26		-			|0 0 1 0 0 1 1 0|
-x27		-			|0 0 1 0 0 1 1 1|
-x28		imm			|0 0 1 0 1 0 0 0| imm		|
-x29		dst,>JC			|0 0 1 0 1 0 0 1| dst		|
-x2A		-			|0 0 1 0 1 0 1 0|
-x2B		-			|0 0 1 0 1 0 1 1|
-RETURN		>R 			|0 0 1 0 1 1 0 0|
-x2D		-			|0 0 1 0 1 1 0 1|
-x2F		var			|0 0 1 0 1 1 1 1| var		|
-x30		var			|0 0 1 1 0 0 0 0| var		|
-x31		imm			|0 0 1 1 0 0 0 1| imm		|
-x32		imm			|0 0 1 1 0 0 1 0| imm		|
-x33		-			|0 0 1 1 0 0 1 1|
-x34		-			|0 0 1 1 0 1 0 0|
-x36		dst,>JC			|0 0 1 1 0 1 1 0| dst 		|
-x38		dst,>JC			|0 0 1 1 1 0 0 0| dst 		|
-x39		-			|0 0 1 1 1 0 0 1|
-x3A		dst,>JC			|0 0 1 1 1 0 1 0| dst 		|
-x3B		-			|0 0 1 1 1 0 1 1|
-x3C		dst,>JC			|0 0 1 1 1 1 0 0| dst		|
-x3E		dst,>JC			|0 0 1 1 1 1 1 0| dst 		|
-x3F		imm			|0 0 1 1 1 1 1 1| imm		|
+CALL_PT1	subr,>CC		|0 0 0 1 1 1| x |
+CALL_PX1	subr,>CC		|0 0 1 0 0 0| x |
+CALL_PT0	subr,>CC		|0 0 1 0 0 1| x |
+CALL_PX0	subr,>CC		|0 0 1 0 1 0| x |
+RET		>R 			|0 0 1 0 1 1 0|m|
+RET_PT1		>RC			|0 0 1 0 1 1 1|m|
+RET_PX1		>RC			|0 0 1 1 0 0 0|m|
+RET_PT0		>RC			|0 0 1 1 0 0 1|m|
+RET_PX0		>RC			|0 0 1 1 0 1 0|m|
+JMP		dst,>J			|0 0 1 1 0 1 1|m| dst 		|
+JMP_PT1		dst,>JC			|0 0 1 1 1 0 0|m| dst 		|
+JMP_PX1		dst,>JC			|0 0 1 1 1 0 1|m| dst 		|
+JMP_PT0		dst,>JC			|0 0 1 1 1 1 0|m| dst		|
+JMP_PX0		dst,>JC			|0 0 1 1 1 1 1|m| dst 		|
 x40		var,var2,dst,>JC	|0 1 0 0 0 0 0 0| var		| var2		| dst		|
 x41		imm,var,dst,>JC		|0 1 0 0 0 0 0 1| imm		| var		| dst		|
 x42		imm,var,dst,>JC		|0 1 0 0 0 0 1 0| imm		| var		| dst		|
@@ -111,33 +95,26 @@ LOOP8		var,dst,>JC		|0 1 0 1 1 0 0 0| var		| dst		|
 x59		-			|0 1 0 1 1 0 0 1|
 LOOPA		var,dst,>JC		|0 1 0 1 1 0 1 0| var		| dst		|
 x5B		-			|0 1 0 1 1 0 1 1|
-END		>R 			|0 1 0 1 1 1 0 0|
-x5D		-			|0 1 0 1 1 1 0 1|
+END		>R 			|0 1 0 1 1 1 0|m|
 LOOPE		imm,dst,>JC		|0 1 0 1 1 1 1 0| imm		| dst		|
 x5F		-			|0 1 0 1 1 1 1 1|
-x60		-			|0 1 1 0 0 0 0 0|
-x61		imm			|0 1 1 0 0 0 0 1| imm		|
+FAIL3		-			|0 1 1 0 0 0 0|m|
 x62		imm			|0 1 1 0 0 0 1 0| imm		|
 y63		-			|0 1 1 0 0 0 1 1|
-y64		-			|0 1 1 0 0 1 0 0|
-x66		-			|0 1 1 0 0 1 1 0|
-x67		-			|0 1 1 0 0 1 1 1|
-x68		-			|0 1 1 0 1 0 0 0|
-x6A		-			|0 1 1 0 1 0 1 0|
-x6B		-			|0 1 1 0 1 0 1 1|
-x6C		-			|0 1 1 0 1 1 0 0|
-x6E		-			|0 1 1 0 1 1 1 0|
-x70		var			|0 1 1 1 0 0 0 0| var		|
-x72		var			|0 1 1 1 0 0 1 0| var		|
-x73		-			|0 1 1 1 0 0 1 1|
-x74		-			|0 1 1 1 0 1 0 0|
-x76		-			|0 1 1 1 0 1 1 0|
-x77		-			|0 1 1 1 0 1 1 1|
-x78		-			|0 1 1 1 1 0 0 0|
-x79		-			|0 1 1 1 1 0 0 1|
-x7A		-			|0 1 1 1 1 0 1 0|
-x7C		imm			|0 1 1 1 1 1 0 0| imm		|
-x7E		imm			|0 1 1 1 1 1 1 0| imm		|
+PT1		-			|0 1 1 0 0 1 0|m|
+PX1		-			|0 1 1 0 0 1 1|m|
+PT0		-			|0 1 1 0 1 0 0|m|
+PX0		-			|0 1 1 0 1 0 1|m|
+PTINV		-			|0 1 1 0 1 1 0|m|
+PXINV		-			|0 1 1 0 1 1 1|m|
+LD_12		var			|0 1 1 1 0 0 0|m| var		|
+LD_13		var			|0 1 1 1 0 0 1|m| var		|
+INC_R2		-			|0 1 1 1 0 1 0|m|
+INC_R3		-			|0 1 1 1 0 1 1|m|
+DEC_R2		-			|0 1 1 1 1 0 0|m|
+DEC_R3		-			|0 1 1 1 1 0 1|m|
+ADD_R2		imm			|0 1 1 1 1 1 0|m| imm		|
+ADD_R3		imm			|0 1 1 1 1 1 1|m| imm		|
 x80		var			|1 0 0 0 0 0 0 0| var		|
 x82		var			|1 0 0 0 0 0 1 0| var		|
 x83		-			|1 0 0 0 0 0 1 1|
@@ -213,8 +190,6 @@ xD4		imm,imm2,var		|1 1 0 1 0 1 0 0| imm		| imm2		| var		|
 xD5		imm,var,var2		|1 1 0 1 0 1 0 1| imm		| var		| var2		|
 xD6		-			|1 1 0 1 0 1 1 0|
 yD8		-			|1 1 0 1 1 0 0 0|
-yDC		var			|1 1 0 1 1 1 0 0| var		|
-yDE		var			|1 1 0 1 1 1 1 0| var		|
 xDA30		imm,imm2		|1 1 0 1 1 0 1 0|0 0 1 1 0 0 0 0| imm		| imm2		|
 xDA33		imm			|1 1 0 1 1 0 1 0|0 0 1 1 0 0 1 1| imm		|
 xDA93		imm			|1 1 0 1 1 0 1 0|1 0 0 1 0 0 1 1| imm		|
@@ -232,11 +207,9 @@ xDA80		dax,imm,imm2		|1 1 0 1 1 0 1 0|1| dax		| imm		| imm2		|
 xDA86		imm,imm2,dst,>JC	|1 1 0 1 1 0 1 0|1 0 0 0 0 1 1 0| imm		| imm2		| dst		|
 xDAA1		imm			|1 1 0 1 1 0 1 0|1 0 1 0 0 0 0 1| imm		|
 xDAL		imm,var			|1 1 0 1 1 0 1 0| imm		| var		|
-xE0		imm,var			|1 1 1 0 0 0 0 0| imm		| var		|
-yE1		imm,imm2		|1 1 1 0 0 0 0 1| imm		| imm2		|
-yE2		imm,var			|1 1 1 0 0 0 1 0| imm		| var		|
-xF0		dst,>JC			|1 1 1 1 0 0 0 0| dst		|
-xF2		dst,>JC			|1 1 1 1 0 0 1 0| dst		|
+FAIL4		>R			|1 1 0 1|1 1| m |
+FAIL4		>R			|1 1 1 0| m     |
+FAIL4		>R			|1 1 1 1| m     |
 '''
 
 class R1kExpIns(assy.Instree_ins):

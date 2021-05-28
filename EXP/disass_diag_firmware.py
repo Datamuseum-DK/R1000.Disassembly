@@ -30,11 +30,36 @@
 import os
 import sys
 
-from pyreveng import mem, code, data, listing
+from pyreveng import mem, code, data, listing, instree
 import pyreveng.cpu.mcs51 as mcs51
+
+import exp_disass
 
 MYDIR = os.path.split(__file__)[0]
 FILENAME = os.path.join(MYDIR, "P8052AH_9028.bin")
+
+
+exp_tree = instree.InsTree(8)
+exp_tree.load_string(exp_disass.R1K_EXP)
+
+def getins(ins):
+    ''' Get the Mnemonic out of the experiment disassembler '''
+    def getmore(_priv, adr, v):
+        if adr == 0x20:
+            v.append(ins)
+        else:
+            v.append(0)
+
+    i = exp_tree.find(
+        None,
+        0x20,
+        getmore,
+    )
+    for j in i:
+        # print(j.assy, j.pil.raw_bits)
+        cmt = j.assy[0].ljust(12) + j.assy[1].ljust(16) + j.pil.raw_bits
+        return "INS_" + j.assy[0], cmt
+    return "INS_z%02x" % ins, "z%02X" % ins
 
 def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
     ''' Disassemble a single file '''
@@ -64,7 +89,20 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
         for n, i in enumerate(range(a, b, 2)):
             d += code.Jump(cond="A=0x%02x" % (i - a), to=i)
             y = cx.disass(i)
-            cx.m.set_label(y.dstadr, "SUB_%04x_%02x" % (a, n))
+            if a != 0x526:
+                cx.m.set_label(y.dstadr, "SUB_%04x_%02x" % (a, i - a))
+                continue
+
+            j, ins1 = getins(i - a)
+            if j not in cx.m.get_labels(y.dstadr):
+                cx.m.set_label(y.dstadr, j)
+
+            if ins1 in cx.m.get_block_comments(y.dstadr):
+                continue
+            cx.m.set_block_comment(y.dstadr, ins1)
+            _j, ins2 = getins(1 + i - a)
+            if ins1 != ins2:
+                cx.m.set_block_comment(y.dstadr, ins2)
 
     for a, b,c  in (
         (0x0746, 0x6d, 8),
@@ -106,6 +144,30 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
         else:
             cx.m.set_label(a, "TABLE_%04x" % a)
 
+    for a, b in (
+        (0x51c, "EXECUTE"),
+        (0x626, "SET_DIAG_ADDR()"),
+        (0x646, "SERIAL_RX_BYTE()"),
+        (0x652, "SERIAL_TX_BYTE()"),
+        (0x65e, "SERIAL_INTERRUPT()"),
+        (0x6ab, "DIAG_DO_CMD_R0"),
+        (0x6ac, "DIAG_DO_CMD_A"),
+        (0x6b1, "DIAG_CMD_6"),
+        (0x6bb, "DIAG_CMD_0"),
+        (0x6cf, "DIAG_CMD_A"),
+        (0x701, "DIAG_CMD_2"),
+        (0x71f, "DIAG_CMD_C"),
+        (0x72c, "DIAG_CMD_E"),
+        (0x739, "DIAG_CMD_4"),
+        (0x73d, "DIAG_CMD_8"),
+    ):
+        cx.m.set_label(a, b)
+
+
+    cx.as_data.set_label(0x03, "diag_address")
+    cx.as_data.set_label(0x04, "diag_status")
+    cx.as_data.set_label(0x10, "exp_PC")
+
     code.lcmt_flows(cx.m)
 
     listing.Listing(
@@ -113,9 +175,12 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
         fn=output_file,
         align_blank=True,
         align_xxx=True,
-        ncol=8,
+        ncol=4,
         **kwargs
     )
+
+    #from pyreveng import partition
+    #partition.Partition(cx.m)
 
     return cx
 
