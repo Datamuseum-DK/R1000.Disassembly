@@ -79,9 +79,10 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
     )
 
     for a, b, c in (
+         (0x0526, 0x0626, 0x0525),	# Has priority for labels
+
          (0x03a2, 0x03b2, 0x03a1),
          (0x03cd, 0x03db, 0x03ca),
-         (0x0526, 0x0626, 0x0525),
          (0x1025, 0x1115, 0x1021),
     ):
         d = cx.disass(c)
@@ -90,7 +91,8 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
             d += code.Jump(cond="A=0x%02x" % (i - a), to=i)
             y = cx.disass(i)
             if a != 0x526:
-                cx.m.set_label(y.dstadr, "SUB_%04x_%02x" % (a, i - a))
+                if not list(cx.m.get_labels(y.dstadr)):
+                    cx.m.set_label(y.dstadr, "SUB_%04x_%02x" % (a, i - a))
                 continue
 
             j, ins1 = getins(i - a)
@@ -116,7 +118,7 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
         (0x08f6, 0xb5, 8),
         (0x09ab, 0xb5, 8),
         (0x0a60, 0x15, 8),
-        (0x0a75, 0xb5, 8),
+        (0x0a75, 0xb5, 9),
         (0x0b2a, 0xb5, 8),
         (0x0bdf, 0x15, 8),
         (0x0bf4, 0x91, 8),
@@ -166,7 +168,24 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
 
     cx.as_data.set_label(0x03, "diag_address")
     cx.as_data.set_label(0x04, "diag_status")
+    cx.as_data.set_label(0x05, "diag_loop_cnt")
+    cx.as_data.set_label(0x06, "diag_loop_top")
     cx.as_data.set_label(0x10, "exp_PC")
+
+    cx.m.set_label(0x46f, "fsm_imm")
+    cx.m.set_label(0x1000, "ins_da")
+
+    cx.m.set_label(0x117c, "da_set1")
+    cx.m.set_label(0x1194, "da_set2")
+    cx.m.set_label(0x1222, "da_set3")
+    cx.m.set_label(0x1246, "da_set4")
+    cx.m.set_label(0x12c2, "da_set5")
+    cx.m.set_label(0x12e1, "da_set6")
+    cx.m.set_label(0x1393, "subr_1393")
+
+    # 0004 75 d0 10  MOV PSW,#0x10
+    for i in range(8):
+        cx.as_data.set_label(0x10 + i, "R%d_" % i)
 
     code.lcmt_flows(cx.m)
 
@@ -195,7 +214,7 @@ def main():
         for i in sys.argv[1:]:
             cx = disassemble_file(i)
     else:
-        cx = disassemble_file(FILENAME, pil=True)
+        cx = disassemble_file(FILENAME, pil=False)
 
 if __name__ == '__main__':
     main()

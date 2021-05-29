@@ -80,6 +80,10 @@ def r1k_experiment(fn, ident=None):
     y = cx.codeptr(0x10)
     cx.m.set_label(y.dst, "EXPERIMENT")
 
+    cx.m.set_label(0x10, "PC_")
+    for i in range(1, 8):
+        cx.m.set_label(0x10 + i, "R%d_" % i)
+
     for i in params:
         a = int(i[1:3], 16)
         b = int(i[5:6], 16)
@@ -142,6 +146,13 @@ if __name__ == '__main__':
             print(bfn)
             try:
                 cx = r1k_experiment(fn, bfn)
-                listing.Listing(cx.m, fn="/tmp/_." + bfn + ".EXP", ncol=6, lo=0x10, hi=cx.hi_adr)
+                listing.Listing(
+                    cx.m,
+                    fn="/tmp/_." + bfn + ".EXP",
+                    ncol=4,
+                    lo=0x10,
+                    hi=cx.hi_adr,
+                    charset=False,
+                )
             except mem.MemError as err:
                 print("FAIL", fn, err)

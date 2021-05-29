@@ -32,27 +32,9 @@
 from pyreveng import assy
 
 R1K_EXP = '''
-x00		imm			|0 0 0 0 0 0 0 0| imm		|
-x02		-			|0 0 0 0 0 0 1 0|
-x03		-			|0 0 0 0 0 0 1 1|
-x04		-			|0 0 0 0 0 1 0 0|
-x05		-			|0 0 0 0 0 1 0 1|
-x06		-			|0 0 0 0 0 1 1 0|
-x07		-			|0 0 0 0 0 1 1 1|
-x08		-			|0 0 0 0 1 0 0 0|
-x09		-			|0 0 0 0 1 0 0 1|
-x0A		-			|0 0 0 0 1 0 1 0|
-x0B		-			|0 0 0 0 1 0 1 1|
-x0C		-			|0 0 0 0 1 1 0 0|
-x0D		-			|0 0 0 0 1 1 0 1|
-x0E		-			|0 0 0 0 1 1 1 0|
-x0F		-			|0 0 0 0 1 1 1 1|
-x10		-			|0 0 0 1 0 0 0 0|
-x11		-			|0 0 0 1 0 0 0 1|
-x13		-			|0 0 0 1 0 0 1 1|
-y14		-			|0 0 0 1 0 1 0 0|
-y15		-			|0 0 0 1 0 1 0 1|
-y16		-			|0 0 0 1 0 1 1 0|
+REPEAT		imm			|0 0 0 0 0 0 0|m| imm		|
+REPEAT		imm			|0 0 0|   imm   |
+UNTIL		-			|0 0 0 1 0 1 1|m|
 CALL		subr,>C			|0 0 0 1 1 0| x |
 CALL_PT1	subr,>CC		|0 0 0 1 1 1| x |
 CALL_PX1	subr,>CC		|0 0 1 0 0 0| x |
@@ -107,39 +89,38 @@ PT0		-			|0 1 1 0 1 0 0|m|
 PX0		-			|0 1 1 0 1 0 1|m|
 PTINV		-			|0 1 1 0 1 1 0|m|
 PXINV		-			|0 1 1 0 1 1 1|m|
-LD_12		var			|0 1 1 1 0 0 0|m| var		|
-LD_13		var			|0 1 1 1 0 0 1|m| var		|
-INC_R2		-			|0 1 1 1 0 1 0|m|
-INC_R3		-			|0 1 1 1 0 1 1|m|
-DEC_R2		-			|0 1 1 1 1 0 0|m|
-DEC_R3		-			|0 1 1 1 1 0 1|m|
-ADD_R2		imm			|0 1 1 1 1 1 0|m| imm		|
-ADD_R3		imm			|0 1 1 1 1 1 1|m| imm		|
-x80		var			|1 0 0 0 0 0 0 0| var		|
-x82		var			|1 0 0 0 0 0 1 0| var		|
-x83		-			|1 0 0 0 0 0 1 1|
+LD		R2,var			|0 1 1 1 0 0 0|m| var		|
+LD		R3,var			|0 1 1 1 0 0 1|m| var		|
+INC		R2			|0 1 1 1 0 1 0|m|
+INC		R3			|0 1 1 1 0 1 1|m|
+DEC		R2			|0 1 1 1 1 0 0|m|
+DEC		R3			|0 1 1 1 1 0 1|m|
+ADD		R2,imm			|0 1 1 1 1 1 0|m| imm		|
+ADD		R3,imm			|0 1 1 1 1 1 1|m| imm		|
+XHG		R2,R3			|1 0 0 0 0 0 0|m|
+INC		var			|1 0 0 0 0 0 1|m| var		|
 x84		var			|1 0 0 0 0 1 0 0| var		|
 x85		-			|1 0 0 0 0 1 0 1|
-x86		imm			|1 0 0 0 0 1 1 0| imm		|
+DEC		var			|1 0 0 0 0 1 1|m| var		|
 x88		imm			|1 0 0 0 1 0 0 0| imm		|
-x8A		var			|1 0 0 0 1 0 1 0| var		|
+INV		var			|1 0 0 0 1 0 1|m| var		|
 x8C		var			|1 0 0 0 1 1 0 0| var		|
 COPY		var,var2		|1 0 0 0 1 1 1 0| var		| var2		|
 STORE		imm,var			|1 0 0 0 1 1 1 1| imm		| var		|
 x90		var,var2		|1 0 0 1 0 0 0 0| var		| var2		|
 x91		imm,imm2,var		|1 0 0 1 0 0 0 1| imm		| imm2		| var		|
-x92		var,var2		|1 0 0 1 0 0 1 0| var		| var2		|
-y93_add		imm,var			|1 0 0 1 0 0 1 1| imm		| var		|
+ADD		var,var2		|1 0 0 1 0 0 1 0| var		| var2		|
+ADD		imm,var			|1 0 0 1 0 0 1 1| imm		| var		|
 x95		imm,imm2,var		|1 0 0 1 0 1 0 1| imm		| imm2		| var		|
-x96		var,var2		|1 0 0 1 0 1 1 0| var		| var2		|
+AND		var,var2		|1 0 0 1 0 1 1 0| var		| var2		|
 AND		imm,var			|1 0 0 1 0 1 1 1| imm		| var		|
 x98		var			|1 0 0 1 1 0 0 0| var		|
 x99		imm,imm2,var		|1 0 0 1 1 0 0 1| imm		| imm2		| var		|
-y9A_or		var,var2		|1 0 0 1 1 0 1 0| var		| var2		|
-x9B		imm,var2		|1 0 0 1 1 0 1 1| imm		| var2		|
+OR		var,var2		|1 0 0 1 1 0 1 0| var		| var2		|
+OR		imm,var2		|1 0 0 1 1 0 1 1| imm		| var2		|
 x9D		imm,imm2,var		|1 0 0 1 1 1 0 1| imm		| imm2		| var		|
-y9E		var,var2		|1 0 0 1 1 1 1 0| var		| var2		|
-y9F		imm,var			|1 0 0 1 1 1 1 1| imm		| var		|
+XOR		var,var2		|1 0 0 1 1 1 1 0| var		| var2		|
+XOR		imm,var			|1 0 0 1 1 1 1 1| imm		| var		|
 xA0		var,var2		|1 0 1 0 0 0 0 0| var		| var2		|
 xA1		imm,imm2,var		|1 0 1 0 0 0 0 1| imm		| imm2		| var		|
 xA2		-			|1 0 1 0 0 0 1 0|
@@ -161,35 +142,40 @@ xB0M		imm,var,var2		|1 0 1 1 0 0 0 0|0 1| imm	| var		| var2		|
 xB0H		imm,var,var2		|1 0 1 1 0 0 0 0|1| imm		| var		| var2		|
 xB1L		var,dst,>JC		|1 0 1 1 0 0 0 1|0 0| var	| dst		|
 xB1		imm			|1 0 1 1 0 0 0 1| imm		|
-xB2		var,imm,imm2		|1 0 1 1 0 0 1 0| var		| imm		| imm2		|
-xB4		var,var2		|1 0 1 1 0 1 0 0| var		| var2		|
+xB2		var,imm,imm2		|1 0 1 1 0 0 1|m| var		| imm		| imm2		|
+xB4		var,var2		|1 0 1 1 0 1 0|m| var		| var2		|
 xB6		imm,var,imm2		|1 0 1 1 0 1 1 0| imm		| var		| imm2		|
 xB7		imm,var,var2		|1 0 1 1 0 1 1 1| imm		| var		| var2		|
-xB8		var			|1 0 1 1 1 0 0 0| var		|
+xB8		var			|1 0 1 1 1 0 0|m| var		|
 xBA		var,var2		|1 0 1 1 1 0 1 0| var		| var2		|
-yBC		imm			|1 0 1 1 1 1 0 0| imm		|
-xBE		var,imm			|1 0 1 1 1 1 1 0| var		| imm		|
-xBF		imm			|1 0 1 1 1 1 1 1| imm		|
-yC0		var,imm			|1 1 0 0 0 0 0 0| var		| imm		|
-xC1		imm			|1 1 0 0 0 0 0 1| imm		|
-xC2		var,imm			|1 1 0 0 0 0 1 0| var		| imm		|
-xC3		imm			|1 1 0 0 0 0 1 1| imm		|
-xC4		imm,imm2		|1 1 0 0 0 1 0 0| imm		| imm2		|
-xC6		imm,imm2		|1 1 0 0 0 1 1 0| imm		| imm2		|
-xC8		imm,imm2		|1 1 0 0 1 0 0 0| imm		| imm2		|
-xC9		var,var2		|1 1 0 0 1 0 0 1| var		| var2		|
-xCA		imm,imm2		|1 1 0 0 1 0 1 0| imm		| imm2		|
-xCB		imm			|1 1 0 0 1 0 1 1| imm		|
-xCC		imm,imm2		|1 1 0 0 1 1 0 0| imm		| imm2		|
-xCD		imm			|1 1 0 0 1 1 0 1| imm		|
-xCE		imm,var			|1 1 0 0 1 1 1 0| imm		| var		|
-xCF		imm			|1 1 0 0 1 1 1 1| imm		|
+FSM		fsm			|1 0 1 1 1 1 0|m| fsm		|
+WP1_FSM		var,fsm			|1 0 1 1 1 1 1 0| var		| fsm		|
+WP1_FSM		R2,fsm			|1 0 1 1 1 1 1 1| fsm		|
+WP2_FSM		var,fsm			|1 1 0 0 0 0 0 0| var		| fsm		|
+WP2_FSM		R2,fsm			|1 1 0 0 0 0 0 1| fsm		|
+WP12_FSM	var,fsm			|1 1 0 0 0 0 1 0| var		| fsm		|
+WP12_FSM	R2,fsm			|1 1 0 0 0 0 1 1| fsm		|
+WP1_FSM		imm,fsm			|1 1 0 0 0 1 0|m| imm		| fsm		|
+WP2_FSM		imm,fsm			|1 1 0 0 0 1 1|m| imm		| fsm		|
+WP12_FSM	imm,imm2,fsm		|1 1 0 0 1 0 0|m| imm		| imm2		| fsm		|
+FSM_RP1		fsm,var			|1 1 0 0 1 0 1 0| fsm		| var		|
+FSM_RP1		fsm,R3			|1 1 0 0 1 0 1 1| fsm		|
+FSM_RP2		fsm,var			|1 1 0 0 1 1 0 0| fsm		| var		|
+FSM_RP2		fsm,R3			|1 1 0 0 1 1 0 1| fsm		|
+FSM_RP12	fsm,var			|1 1 0 0 1 1 1 0| fsm		| var		|
+FSM_RP12	fsm,R3			|1 1 0 0 1 1 1 1| fsm		|
 xD0		var,imm			|1 1 0 1 0 0 0 0| var		| imm		|
 xD2		imm,imm2		|1 1 0 1 0 0 1 0| imm		| imm2		|
 xD4		imm,imm2,var		|1 1 0 1 0 1 0 0| imm		| imm2		| var		|
 xD5		imm,var,var2		|1 1 0 1 0 1 0 1| imm		| var		| var2		|
-xD6		-			|1 1 0 1 0 1 1 0|
-yD8		-			|1 1 0 1 1 0 0 0|
+FSM8		-			|1 1 0 1 0 1 1|m|
+FSM2		-			|1 1 0 1 1 0 0|m|
+
+# XXX: Implement DA as (variable length) prefix ?
+#xDA_R5		R3			|1 1 0 1 1 0 1 0| x	      |1|
+#xDA_R5		R2			|1 1 0 1 1 0 1 0| x	  |1|0|1|
+#xDA_R5		imm			|1 1 0 1 1 0 1 0| x	      |0| imm		|
+
 xDA30		imm,imm2		|1 1 0 1 1 0 1 0|0 0 1 1 0 0 0 0| imm		| imm2		|
 xDA33		imm			|1 1 0 1 1 0 1 0|0 0 1 1 0 0 1 1| imm		|
 xDA93		imm			|1 1 0 1 1 0 1 0|1 0 0 1 0 0 1 1| imm		|
@@ -222,6 +208,10 @@ class R1kExpIns(assy.Instree_ins):
     def assy_imm(self):
         ''' ... '''
         return assy.Arg_imm(self['imm'])
+
+    def assy_fsm(self):
+        ''' ... '''
+        return assy.Arg_verbatim("/0x%02x/" % self['fsm'])
 
     def assy_imm2(self):
         ''' ... '''
@@ -266,3 +256,5 @@ class R1kExp(assy.Instree_disass):
             abits=8,
         )
         self.add_ins(R1K_EXP, R1kExpIns)
+        self.verbatim += ("R2",)
+        self.verbatim += ("R3",)
