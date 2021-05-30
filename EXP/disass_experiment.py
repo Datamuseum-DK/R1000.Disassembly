@@ -129,7 +129,14 @@ if __name__ == '__main__':
 
     if len(sys.argv) == 5 and sys.argv[1] == "-AutoArchaeologist":
         cx = r1k_experiment(sys.argv[3], sys.argv[2])
-        listing.Listing(cx.m, fn=sys.argv[4], ncol=6, lo=0x10, hi=cx.hi_adr)
+        listing.Listing(
+	    cx.m,
+	    fn=sys.argv[4],
+	    ncol=6,
+	    lo=0x10,
+	    hi=cx.hi_adr,
+	    charset=False,
+        )
         exit(0)
 
     for ext in (

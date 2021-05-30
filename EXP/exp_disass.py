@@ -127,7 +127,7 @@ xA2		-			|1 0 1 0 0 0 1 0|
 xA4		imm,imm2,var		|1 0 1 0 0 1 0 0| imm		| imm2		| var		|
 xA5L		var,dst,>JC		|1 0 1 0 0 1 0 1|0|var		| dst		|
 yA6		imm,var			|1 0 1 0 0 1 1 0| imm		| var		|
-xA7		imm			|1 0 1 0 0 1 1 1| imm		|
+xA7		imm,R3			|1 0 1 0 0 1 1 1| imm		|
 xA9		imm			|1 0 1 0 1 0 0 1| imm		|
 xA8		imm,var			|1 0 1 0 1 0 0 0| imm		| var		|
 xAA		imm,var			|1 0 1 0 1 0 1 0| imm		| var		|
