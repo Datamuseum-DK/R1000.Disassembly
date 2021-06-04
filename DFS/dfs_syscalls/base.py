@@ -77,7 +77,6 @@ class DfsSysCall():
 class DfsKernCall(DfsSysCall):
     ''' KERNEL system-call '''
     def __init__(self, number, name=None, **kwargs):
-        KERNCALLS[number] = self
         adr = 0x10200 + 2 * number
         if name is None:
             name = "KERNCALL_%02x" % number

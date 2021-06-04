@@ -43,7 +43,6 @@ def round_0(cx):
     ):
         data.Txt(cx.m, a, splitnl=True)
 
-    cx.m.set_label(0x9e74, "STOP_UNTIL_IRQ()")
     for a in range(0x0000a9a4, 0x0000a9e0, 4):
         cx.m.set_label(a, "REG_SAVE_%X" % cx.m[a])
         data.Const(cx.m, a, a + 4)
@@ -92,8 +91,14 @@ def round_0(cx):
         cx.dataptr(a + 0x14)
         z = data.Const(cx.m, a + 0x18)
         cx.m.set_line_comment(z.lo, "Drive number")
-        z = data.Const(cx.m, a + 0x19, a + 0x30)
-        z = data.Const(cx.m, a + 0x30, a + 0x5c)
+        z = data.Const(cx.m, a + 0x2b, a + 0x2b + 4)
+        cx.m.set_line_comment(z.lo, ".lba")
+        z = data.Const(cx.m, a + 0x19, a + 0x1f)
+        z = data.Const(cx.m, a + 0x20, a + 0x2b)
+        z = data.Const(cx.m, a + 0x2f)
+        z = data.Const(cx.m, a + 0x30, a + 0x3f)
+        z = data.Const(cx.m, a + 0x40, a + 0x4f)
+        z = data.Const(cx.m, a + 0x50, a + 0x5c)
 
     cx.m.set_label(0x92e, "DRIVE_TABLE")
     for d in range(4):
@@ -111,7 +116,6 @@ def round_1(cx):
         (0x2448, 0x2454, 4),
         (0x3b82, 0x3b90, 4),
         (0x42e6, 0x42f2, 2),
-        (0x9e88, 0x9f00, 8),
         (0xa19c, 0xa1b4, 4),
     ):
         for i in range(a, b, c):
@@ -205,6 +209,7 @@ def round_1(cx):
         (0x8d72, "MANUAL"),
         (0x9cb8, "via 0x520"),
         (0x9cc0, "MANUAL"),
+        (0x9e88, "Wake after stop"),
         (0x9f0e, "via 0x09c4()"),
         #(0xac06, "MANUAL"),
         #(0xad58, "MANUAL"),
@@ -232,6 +237,7 @@ def round_1(cx):
         (0x1444, "MODEM_VEC_4_RAISE_DTR"),
         (0x1448, "MODEM_VEC_5_LOWER_DTR"),
         (0x144c, "MODEM_VEC_6"),
+        (0x163c, "Timeout_chain"),
         (0x2374, "TEXT_TO_CONSOLE()"),
         (0x32f4, "INIT_KERNEL_05_UARTS"),
         (0x3b4a, "MODEM_VEC_1_XE1201"),
@@ -283,30 +289,39 @@ def round_1(cx):
         (0x66a8, "INIT_KERNEL_10"),
         (0x8398, "BOUNCE_TO_FS"),
         (0x8acc, "INIT_KERNEL_04"),
+        (0x8bec, "Stuff_Response_Fifo(A1)"),
         (0x8df0, "GET_SECTOR_BUFFER([A0+0x13].B => A1)"),
         (0x8e12, "CONFIG_IO_MAP()"),
         (0x8eb4, "INIT_KERNEL_03_FIFO"),
         (0x9ad0, "INIT_KERNEL_07"),
         (0x9c40, "INIT_KERNEL"),
         (0x9cee, "INIT_KERNEL_01"),
-        (0x9e6a, "INIT_KERNEL_02"),
+        (0x9d6e, "Timeout_Stop_PIT(A1)"),
+        (0x9d8e, "Timeout_Start_PIT()"),
+        (0x9dc4, "Timeout_Arm(D0=ticks,A2=entry)"),
+        (0x9e00, "Timeout_Cancel(A2=entry)"),
+        (0x9e6a, "Timeout_Init()"),
+        (0x9e74, "AwaitInterrupt()"),
         (0x9f0e, "INIT_KERNEL_08"),
         (0x9fde, "INIT_KERNEL_09"),
         (0xa710, "SCSI_OPS_TABLE"),
-        (0x4b20, "CHS512_TO_LBA1024()"),
+        (0x4b20, "CHS512_TO_LBA1024(A0=CHAN)"),
         (0x374c, "DO_KC_15_DiagBus(D0,A0)"),
         (0x362c, "DiagBusResponse(D2)"),
-        (0x9dc4, "ArmTimeout?"),
-        (0x9e00, "CancelTimeout?"),
     ):
         cx.m.set_label(a, b)
     for a, b in (
+        (0x4b2a, "chan.drive"),
+        (0x4b2e, "chan.cyl"),
         (0x4b32, "must be <= n_cyl"),
         (0x4b3a, "multiply by n_heads"),
+        (0x4b40, "chan.head"),
         (0x4b44, "must be <= n_heads"),
         (0x4b5e, "multiply by n_sect.512"),
+        (0x4b64, "chan.sect"),
         (0x4b68, "must be <= n_sect.512"),
         (0x4b72, "sect.512 -> sect.1024"),
+        (0x4b78, "drive_desc.lba"),
         (0x1a120, "A1 = return address"),
         (0x1a12a, "length of exp name"),
         (0x1a130, "A1 now after string"),
@@ -328,6 +343,7 @@ def round_1(cx):
     cx.m.set_block_comment(0x36b0, "(Vector 0x48) DIAG_BUS.TXRDY Interrupt")
     cx.m.set_block_comment(0x370c, "(Vector 0x44) DIAG_BUS.RXRDY Interrupt")
     cx.m.set_block_comment(0x5a02, "(Vector 0x91) SCSI_D Interrupt")
+    cx.m.set_block_comment(0x8c3c, "(Vector 0x4e) FIFO Interrupt")
     cx.m.set_block_comment(0x98aa, "(Vector 0x92) SCSI_T Interrupt")
     cx.m.set_block_comment(0x9e30, "(Vector 0x4f) PIT Interrupt")
 
@@ -337,3 +353,38 @@ def round_2(cx):
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
+
+'''
+00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f
+                                                                                             -- 0x00...0x56 even numbers
+                                                                                             S@512
+                                                                                          --    0x00...0x0e
+                                                                                          HD
+                                                                                    -----[-- --] 0x0000...0x0031
+                                                                                    CYL
+                                                                                 --             0x02/0x03
+                                                                              --                0x00
+                                                                              DRIVE
+                                                                           --                   0x80/0x84/0x86
+00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f
+                                                               --                               0x02
+                                                            -----------                         0x??0200000 ?? even
+                                                   -----------                                  pointer
+                                                -----------                                     ????????
+                                                --                                              ??
+00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f
+                                          --                                                    0x81,0xa1,0xc1
+                        -----------                                                             0x00000000...0x00020000
+                        LENGTH
+
+            -----------                                                                         0x954,0x9303fc00
+            DRIVEDESC/SCSI CDB ?
+
+-----------                                                                                     0x00004d{58,60,92,a2}
+
+0       0       4       2
+0       0       8       4
+13      3       52      0x22e8
+13      12      58      0x2480
+'''
+

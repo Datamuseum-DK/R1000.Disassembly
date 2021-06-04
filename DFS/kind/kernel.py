@@ -74,7 +74,7 @@ def vector_line_a(cx):
     for sc in range(32):
         i = tbl + sc * 4
         y = cx.codeptr(i)
-        syscall = cx.dfs_syscalls[sc]
+        syscall = cx.dfs_syscalls[sc * 2 + 0x10200]
         syscall.set_block_comment(cx, y.dst)
         cx.m.set_block_comment(y.dst, "(From PTR @ 0x%x)" % (i))
         cx.m.set_label(y.dst, syscall.name)

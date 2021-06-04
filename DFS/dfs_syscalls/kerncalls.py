@@ -33,6 +33,10 @@
 from .base import DfsKernCall
 
 DfsKernCall(
+    0x01,
+    "KC01_DumpOn",
+)
+DfsKernCall(
     0x02,
     "KC02_Start_Disk_IO",
     bcmt='''
@@ -59,11 +63,16 @@ CHS is 512 byte sectors
     )
 
 DfsKernCall(0x03, "KC03_Wait_Disk_IO")
-DfsKernCall(0x05, "KC05_Write_Console")
+DfsKernCall(0x05, "KC05_Write_Console_String")
+DfsKernCall(0x06, "KC06_Write_Console_Char")
+DfsKernCall(0x07, "KC07_Read_Console_Char")
+DfsKernCall(0x0f, "KC0f_ReInit")
 DfsKernCall(0x10, "KC10_Panic")
+DfsKernCall(0x13, "KC13_RTC")
 DfsKernCall(0x15, "KC15_Diag_Bus")
 DfsKernCall(0x16, "KC16_Clock_Margin")
 DfsKernCall(0x17, "KC17_Power_Margin")
 DfsKernCall(0x1c, "KC1c_ProtCopy(src.P, dst.P, len.W)")
+DfsKernCall(0x1e, "KC1e_Fifo_Response(chan.W, ptr.P)")
 
 _x = 0
