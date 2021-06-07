@@ -79,7 +79,7 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
     )
 
     for a, b, c in (
-         (0x0526, 0x0626, 0x0525),	# Has priority for labels
+         (0x0526, 0x0626, 0x0525),     # Has priority for labels
 
          (0x03a2, 0x03b2, 0x03a1),
          (0x03cd, 0x03db, 0x03ca),
@@ -106,35 +106,64 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
             if ins1 != ins2:
                 cx.m.set_block_comment(y.dstadr, ins2)
 
-    for a, b,c  in (
-        (0x0746, 0x6d, 8),
+    cx.m.set_block_comment(0x746, '''
+This table is used by `READ_RF_A.TYP` and seens to
+unpermute the bits between the serial scan-chain and
+some "canonical" format.
+''')
+    for a, c  in (
+        (0x0746, "BITSPEC_RF_TYP"),
+        (0x07c0, None),
+        (0x0812, None),
+        (0x0864, None),
+        (0x08ad, None),
+        (0x08f6, None),
+        (0x09ab, None),
+        (0x0a75, None),
+        (0x0b2a, None),
+        (0x0bf4, None),
+        (0x0c92, None),
+        (0x0cbc, None),
+        (0x0d05, None),
+        (0x0d4e, None),
+        (0x0da0, None),
+        (0x0e31, None),
+        (0x0e83, None),
+        (0x0ed5, None),
+    ):
+        if c:
+            cx.m.set_label(a, c)
+        else:
+            cx.m.set_label(a, "BITSPEC_%04x" % a)
+        while cx.m[a] != 0xff:
+            print("K %04x" % a)
+            y = data.Data(cx.m, a, a + 9)
+            x = []
+            for _j in range(8):
+                j = cx.m[a]
+                a += 1
+                if j != 0x1f:
+                    x.append("%d->0x%02x" % (7 - (j >> 5), j & 0x1f))
+                else:
+                    x.append("NOP    ")
+            x.append("0x%02x" % cx.m[a])
+            a += 1
+            y.rendered = ".BITPOS\t" + ", ".join(x)
+            y.compact = True
+        data.Const(cx.m, a, a + 1)
+         
+
+    for a, b, c  in (
         (0x07b3, 0x0d, 8),
-        (0x07c0, 0x49, 8),
         (0x0809, 0x09, 8),
-        (0x0812, 0x49, 8),
         (0x085b, 0x09, 8),
-        (0x0864, 0x49, 8),
-        (0x08ad, 0x49, 8),
-        (0x08f6, 0xb5, 8),
-        (0x09ab, 0xb5, 8),
-        (0x0a60, 0x15, 8),
-        (0x0a75, 0xb5, 9),
-        (0x0b2a, 0xb5, 8),
-        (0x0bdf, 0x15, 8),
-        (0x0bf4, 0x91, 8),
-        (0x0c85, 0x0d, 8),
-        (0x0c92, 0x25, 8),
-        (0x0cb7, 0x05, 8),
-        (0x0cbc, 0x49, 8),
-        (0x0d05, 0x49, 8),
-        (0x0d4e, 0x49, 8),
-        (0x0d97, 0x09, 8),
-        (0x0da0, 0x91, 8),
-        (0x0e31, 0x49, 8),
-        (0x0e7a, 0x09, 8),
-        (0x0e83, 0x49, 8),
-        (0x0ecc, 0x09, 8),
-        (0x0ed5, 0x91, 8),
+        (0x0a60, 0x15, 9),
+        (0x0bdf, 0x15, 9),
+        (0x0c85, 0x0d, 9),
+        (0x0cb7, 0x05, 9),
+        (0x0d97, 0x09, 9),
+        (0x0e7a, 0x09, 9),
+        (0x0ecc, 0x09, 9),
     ):
         if b:
             cx.m.set_label(a, "TABLE_%04x[0x%02x]" % (a, b))
@@ -162,6 +191,7 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
         (0x72c, "DIAG_CMD_E"),
         (0x739, "DIAG_CMD_4"),
         (0x73d, "DIAG_CMD_8"),
+        (0x13d8, "PERMUTE_BITS"),
     ):
         cx.m.set_label(a, b)
 
@@ -175,12 +205,14 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
     cx.m.set_label(0x46f, "fsm_imm")
     cx.m.set_label(0x1000, "ins_da")
 
-    cx.m.set_label(0x117c, "da_set1")
-    cx.m.set_label(0x1194, "da_set2")
-    cx.m.set_label(0x1222, "da_set3")
-    cx.m.set_label(0x1246, "da_set4")
-    cx.m.set_label(0x12c2, "da_set5")
-    cx.m.set_label(0x12e1, "da_set6")
+    cx.m.set_label(0x117c, "da_set_1")
+    cx.m.set_label(0x1194, "da_set_2")
+    cx.m.set_label(0x1222, "da_set_3")
+    cx.m.set_label(0x1246, "da_set_4")
+    cx.m.set_label(0x12c2, "da_set_5")
+    cx.m.set_label(0x12e1, "da_set_6")
+    cx.m.set_label(0x133a, "da_set_a")
+    cx.m.set_label(0x135c, "da_set_c")
     cx.m.set_label(0x1393, "subr_1393")
 
     # 0004 75 d0 10  MOV PSW,#0x10
@@ -198,8 +230,8 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
         **kwargs
     )
 
-    #from pyreveng import partition
-    #partition.Partition(cx.m)
+    from pyreveng import partition
+    partition.Partition(cx.m)
 
     return cx
 
