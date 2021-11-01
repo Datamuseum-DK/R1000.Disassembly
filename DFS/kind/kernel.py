@@ -106,6 +106,7 @@ def hunt_vectors(cx):
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
     ioc_hardware.add_symbols(cx.m)
+    ioc_eeprom_exports.add_symbols(cx.m)
     cx.it.load_string(KERNEL_DESC, KernelIns)
     cx.dfs_syscalls = dfs_syscalls.DfsSysCalls()
     ioc_eeprom_exports.add_flow_check(cx)

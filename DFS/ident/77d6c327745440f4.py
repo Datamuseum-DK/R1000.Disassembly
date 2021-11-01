@@ -240,8 +240,10 @@ def round_1(cx):
         (0x163c, "Timeout_chain"),
         (0x2374, "TEXT_TO_CONSOLE()"),
         (0x32f4, "INIT_KERNEL_05_UARTS"),
+        (0x3970, "INT_MODEM_RESET"),
         (0x3b4a, "MODEM_VEC_1_XE1201"),
         (0x3b58, "MODEM_VEC_1_DUART"),
+        (0x3e96, "MODEM_IS_X"),
         (0x3ede, "MODEM_VEC_2_XE1201"),
         (0x3ee0, "MODEM_VEC_2_DUART"),
         (0x3eee, "MODEM_VEC_3_XE1201"),
@@ -342,6 +344,9 @@ def round_1(cx):
     cx.m.set_block_comment(0x2ada, "(Vector 0x45) CONSOLE.RXRDY Interrupt")
     cx.m.set_block_comment(0x36b0, "(Vector 0x48) DIAG_BUS.TXRDY Interrupt")
     cx.m.set_block_comment(0x370c, "(Vector 0x44) DIAG_BUS.RXRDY Interrupt")
+    cx.m.set_block_comment(0x3970, "Reset INT_MODEM by writing 3 zeros to cmd reg")
+    cx.m.set_block_comment(0x3b3e, "(Vector 0x4c) INT_MODEM Interrupt (1)")
+    cx.m.set_block_comment(0x4120, "(Vector 0x47) INT_MODEM Interrupt (2)")
     cx.m.set_block_comment(0x5a02, "(Vector 0x91) SCSI_D Interrupt")
     cx.m.set_block_comment(0x8c3c, "(Vector 0x4e) FIFO Interrupt")
     cx.m.set_block_comment(0x98aa, "(Vector 0x92) SCSI_T Interrupt")
