@@ -136,7 +136,6 @@ some "canonical" format.
         else:
             cx.m.set_label(a, "BITSPEC_%04x" % a)
         while cx.m[a] != 0xff:
-            print("K %04x" % a)
             y = data.Data(cx.m, a, a + 9)
             x = []
             for _j in range(8):
@@ -184,9 +183,9 @@ some "canonical" format.
         (0x6ab, "DIAG_DO_CMD_R0"),
         (0x6ac, "DIAG_DO_CMD_A"),
         (0x6b1, "DIAG_CMD_6"),
-        (0x6bb, "DIAG_CMD_0"),
-        (0x6cf, "DIAG_CMD_A"),
-        (0x701, "DIAG_CMD_2"),
+        (0x6bb, "DIAG_CMD_0_STATUS"),
+        (0x6cf, "DIAG_CMD_A_DOWNLOAD"),
+        (0x701, "DIAG_CMD_2_UPLOAD"),
         (0x71f, "DIAG_CMD_C"),
         (0x72c, "DIAG_CMD_E"),
         (0x739, "DIAG_CMD_4"),
