@@ -30,6 +30,8 @@
 '''
 
 import os
+import hashlib
+import importlib
 
 from pyreveng import mem, assy, data, listing
 
@@ -75,6 +77,20 @@ def r1k_experiment(fn, ident=None):
             adr += 1
     cx.hi_adr = adr
 
+    hash = hashlib.sha256(cx.m.bytearray(0, adr)).hexdigest()[:16]
+
+    try:
+        hashmod = importlib.import_module("details_" + hash)
+        cx.m.set_block_comment(0x10, "Hash " + hash + " (with python module)")
+        print("Hash", hash, "Module")
+    except ModuleNotFoundError:
+        cx.m.set_block_comment(0x10, " Hash " + hash + " (no python module)")
+        hashmod = None
+        print("Hash", hash, "No module")
+
+    if hashmod:
+        hashmod.early(cx)
+
     cx.subrs = set()
     cx.code_base = cx.m[0x10]
     y = cx.codeptr(0x10)
@@ -117,6 +133,9 @@ def r1k_experiment(fn, ident=None):
             y.typ = ".DATA"
             i += 1
 
+    if hashmod:
+        hashmod.late(cx)
+
     # code.lcmt_flows(cx.m)
     return cx
 
@@ -139,6 +158,18 @@ if __name__ == '__main__':
         )
         exit(0)
 
+    if len(sys.argv) == 2:
+        cx = r1k_experiment(sys.argv[1], sys.argv[1])
+        listing.Listing(
+            cx.m,
+            fn="/tmp/_exp",
+            ncol=6,
+            lo=0x10,
+            hi=cx.hi_adr,
+            charset=False,
+        )
+        exit(0)
+
     for ext in (
         ".M32",
         ".FIU",
@@ -148,7 +179,7 @@ if __name__ == '__main__':
         ".IOC",
         # ".MEM"
     ):
-        for fn in sorted(glob.glob("/critter/DDHF/R1000/hack/X/*NOVRAM*" + ext)):
+        for fn in sorted(glob.glob("/critter/DDHF/R1000/hack/X/*RF*" + ext)):
             bfn = os.path.basename(fn)
             print(bfn)
             try:
@@ -156,7 +187,7 @@ if __name__ == '__main__':
                 listing.Listing(
                     cx.m,
                     fn="/tmp/_." + bfn + ".EXP",
-                    ncol=4,
+                    ncol=5,
                     lo=0x10,
                     hi=cx.hi_adr,
                     charset=False,
