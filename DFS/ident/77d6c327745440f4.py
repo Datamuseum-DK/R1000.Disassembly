@@ -48,6 +48,9 @@ def round_0(cx):
         data.Const(cx.m, a, a + 4)
 
     for a in (
+        0xa560,
+        0xa569,
+        0xa571,
         0xa580,
         0xa585,
         0xa58f,
@@ -136,7 +139,8 @@ def round_1(cx):
         (0x8188, 0x81a0),
         (0x8234, 0x824c),
         (0xa4e0, 0xa518),
-        (0xa5b1, 0xa688),
+        (0xa5b1, 0xa641),
+        # (0xa641, 0xa688),
         (0xa68c, 0xa710),
         (0xa718, 0xa72c),
         (0xa734, 0xa740),
@@ -150,6 +154,10 @@ def round_1(cx):
         for i in range(a, b, 4):
             y = cx.codeptr(i)
             cx.m.set_block_comment(y.dst, "PTR @ 0x%x" % i)
+
+    for n, a in enumerate(range(0xa641, 0xa689, 4)):
+        y = cx.codeptr(a)
+        cx.m.set_label(y.dst, "MODEM_0x%x" % n)
 
     for a, b in (
         (0xa21c, 0xa246),
@@ -230,13 +238,15 @@ def round_1(cx):
 
     for a, b in (
         (0x1429, "XE1201_CTRL_COPY"),
-        (0x1434, "PHONE_NUMBER_PTR"),
+        (0x1434, "MODEM_TXBUF"),
         (0x1438, "MODEM_VEC_1"),
         (0x143c, "MODEM_VEC_2"),
         (0x1440, "MODEM_VEC_3"),
         (0x1444, "MODEM_VEC_4_RAISE_DTR"),
         (0x1448, "MODEM_VEC_5_LOWER_DTR"),
         (0x144c, "MODEM_VEC_6"),
+        (0x1481, "MODEM_EXPECT"),
+        (0x1485, "MODEM_STATE"),
         (0x163c, "Timeout_chain"),
         (0x2374, "TEXT_TO_CONSOLE()"),
         (0x32f4, "INIT_KERNEL_05_UARTS"),
