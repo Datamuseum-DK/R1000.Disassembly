@@ -66,12 +66,14 @@ x4C		var,var2,dst,>JC	|0 1 0 0 1 1 0 0| var		| var2		| dst		|
 x4D		imm,var,dst,>JC		|0 1 0 0 1 1 0 1| imm		| var		| dst		|
 x4EL		var,var2,dst,>JC	|0 1 0 0 1 1 1 0|0|var		| var2		| dst		|
 x4F		imm,var,dst,>JC		|0 1 0 0 1 1 1 1| imm		| var		| dst		|
-x50		var,var2		|0 1 0 1 0 0 0 0| var		| var2		|
-x51		imm,imm2,var,dst,>JC	|0 1 0 1 0 0 0 1| imm		| imm2		| var		| dst		|
 
-# Compare two bytes
-CMP2_BNE	var,var2,dst,>JC	|0 1 0 1 0 0 1 0|0|var		| var2		| dst		|
-CMP2_BNE	imm,imm2,var,dst,>JC	|0 1 0 1 0 0 1 1| imm		| imm2		| var		| dst		|
+# Compare two bytes, branch if equal
+BEQ.W		var,var2,dst,>JC	|0 1 0 1 0 0 0 0| var		| var2		| dst		|
+BEQ.W		wimm,var,dst,>JC	|0 1 0 1 0 0 0 1| imm		| imm2		| var		| dst		|
+
+# Compare two bytes, branch if non equal
+BNE.W		var,var2,dst,>JC	|0 1 0 1 0 0 1 0|0|var		| var2		| dst		|
+BNE.W		wimm,var,dst,>JC	|0 1 0 1 0 0 1 1| imm		| imm2		| var		| dst		|
 
 LOOP4		var,dst,>JC		|0 1 0 1 0 1 0 0| var		| dst		|
 LOOP6		var,dst,>JC		|0 1 0 1 0 1 1 0| var		| dst		|
@@ -116,7 +118,7 @@ STORE		imm,var			|1 0 0 0 1 1 1 1| imm		| var		|
 COPY2		var,var2		|1 0 0 1 0 0 0 0| var		| var2		|
 
 # Store two immediate bytes
-STORE2		imm,imm2,var		|1 0 0 1 0 0 0 1| imm		| imm2		| var		|
+STOREW		wimm,var		|1 0 0 1 0 0 0 1| imm		| imm2		| var		|
 
 ADD		var,var2		|1 0 0 1 0 0 1 0| var		| var2		|
 ADD		imm,var			|1 0 0 1 0 0 1 1| imm		| var		|
@@ -187,8 +189,8 @@ FSM_RP2		fsm,var			|1 1 0 0 1 1 0 0| fsm		| var		|
 FSM_RP2		fsm,R3			|1 1 0 0 1 1 0 1| fsm		|
 FSM_RP12	fsm,var			|1 1 0 0 1 1 1 0| fsm		| var		|
 FSM_RP12	fsm,R3			|1 1 0 0 1 1 1 1| fsm		|
-FSM_W16		var,fsm			|1 1 0 1 0 0 0 0| var		| fsm		|
-FSM_W16		imm,fsm			|1 1 0 1 0 0 1|m| imm		| fsm		|
+FSM_8X		var,fsm			|1 1 0 1 0 0 0 0| var		| fsm		|
+FSM_8X		imm,fsm			|1 1 0 1 0 0 1|m| imm		| fsm		|
 xD4		imm,imm2,var		|1 1 0 1 0 1 0 0| imm		| imm2		| var		|
 xD5		imm,var,var2		|1 1 0 1 0 1 0 1| imm		| var		| var2		|
 FSM8		-			|1 1 0 1 0 1 1|m|
@@ -226,6 +228,10 @@ class R1kExpIns(assy.Instree_ins):
     def assy_imm(self):
         ''' ... '''
         return assy.Arg_imm(self['imm'])
+
+    def assy_wimm(self):
+        ''' ... '''
+        return assy.Arg_imm((self['imm'] << 8)| self['imm2'])
 
     def assy_fsm(self):
         ''' ... '''
