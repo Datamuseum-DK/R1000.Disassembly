@@ -31,7 +31,9 @@ def early(cx):
     cx.m.set_block_comment(0x10, "Aka: TEST_WCS_ADDRESSING.IOC")
 
 def late(cx):
-    cx.m.set_line_comment(0x38, "{10} + {11} + {61}")
-    cx.m.set_line_comment(0x55, "Waits for RTCTR0 overflow")
+    cx.m.set_line_comment(0x36, "{48} Waits for RTCTR0 overflow")
+    cx.m.set_line_comment(0x3c, "{10} UIRS01 serial load")
+    cx.m.set_line_comment(0x3f, "{11} UIRS23 serial load")
+    cx.m.set_line_comment(0x42, "{61} WCS write, WCSA++")
+    cx.m.set_line_comment(0x55, "{48} Waits for RTCTR0 overflow")
     cx.m.set_line_comment(0x5b, "UIRSC parallel load")
-    cx.m.set_line_comment(0x42, "Writes to CSRAM")
