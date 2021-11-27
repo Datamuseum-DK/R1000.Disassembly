@@ -40,16 +40,16 @@ CALL_PT		subr,>CC		|0 0 0 1 1 1| x |
 CALL_PX		subr,>CC		|0 0 1 0 0 0| x |
 CALL_NPT	subr,>CC		|0 0 1 0 0 1| x |
 CALL_NPX	subr,>CC		|0 0 1 0 1 0| x |
-RET		>R 			|0 0 1 0 1 1 0|m|
+RET		>R			|0 0 1 0 1 1 0|m|
 RET_PT		>RC			|0 0 1 0 1 1 1|m|
 RET_PX		>RC			|0 0 1 1 0 0 0|m|
 RET_NPT		>RC			|0 0 1 1 0 0 1|m|
 RET_NPX		>RC			|0 0 1 1 0 1 0|m|
-JMP		dst,>J			|0 0 1 1 0 1 1|m| dst 		|
-JMP_PT		dst,>JC			|0 0 1 1 1 0 0|m| dst 		|
-JMP_PX		dst,>JC			|0 0 1 1 1 0 1|m| dst 		|
+JMP		dst,>J			|0 0 1 1 0 1 1|m| dst		|
+JMP_PT		dst,>JC			|0 0 1 1 1 0 0|m| dst		|
+JMP_PX		dst,>JC			|0 0 1 1 1 0 1|m| dst		|
 JMP_NPT		dst,>JC			|0 0 1 1 1 1 0|m| dst		|
-JMP_NPX		dst,>JC			|0 0 1 1 1 1 1|m| dst 		|
+JMP_NPX		dst,>JC			|0 0 1 1 1 1 1|m| dst		|
 x40		var,var2,dst,>JC	|0 1 0 0 0 0 0 0| var		| var2		| dst		|
 x41		imm,var,dst,>JC		|0 1 0 0 0 0 0 1| imm		| var		| dst		|
 x42		imm,var,dst,>JC		|0 1 0 0 0 0 1 0| imm		| var		| dst		|
@@ -82,7 +82,7 @@ LOOP8		var,dst,>JC		|0 1 0 1 1 0 0 0| var		| dst		|
 x59		-			|0 1 0 1 1 0 0 1|
 LOOPA		var,dst,>JC		|0 1 0 1 1 0 1 0| var		| dst		|
 x5B		-			|0 1 0 1 1 0 1 1|
-END		>R 			|0 1 0 1 1 1 0|m|
+END		>R			|0 1 0 1 1 1 0|m|
 LOOPE		imm,dst,>JC		|0 1 0 1 1 1 1 0| imm		| dst		|
 x5F		-			|0 1 0 1 1 1 1 1|
 FAIL3		-			|0 1 1 0 0 0 0|m|
@@ -115,18 +115,18 @@ COPY		var,var2		|1 0 0 0 1 1 1 0| var		| var2		|
 STORE		imm,var			|1 0 0 0 1 1 1 1| imm		| var		|
 
 # Copy two bytes from @var -> @var2
-COPY2		var,var2		|1 0 0 1 0 0 0 0| var		| var2		|
+STORE.W		var,var2		|1 0 0 1 0 0 0 0| var		| var2		|
 
 # Store two immediate bytes
-STOREW		wimm,var		|1 0 0 1 0 0 0 1| imm		| imm2		| var		|
+STORE.W		wimm,var		|1 0 0 1 0 0 0 1| imm		| imm2		| var		|
 
 ADD		var,var2		|1 0 0 1 0 0 1 0| var		| var2		|
 ADD		imm,var			|1 0 0 1 0 0 1 1| imm		| var		|
 x95		imm,imm2,var		|1 0 0 1 0 1 0 1| imm		| imm2		| var		|
 AND		var,var2		|1 0 0 1 0 1 1 0| var		| var2		|
 AND		imm,var			|1 0 0 1 0 1 1 1| imm		| var		|
-x98		var			|1 0 0 1 1 0 0 0| var		|
-x99		imm,imm2,var		|1 0 0 1 1 0 0 1| imm		| imm2		| var		|
+AND.W		var,var2		|1 0 0 1 1 0 0 0| var		| var2		|
+AND.W		wimm,var		|1 0 0 1 1 0 0 1| imm		| imm2		| var		|
 OR		var,var2		|1 0 0 1 1 0 1 0| var		| var2		|
 OR		imm,var2		|1 0 0 1 1 0 1 1| imm		| var2		|
 x9D		imm,imm2,var		|1 0 0 1 1 1 0 1| imm		| imm2		| var		|
@@ -139,16 +139,16 @@ xA4		imm,imm2,var		|1 0 1 0 0 1 0 0| imm		| imm2		| var		|
 xA5L		var,dst,>JC		|1 0 1 0 0 1 0 1|0|var		| dst		|
 
 # A6,A7,AA,AB Vector right shift/rotate ?  imm = nshift-1, imm2 = nbytes
-V_RIGHT.0	imm,imm2,var		|1 0 1 0 0 1 1 0| imm | imm2	| var		|
-V_RIGHT.0	imm,imm2,R3		|1 0 1 0 0 1 1 1| imm | imm2	|
-V_RIGHT.1	imm,imm2,var		|1 0 1 0 1 0 1 0| imm | imm2	| var		|
-V_RIGHT.1	imm,imm2,R3		|1 0 1 0 1 0 1 1| imm | imm2	|
+RIGHT.0		rot,var,vec		|1 0 1 0 0 1 1 0| rot | vec	| var		|
+RIGHT.0		rot,R3,vec		|1 0 1 0 0 1 1 1| rot | vec	|
+RIGHT.1		rot,var,vec		|1 0 1 0 1 0 1 0| rot | vec	| var		|
+RIGHT.1		rot,R3,vec		|1 0 1 0 1 0 1 1| rot | vec	|
 
 # A8,A9,AC,AD Vector left shift/rotate ?  imm = nshift-1, imm2 = nbytes
-V_LEFT.0	imm,imm2,var		|1 0 1 0 1 0 0 0| imm | imm2	| var		|
-V_LEFT.0	imm,imm2,R3		|1 0 1 0 1 0 0 1| imm | imm2	|
-V_LEFT.1	imm,imm2,var		|1 0 1 0 1 1 0 0| imm | imm2	| var		|
-V_LEFT.1	imm,imm2,R3		|1 0 1 0 1 1 0 0| imm | imm2	|
+SR.0		rot,var,vec		|1 0 1 0 1 0 0 0| rot | vec	| var		|
+SR.0		rot,R3,vec		|1 0 1 0 1 0 0 1| rot | vec	|
+SR.1		rot,var,vec		|1 0 1 0 1 1 0 0| rot | vec	| var		|
+SR.1		rot,R3,vec		|1 0 1 0 1 1 0 0| rot | vec	|
 
 # Vector operations, acts on #imm location starting at var/R3
 V_INV		imm,var			|1 0 1 0 1 1 1|0|1 0 0|imm	| var		|
@@ -157,7 +157,7 @@ V_oper		var,imm,imm2		|1 0 1 0 1 1 1|0|imm2 |imm	| var		|
 V_oper		R3,imm,imm2		|1 0 1 0 1 1 1|1|imm2 |imm	|
 xAE		dst,>JC			|1 0 1 0 1 1 1 0|0 0 0 0 1 0 0 0|0 0 0 1 1 0 1 0| dst		|
 
-# Vector operations, acts on #imm locations, at var+var2/R2+R3
+# Vector operations, acts on #imm locations, at var&var2/R2&R3
 #    example: TEST_RDR_SCAN.IOC
 V_CMP_BNE	imm,var,var2,>JC	|1 0 1 1 0 0 0 0|0 0 1| imm	| var		| var2		| dst		|
 V_CMP_BNE	imm,R2,R3,>JC		|1 0 1 1 0 0 0 1|0 0 1| imm	| dst		|
@@ -174,6 +174,8 @@ xB7		imm,var,var2		|1 0 1 1 0 1 1 1| imm		| var		| var2		|
 xB8		var			|1 0 1 1 1 0 0|m| var		|
 xBA		var,var2		|1 0 1 1 1 0 1 0| var		| var2		|
 FSM		fsm			|1 0 1 1 1 1 0|m| fsm		|
+
+XFR		I,TYPVAL,DUMMY		|BC|51|
 WP1_FSM		var,fsm			|1 0 1 1 1 1 1 0| var		| fsm		|
 WP1_FSM		R2,fsm			|1 0 1 1 1 1 1 1| fsm		|
 WP2_FSM		var,fsm			|1 1 0 0 0 0 0 0| var		| fsm		|
@@ -189,19 +191,25 @@ FSM_RP2		fsm,var			|1 1 0 0 1 1 0 0| fsm		| var		|
 FSM_RP2		fsm,R3			|1 1 0 0 1 1 0 1| fsm		|
 FSM_RP12	fsm,var			|1 1 0 0 1 1 1 0| fsm		| var		|
 FSM_RP12	fsm,R3			|1 1 0 0 1 1 1 1| fsm		|
+
 FSM_8X		var,fsm			|1 1 0 1 0 0 0 0| var		| fsm		|
 FSM_8X		imm,fsm			|1 1 0 1 0 0 1|m| imm		| fsm		|
+
+LOAD		I,imm,UIRSC01		|1 1 0 1 0 0 1 0| imm		|0 0 0 1 0 0 0 0|
+LOAD		I,imm,UIRSC23		|1 1 0 1 0 0 1 0| imm		|0 0 0 1 0 0 0 1|
+
 xD4		imm,imm2,var		|1 1 0 1 0 1 0 0| imm		| imm2		| var		|
 xD5		imm,var,var2		|1 1 0 1 0 1 0 1| imm		| var		| var2		|
 FSM8		-			|1 1 0 1 0 1 1|m|
 FSM2		-			|1 1 0 1 1 0 0|m|
 
-# imm2 is FSM command
-xDA_12		var,imm2		|1 1 0 1 1 0 1|m| col   |0 0 0|0| var		| imm2		|
-xDA_12		R2,imm2			|1 1 0 1 1 0 1|m| col   |0 0 0|1| imm2		|
+xDA_12		var,fsm			|1 1 0 1 1 0 1|m| col   |0 0 0|0| var		| fsm		|
+xDA_12		R2,fsm			|1 1 0 1 1 0 1|m| col   |0 0 0|1| fsm		|
+LOAD		I,var,DUMMY		|1 1 0 1 1 0 1 0|1 1 0 1 0 0 0 0| var		|0 0 1 0 0 0 0 0|
 
-xDA_34		var,imm2		|1 1 0 1 1 0 1|m| col   |0 0 1|0| var		| imm2		|
-xDA_34		R2,imm2			|1 1 0 1 1 0 1|m| col   |0 0 1|1| imm2		|
+xDA_34		var,fsm			|1 1 0 1 1 0 1|m| col   |0 0 1|0| var		| fsm		|
+xDA_34		R2,fsm			|1 1 0 1 1 0 1|m| col   |0 0 1|1| fsm		|
+LOAD		I,DUMMY,var,INV		|1 1 0 1 1 0 1 0|1 1 0 1 0 0 1 0| var		|0 0 1 0 0 0 0 1|
 
 # XXX: Not sure about these lengths
 xDA_56		var,imm2,>R		|1 1 0 1 1 0 1|m| col   |0 1|x|0| var		| imm2		|
@@ -211,27 +219,36 @@ xDA_56		R2,imm2,>R		|1 1 0 1 1 0 1|m| col   |0 1|x|1| imm2		|
 xDA_ac		var,imm2,>R		|1 1 0 1 1 0 1|m| col   |1|  x|0| var		| imm2		|
 xDA_ac		R2,imm2,>R		|1 1 0 1 1 0 1|m| col   |1|  x|1| imm2		|
 
-FAIL4		>R			|1 1 0 1 1 0 1|m|0 0 0 0 1 0 0 0|
+MISS_xDA	>R			|1 1 0 1 1 0 1|m|
 
-FAIL4		>R			|1 1 0 1|1 1| m |
-FAIL4		>R			|1 1 1 0| m     |
-FAIL4		>R			|1 1 1 1| m     |
+# Only implemented in MEM32 DIPROC
+FAIL4_MEM32	>R			|1 1 0 1|1 1| m |
+FAIL4_MEM32	>R			|1 1 1 0| m     |
+FAIL4_MEM32	>R			|1 1 1 1| m     |
 '''
 
 class R1kExpIns(assy.Instree_ins):
     ''' Experiment Instructions '''
 
+    def assy_vec(self):
+        ''' ... '''
+        return assy.Arg_verbatim("[0x%x]" % self['vec'])
+
     def assy_dax(self):
         ''' ... '''
         return assy.Arg_imm(self['dax'] | 0x80)
 
+    def assy_rot(self):
+        ''' ... '''
+        return assy.Arg_imm(self['rot'] + 1, wid=4)
+
     def assy_imm(self):
         ''' ... '''
-        return assy.Arg_imm(self['imm'])
+        return assy.Arg_imm(self['imm'], wid=8)
 
     def assy_wimm(self):
         ''' ... '''
-        return assy.Arg_imm((self['imm'] << 8)| self['imm2'])
+        return assy.Arg_imm((self['imm'] << 8)| self['imm2'], wid=16)
 
     def assy_fsm(self):
         ''' ... '''
@@ -282,3 +299,9 @@ class R1kExp(assy.Instree_disass):
         self.add_ins(R1K_EXP, R1kExpIns)
         self.verbatim += ("R2",)
         self.verbatim += ("R3",)
+        self.verbatim += ("I",)
+        self.verbatim += ("UIRSC01",)
+        self.verbatim += ("UIRSC23",)
+        self.verbatim += ("TYPVAL",)
+        self.verbatim += ("DUMMY",)
+        self.verbatim += ("INV",)
