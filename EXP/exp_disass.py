@@ -52,8 +52,8 @@ JMP_NPT		dst,>JC			|0 0 1 1 1 1 0|m| dst		|
 JMP_NPX		dst,>JC			|0 0 1 1 1 1 1|m| dst		|
 x40		var,var2,dst,>JC	|0 1 0 0 0 0 0 0| var		| var2		| dst		|
 x41		imm,var,dst,>JC		|0 1 0 0 0 0 0 1| imm		| var		| dst		|
-x42		imm,var,dst,>JC		|0 1 0 0 0 0 1 0| imm		| var		| dst		|
-x43		imm,var,dst,>JC		|0 1 0 0 0 0 1 1| imm		| var		| dst		|
+AND_JZ		imm,var,dst,>JC		|0 1 0 0 0 0 1 0| imm		| var		| dst		|
+AND_JNZ		imm,var,dst,>JC		|0 1 0 0 0 0 1 1| imm		| var		| dst		|
 x44		var,dst,>JC		|0 1 0 0 0 1 0 0| var		| dst		|
 x45		dst,>JC			|0 1 0 0 0 1 0 1| dst		|
 y46		var,dst,>JC		|0 1 0 0 0 1 1 0| var		| dst		|
@@ -109,7 +109,7 @@ DEC		var			|1 0 0 0 0 1 1|m| var		|
 x88		imm			|1 0 0 0 1 0 0 0| imm		|
 INV		var			|1 0 0 0 1 0 1|m| var		|
 
-CPL2		var			|1 0 0 0 1 1 0|m| var		|
+INV.W		var			|1 0 0 0 1 1 0|m| var		|
 
 COPY		var,var2		|1 0 0 0 1 1 1 0| var		| var2		|
 STORE		imm,var			|1 0 0 0 1 1 1 1| imm		| var		|
@@ -122,7 +122,8 @@ STORE.W		wimm,var		|1 0 0 1 0 0 0 1| imm		| imm2		| var		|
 
 ADD		var,var2		|1 0 0 1 0 0 1 0| var		| var2		|
 ADD		imm,var			|1 0 0 1 0 0 1 1| imm		| var		|
-x95		imm,imm2,var		|1 0 0 1 0 1 0 1| imm		| imm2		| var		|
+ADD.W		var,var2		|1 0 0 1 0 1 0 0| var		| var2		|
+ADD.W		wimm,var		|1 0 0 1 0 1 0 1| imm		| imm2		| var		|
 AND		var,var2		|1 0 0 1 0 1 1 0| var		| var2		|
 AND		imm,var			|1 0 0 1 0 1 1 1| imm		| var		|
 AND.W		var,var2		|1 0 0 1 1 0 0 0| var		| var2		|
