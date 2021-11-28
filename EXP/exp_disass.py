@@ -183,15 +183,15 @@ WP2_FSM		var,fsm			|1 1 0 0 0 0 0 0| var		| fsm		|
 WP2_FSM		R2,fsm			|1 1 0 0 0 0 0 1| fsm		|
 WP12_FSM	var,fsm			|1 1 0 0 0 0 1 0| var		| fsm		|
 WP12_FSM	R2,fsm			|1 1 0 0 0 0 1 1| fsm		|
-WP1_FSM		imm,fsm			|1 1 0 0 0 1 0|m| imm		| fsm		|
-WP2_FSM		imm,fsm			|1 1 0 0 0 1 1|m| imm		| fsm		|
-WP12_FSM	imm,imm2,fsm		|1 1 0 0 1 0 0|m| imm		| imm2		| fsm		|
-FSM_RP1		fsm,var			|1 1 0 0 1 0 1 0| fsm		| var		|
-FSM_RP1		fsm,R3			|1 1 0 0 1 0 1 1| fsm		|
-FSM_RP2		fsm,var			|1 1 0 0 1 1 0 0| fsm		| var		|
-FSM_RP2		fsm,R3			|1 1 0 0 1 1 0 1| fsm		|
-FSM_RP12	fsm,var			|1 1 0 0 1 1 1 0| fsm		| var		|
-FSM_RP12	fsm,R3			|1 1 0 0 1 1 1 1| fsm		|
+WFSM.L		imm,fsm			|1 1 0 0 0 1 0|m| imm		| fsm		|
+WFSM.H		imm,fsm			|1 1 0 0 0 1 1|m| imm		| fsm		|
+WFSM.W		wimm,fsm		|1 1 0 0 1 0 0|m| imm		| imm2		| fsm		|
+RFSM.L		fsm,var			|1 1 0 0 1 0 1 0| fsm		| var		|
+RFSM.L		fsm,R3			|1 1 0 0 1 0 1 1| fsm		|
+RFSM.H		fsm,var			|1 1 0 0 1 1 0 0| fsm		| var		|
+RFSM.H		fsm,R3			|1 1 0 0 1 1 0 1| fsm		|
+RFSM.W		fsm,var			|1 1 0 0 1 1 1 0| fsm		| var		|
+RFSM.W		fsm,R3			|1 1 0 0 1 1 1 1| fsm		|
 
 FSM_8X		var,fsm			|1 1 0 1 0 0 0 0| var		| fsm		|
 FSM_8X		imm,fsm			|1 1 0 1 0 0 1|m| imm		| fsm		|
