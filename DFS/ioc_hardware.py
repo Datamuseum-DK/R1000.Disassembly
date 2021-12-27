@@ -30,6 +30,25 @@
    ------------------------
 '''
 
+INTERRUPT_VECTORS = {
+    0x40: "PS.AC_PF",
+    0x41: "MAP_PERR",
+    0x42: "CONSOLE.BREAK",
+    0x43: "EXT_LEVEL_7",
+    0x44: "DIAG_BUS.RXRDY",
+    0x45: "CONSOLE.RXRDY",
+    0x46: "MODEM.RXRDY",
+    0x47: "MOSART.RXRDY",	# EXT_LEVEL6
+    0x48: "DIAG_BUS.TXRDY",
+    0x49: "CONSOLE.TXRDY",
+    0x4a: "MODEM.DSCHG",
+    0x4b: "MODEM.TXRDY",
+    0x4c: "MOSART.TXRDY",	# EXT_LEVEL1
+    0x4d: "RESPONSE_INTR",
+    0x4e: "REQUEST_INTR",
+    0x4f: "PITINT",
+}
+
 DEVICE_SYMBOLS = {
 
     0x9303e000: "IO_RESHA_SCA_CTL",
