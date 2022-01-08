@@ -32,68 +32,66 @@
 from pyreveng import assy
 
 R1K_EXP = '''
-REPEAT_L	imm			|0 0 0 0 0 0 0|m| imm		|
+REPEAT		imm			|0 0 0 0 0 0 0|m| imm		|
 REPEAT		imm			|0 0 0|   imm   |
 UNTIL		-			|0 0 0 1 0 1 1|m|
 CALL		subr,>C			|0 0 0 1 1 0| x |
-CALL_PT		subr,>CC		|0 0 0 1 1 1| x |
-CALL_PX		subr,>CC		|0 0 1 0 0 0| x |
-CALL_NPT	subr,>CC		|0 0 1 0 0 1| x |
-CALL_NPX	subr,>CC		|0 0 1 0 1 0| x |
+CALL		PT,subr,>CC		|0 0 0 1 1 1| x |
+CALL		PX,subr,>CC		|0 0 1 0 0 0| x |
+CALL		NPT,subr,>CC		|0 0 1 0 0 1| x |
+CALL		NPX,subr,>CC		|0 0 1 0 1 0| x |
 RET		>R			|0 0 1 0 1 1 0|m|
-RET_PT		>RC			|0 0 1 0 1 1 1|m|
-RET_PX		>RC			|0 0 1 1 0 0 0|m|
-RET_NPT		>RC			|0 0 1 1 0 0 1|m|
-RET_NPX		>RC			|0 0 1 1 0 1 0|m|
+RET		PT,>RC			|0 0 1 0 1 1 1|m|
+RET		PX,>RC			|0 0 1 1 0 0 0|m|
+RET		NPT,>RC			|0 0 1 1 0 0 1|m|
+RET		NPX,>RC			|0 0 1 1 0 1 0|m|
 JMP		dst,>J			|0 0 1 1 0 1 1|m| dst		|
-JMP_PT		dst,>JC			|0 0 1 1 1 0 0|m| dst		|
-JMP_PX		dst,>JC			|0 0 1 1 1 0 1|m| dst		|
-JMP_NPT		dst,>JC			|0 0 1 1 1 1 0|m| dst		|
-JMP_NPX		dst,>JC			|0 0 1 1 1 1 1|m| dst		|
-x40		var,var2,dst,>JC	|0 1 0 0 0 0 0 0| var		| var2		| dst		|
-x41		imm,var,dst,>JC		|0 1 0 0 0 0 0 1| imm		| var		| dst		|
-AND_JZ		imm,var,dst,>JC		|0 1 0 0 0 0 1 0| imm		| var		| dst		|
-AND_JNZ		imm,var,dst,>JC		|0 1 0 0 0 0 1 1| imm		| var		| dst		|
-x44		var,dst,>JC		|0 1 0 0 0 1 0 0| var		| dst		|
-x45		dst,>JC			|0 1 0 0 0 1 0 1| dst		|
-y46		var,dst,>JC		|0 1 0 0 0 1 1 0| var		| dst		|
-y47		dst,>JC			|0 1 0 0 0 1 1 1| dst		|
-x48		imm,dst,>JC		|0 1 0 0 1 0 0 0| imm		| dst		|
-x49		-			|0 1 0 0 1 0 0 1|
-x4A		var,dst,>JC		|0 1 0 0 1 0 1 0| var		| dst		|
-x4B		-			|0 1 0 0 1 0 1 1|
-x4C		var,var2,dst,>JC	|0 1 0 0 1 1 0 0| var		| var2		| dst		|
-x4D		imm,var,dst,>JC		|0 1 0 0 1 1 0 1| imm		| var		| dst		|
-x4EL		var,var2,dst,>JC	|0 1 0 0 1 1 1 0|0|var		| var2		| dst		|
-x4F		imm,var,dst,>JC		|0 1 0 0 1 1 1 1| imm		| var		| dst		|
+JMP		PT,dst,>JC		|0 0 1 1 1 0 0|m| dst		|
+JMP		PX,dst,>JC		|0 0 1 1 1 0 1|m| dst		|
+JMP		NPT,dst,>JC		|0 0 1 1 1 1 0|m| dst		|
+JMP		NPX,dst,>JC		|0 0 1 1 1 1 1|m| dst		|
+JMP		GT,var,var2,dst,>JC	|0 1 0 0 0 0 0 0| var		| var2		| dst		|
+JMP		LT,var,var2,dst,>JC	|0 1 0 0 0 0 0 1| var		| var2		| dst		|
+TEST		Z,imm,var,dst,>JC	|0 1 0 0 0 0 1 0| imm		| var		| dst		|
+TEST		NZ,imm,var,dst,>JC	|0 1 0 0 0 0 1 1| imm		| var		| dst		|
+JMP		Z,var,dst,>JC		|0 1 0 0 0 1 0|m| var		| dst		|
+JMP		NZ,var,dst,>JC		|0 1 0 0 0 1 1|m| var		| dst		|
+JMP.W		Z,var,dst,>JC		|0 1 0 0 1 0 0|m| var		| dst		|
+JMP.W		NZ,var,dst,>JC		|0 1 0 0 1 0 1|m| var		| dst		|
+JMP		EQ,var,var2,dst,>JC	|0 1 0 0 1 1 0 0| var		| var2		| dst		|
+JMP		EQ,imm,var,dst,>JC	|0 1 0 0 1 1 0 1| imm		| var		| dst		|
+JMP		NE,var,var2,dst,>JC	|0 1 0 0 1 1 1 0| var		| var2		| dst		|
+JMP		NE,imm,var,dst,>JC	|0 1 0 0 1 1 1 1| imm		| var		| dst		|
 
 # Compare two bytes, branch if equal
-BEQ.W		var,var2,dst,>JC	|0 1 0 1 0 0 0 0| var		| var2		| dst		|
-BEQ.W		wimm,var,dst,>JC	|0 1 0 1 0 0 0 1| imm		| imm2		| var		| dst		|
+JMP.W		EQ,var,var2,dst,>JC	|0 1 0 1 0 0 0 0| var		| var2		| dst		|
+JMP.W		EQ,wimm,var,dst,>JC	|0 1 0 1 0 0 0 1| imm		| imm2		| var		| dst		|
 
 # Compare two bytes, branch if non equal
-BNE.W		var,var2,dst,>JC	|0 1 0 1 0 0 1 0|0|var		| var2		| dst		|
-BNE.W		wimm,var,dst,>JC	|0 1 0 1 0 0 1 1| imm		| imm2		| var		| dst		|
+JMP.W		NE,var,var2,dst,>JC	|0 1 0 1 0 0 1 0| var		| var2		| dst		|
+JMP.W		NE,wimm,var,dst,>JC	|0 1 0 1 0 0 1 1| imm		| imm2		| var		| dst		|
 
-LOOP4		var,dst,>JC		|0 1 0 1 0 1 0 0| var		| dst		|
-LOOP6		var,dst,>JC		|0 1 0 1 0 1 1 0| var		| dst		|
-x57		-			|0 1 0 1 0 1 1 1|
-LOOP8		var,dst,>JC		|0 1 0 1 1 0 0 0| var		| dst		|
-x59		-			|0 1 0 1 1 0 0 1|
-LOOPA		var,dst,>JC		|0 1 0 1 1 0 1 0| var		| dst		|
-x5B		-			|0 1 0 1 1 0 1 1|
+# Decrement, jump not zero
+DJNZ		var,dst,>JC		|0 1 0 1 0 1 0|m| var		| dst		|
+DJNZ.W		var,dst,>JC		|0 1 0 1 0 1 1|m| var		| dst		|
+
+# Decrement, jump not negative
+DJNN		var,dst,>JC		|0 1 0 1 1 0 0|m| var		| dst		|
+DJNN.W		var,dst,>JC		|0 1 0 1 1 0 1|m| var		| dst		|
+
 END		>R			|0 1 0 1 1 1 0|m|
-LOOPE		imm,dst,>JC		|0 1 0 1 1 1 1 0| imm		| dst		|
-x5F		-			|0 1 0 1 1 1 1 1|
-FAIL3		-			|0 1 1 0 0 0 0|m|
-x62		imm			|0 1 1 0 0 0 1 0| imm		|
-y63		-			|0 1 1 0 0 0 1 1|
-SET_PT		-			|0 1 1 0 0 1 0|m|
-SET_PX		-			|0 1 1 0 0 1 1|m|
-CLR_PT		-			|0 1 1 0 1 0 0|m|
-CLR_PX		-			|0 1 1 0 1 0 1|m|
-PTINV		-			|0 1 1 0 1 1 0|m|
-PXINV		-			|0 1 1 0 1 1 1|m|
+LOOPE		imm,dst,>JC		|0 1 0 1 1 1 1|m| imm		| dst		|
+PAUSE		-			|0 1 1 0 0 0 0|m|
+
+# Delay in units of 50µs
+DELAY		imm			|0 1 1 0 0 0 1|m| imm		|
+
+SET		PT			|0 1 1 0 0 1 0|m|
+SET		PX			|0 1 1 0 0 1 1|m|
+CLR		PT			|0 1 1 0 1 0 0|m|
+CLR		PX			|0 1 1 0 1 0 1|m|
+INV		PT			|0 1 1 0 1 1 0|m|
+INV		PX			|0 1 1 0 1 1 1|m|
 LD		R2,var			|0 1 1 1 0 0 0|m| var		|
 LD		R3,var			|0 1 1 1 0 0 1|m| var		|
 INC		R2			|0 1 1 1 0 1 0|m|
@@ -103,22 +101,24 @@ DEC		R3			|0 1 1 1 1 0 1|m|
 ADD		R2,imm			|0 1 1 1 1 1 0|m| imm		|
 ADD		R3,imm			|0 1 1 1 1 1 1|m| imm		|
 XHG		R2,R3			|1 0 0 0 0 0 0|m|
-INC		var			|1 0 0 0 0 0 1|m| var		|
-INC2		var			|1 0 0 0 0 1 0|m| var		|
-DEC		var			|1 0 0 0 0 1 1|m| var		|
-x88		imm			|1 0 0 0 1 0 0 0| imm		|
-INV		var			|1 0 0 0 1 0 1|m| var		|
 
+INC		var			|1 0 0 0 0 0 1|m| var		|
+INC.W		var			|1 0 0 0 0 1 0|m| var		|
+
+DEC		var			|1 0 0 0 0 1 1|m| var		|
+DEC.W		var			|1 0 0 0 1 0 0|m| var		|
+
+INV		var			|1 0 0 0 1 0 1|m| var		|
 INV.W		var			|1 0 0 0 1 1 0|m| var		|
 
-COPY		var,var2		|1 0 0 0 1 1 1 0| var		| var2		|
-STORE		imm,var			|1 0 0 0 1 1 1 1| imm		| var		|
+MOV		var,var2		|1 0 0 0 1 1 1 0| var		| var2		|
+MOV		imm,var			|1 0 0 0 1 1 1 1| imm		| var		|
 
 # Copy two bytes from @var -> @var2
-STORE.W		var,var2		|1 0 0 1 0 0 0 0| var		| var2		|
+MOV.W		var,var2		|1 0 0 1 0 0 0 0| var		| var2		|
 
 # Store two immediate bytes
-STORE.W		wimm,var		|1 0 0 1 0 0 0 1| imm		| imm2		| var		|
+MOV.W		wimm,var		|1 0 0 1 0 0 0 1| imm		| imm2		| var		|
 
 ADD		var,var2		|1 0 0 1 0 0 1 0| var		| var2		|
 ADD		imm,var			|1 0 0 1 0 0 1 1| imm		| var		|
@@ -130,18 +130,20 @@ AND.W		var,var2		|1 0 0 1 1 0 0 0| var		| var2		|
 AND.W		wimm,var		|1 0 0 1 1 0 0 1| imm		| imm2		| var		|
 OR		var,var2		|1 0 0 1 1 0 1 0| var		| var2		|
 OR		imm,var2		|1 0 0 1 1 0 1 1| imm		| var2		|
-x9D		imm,imm2,var		|1 0 0 1 1 1 0 1| imm		| imm2		| var		|
+OR.W		var,var2		|1 0 0 1 1 1 0 0| var		| var2		|
+OR.W		wimm,var		|1 0 0 1 1 1 0 1| imm		| imm2		| var		|
 XOR		var,var2		|1 0 0 1 1 1 1 0| var		| var2		|
 XOR		imm,var			|1 0 0 1 1 1 1 1| imm		| var		|
-xA0		var,var2		|1 0 1 0 0 0 0 0| var		| var2		|
-xA1		imm,imm2,var		|1 0 1 0 0 0 0 1| imm		| imm2		| var		|
-xA2		-			|1 0 1 0 0 0 1 0|
-xA4		imm,imm2,var		|1 0 1 0 0 1 0 0| imm		| imm2		| var		|
-xA5L		var,dst,>JC		|1 0 1 0 0 1 0 1|0|var		| dst		|
+XOR.W		var,var2		|1 0 1 0 0 0 0 0| var		| var2		|
+XOR.W		wimm,var		|1 0 1 0 0 0 0 1| imm		| imm2		| var		|
+VADD		vec,imm,var		|1 0 1 0 0 0 1 0| vec		| imm		| var		|
+VADD		vec,imm,R3		|1 0 1 0 0 0 1 1| vec		| imm		|
+VSUB		vec,imm,var		|1 0 1 0 0 1 0 0| vec		| imm		| var		|
+VSUB		vec,imm,R3		|1 0 1 0 0 1 0 1| vec		| imm		|
 
 # A6,A7,AA,AB Vector right shift/rotate ?  imm = nshift-1, imm2 = nbytes
-RIGHT.0		rot,var,vec		|1 0 1 0 0 1 1 0| rot | vec	| var		|
-RIGHT.0		rot,R3,vec		|1 0 1 0 0 1 1 1| rot | vec	|
+LEFT.0		rot,var,vec		|1 0 1 0 0 1 1 0| rot | vec	| var		|
+LEFT.0		rot,R3,vec		|1 0 1 0 0 1 1 1| rot | vec	|
 RIGHT.1		rot,var,vec		|1 0 1 0 1 0 1 0| rot | vec	| var		|
 RIGHT.1		rot,R3,vec		|1 0 1 0 1 0 1 1| rot | vec	|
 
@@ -149,24 +151,39 @@ RIGHT.1		rot,R3,vec		|1 0 1 0 1 0 1 1| rot | vec	|
 SR.0		rot,var,vec		|1 0 1 0 1 0 0 0| rot | vec	| var		|
 SR.0		rot,R3,vec		|1 0 1 0 1 0 0 1| rot | vec	|
 SR.1		rot,var,vec		|1 0 1 0 1 1 0 0| rot | vec	| var		|
-SR.1		rot,R3,vec		|1 0 1 0 1 1 0 0| rot | vec	|
+SR.1		rot,R3,vec		|1 0 1 0 1 1 0 1| rot | vec	|
 
 # Vector operations, acts on #imm location starting at var/R3
-V_INV		imm,var			|1 0 1 0 1 1 1|0|1 0 0|imm	| var		|
-V_INV		imm,R3			|1 0 1 0 1 1 1|1|1 0 0|imm	|
-V_oper		var,imm,imm2		|1 0 1 0 1 1 1|0|imm2 |imm	| var		|
-V_oper		R3,imm,imm2		|1 0 1 0 1 1 1|1|imm2 |imm	|
+VJMP		Z,vec,var,dst,>JC	|1 0 1 0 1 1 1|0|0 0 0|vec	| var		| dst		|
+VJMP		Z,vec,R3,dst,>JC	|1 0 1 0 1 1 1|1|0 0 0|vec	| dst		|
+VJMP		NZ,vec,var,dst,>JC	|1 0 1 0 1 1 1|0|0 0 1|vec	| var		| dst		|
+VJMP		NZ,vec,R3,dst,>JC	|1 0 1 0 1 1 1|1|0 0 1|vec	| dst		|
+VINC		vec,var			|1 0 1 0 1 1 1|0|0 1 0|vec	| var		|
+VINC		vec,R3			|1 0 1 0 1 1 1|1|0 1 0|vec	|
+VDEC		vec,var			|1 0 1 0 1 1 1|0|0 1 1|vec	| var		|
+VDEC		vec,R3			|1 0 1 0 1 1 1|1|0 1 1|vec	|
+VINV		vec,var			|1 0 1 0 1 1 1|0|1 0 0|vec	| var		|
+VINV		vec,R3			|1 0 1 0 1 1 1|1|1 0 0|vec	|
+BAD_INS		-			|1 0 1 0 1 1 1|m|
+
 xAE		dst,>JC			|1 0 1 0 1 1 1 0|0 0 0 0 1 0 0 0|0 0 0 1 1 0 1 0| dst		|
 
-# Vector operations, acts on #imm locations, at var&var2/R2&R3
-#    example: TEST_RDR_SCAN.IOC
-V_CMP_BNE	imm,var,var2,>JC	|1 0 1 1 0 0 0 0|0 0 1| imm	| var		| var2		| dst		|
-V_CMP_BNE	imm,R2,R3,>JC		|1 0 1 1 0 0 0 1|0 0 1| imm	| dst		|
-V_XOR		imm,var,var2		|1 0 1 1 0 0 0 0|1 1 0| imm	| var		| var2		|
-V_XOR		imm,R2,R3		|1 0 1 1 0 0 0 1|1 1 0| imm	|
+VJMP		EQ,vec,var,var2,dst,>JC	|1 0 1 1 0 0 0 0|0 0 0| vec	| var		| var2		| dst		|
+VJMP		EQ,vec,R2,R3,dst,>JC	|1 0 1 1 0 0 0 1|0 0 0| vec	| dst		|
+VJMP		NE,vec,var,var2,dst,>JC	|1 0 1 1 0 0 0 0|0 0 1| vec	| var		| var2		| dst		|
+VJMP		NE,vec,R2,R3,dst,>JC	|1 0 1 1 0 0 0 1|0 0 1| vec	| dst		|
+VMOV		vec,var,var2		|1 0 1 1 0 0 0 0|0 1 0| vec	| var		| var2		|
+VMOV		vec,@R2,@R3		|1 0 1 1 0 0 0 1|0 1 0| vec	|
+VADD		vec,var,var2		|1 0 1 1 0 0 0 0|0 1 1| vec	| var		| var2		|
+VADD		vec,R2,R3		|1 0 1 1 0 0 0 1|0 1 1| vec	|
+VAND		vec,var,var2		|1 0 1 1 0 0 0 0|1 0 0| vec	| var		| var2		|
+VAND		vec,R2,R3		|1 0 1 1 0 0 0 1|1 0 0| vec	|
+VOR		vec,var,var2		|1 0 1 1 0 0 0 0|1 0 1| vec	| var		| var2		|
+VOR		vec,R2,R3		|1 0 1 1 0 0 0 1|1 0 1| vec	|
+VXOR		vec,var,var2		|1 0 1 1 0 0 0 0|1 1 0| vec	| var		| var2		|
+VXOR		vec,R2,R3		|1 0 1 1 0 0 0 1|1 1 0| vec	|
 
-xB0_?		imm,imm2,var,var2	|1 0 1 1 0 0 0 0| imm | imm2	| var		| var2		|
-xB1_?		imm,imm2,R2,R3		|1 0 1 1 0 0 0 1| imm | imm2	|
+BAD_INS		-			|1 0 1 1 0 0 0|m|
 
 xB2		var,imm,imm2		|1 0 1 1 0 0 1|m| var		| imm		| imm2		|
 xB4		var,var2		|1 0 1 1 0 1 0|m| var		| var2		|
@@ -176,7 +193,6 @@ xB8		var			|1 0 1 1 1 0 0|m| var		|
 xBA		var,var2		|1 0 1 1 1 0 1 0| var		| var2		|
 FSM		fsm			|1 0 1 1 1 1 0|m| fsm		|
 
-XFR		I,TYPVAL,DUMMY		|BC|51|
 WP1_FSM		var,fsm			|1 0 1 1 1 1 1 0| var		| fsm		|
 WP1_FSM		R2,fsm			|1 0 1 1 1 1 1 1| fsm		|
 WP2_FSM		var,fsm			|1 1 0 0 0 0 0 0| var		| fsm		|
@@ -189,43 +205,65 @@ WFSM.W		wimm,fsm		|1 1 0 0 1 0 0|m| imm		| imm2		| fsm		|
 RFSM.L		fsm,var			|1 1 0 0 1 0 1 0| fsm		| var		|
 RFSM.L		fsm,R3			|1 1 0 0 1 0 1 1| fsm		|
 RFSM.H		fsm,var			|1 1 0 0 1 1 0 0| fsm		| var		|
-RFSM.H		fsm,R3			|1 1 0 0 1 1 0 1| fsm		|
+RFSM.H		fsm,@R3			|1 1 0 0 1 1 0 1| fsm		|
 RFSM.W		fsm,var			|1 1 0 0 1 1 1 0| fsm		| var		|
 RFSM.W		fsm,R3			|1 1 0 0 1 1 1 1| fsm		|
 
 FSM_8X		var,fsm			|1 1 0 1 0 0 0 0| var		| fsm		|
 FSM_8X		imm,fsm			|1 1 0 1 0 0 1|m| imm		| fsm		|
 
-LOAD		I,imm,UIRSC01		|1 1 0 1 0 0 1 0| imm		|0 0 0 1 0 0 0 0|
-LOAD		I,imm,UIRSC23		|1 1 0 1 0 0 1 0| imm		|0 0 0 1 0 0 0 1|
-
-xD4		imm,imm2,var		|1 1 0 1 0 1 0 0| imm		| imm2		| var		|
+xD4_RCV		imm,fsm,var		|1 1 0 1 0 1 0 0| imm		| fsm		| var		|
 xD5		imm,var,var2		|1 1 0 1 0 1 0 1| imm		| var		| var2		|
 FSM8		-			|1 1 0 1 0 1 1|m|
 FSM2		-			|1 1 0 1 1 0 0|m|
 
-xDA_12		var,fsm			|1 1 0 1 1 0 1|m| col   |0 0 0|0| var		| fsm		|
-xDA_12		R2,fsm			|1 1 0 1 1 0 1|m| col   |0 0 0|1| fsm		|
-LOAD		I,var,DUMMY		|1 1 0 1 1 0 1 0|1 1 0 1 0 0 0 0| var		|0 0 1 0 0 0 0 0|
+CHN_SND		var,chn			|1 1 0 1 1 0 1|m| chn   |0 0 0|0| var		| fsm		|
+CHN_SND		@R2,chn			|1 1 0 1 1 0 1|m| chn   |0 0 0|1| fsm		|
 
-xDA_34		var,fsm			|1 1 0 1 1 0 1|m| col   |0 0 1|0| var		| fsm		|
-xDA_34		R2,fsm			|1 1 0 1 1 0 1|m| col   |0 0 1|1| fsm		|
-LOAD		I,DUMMY,var,INV		|1 1 0 1 1 0 1 0|1 1 0 1 0 0 1 0| var		|0 0 1 0 0 0 0 1|
+CHN_RCV		chn,var			|1 1 0 1 1 0 1|m| chn   |0 0 1|0| var		| fsm		|
+CHN_RCV		chn,@R3			|1 1 0 1 1 0 1|m| chn   |0 0 1|1| fsm		|
+
+CHN_CMP		EQ,var,chn,dst,>JC	|1 1 0 1 1 0 1|m| chn   |0 1 0|0| var		| fsm		| dst		|
+CHN_CMP		EQ,@R2,chn,dst,>JC	|1 1 0 1 1 0 1|m| chn   |0 1 0|1| fsm		| dst		|
+CHN_CMP		NE,var,chn,dst,>JC	|1 1 0 1 1 0 1|m| chn   |0 1 1|0| var		| fsm		| dst		|
+CHN_CMP		NE,@R2,chn,dst,>JC	|1 1 0 1 1 0 1|m| chn   |0 1 1|1| fsm		| dst		|
 
 # XXX: Not sure about these lengths
-xDA_56		var,imm2,>R		|1 1 0 1 1 0 1|m| col   |0 1|x|0| var		| imm2		|
-xDA_56		R2,imm2,>R		|1 1 0 1 1 0 1|m| col   |0 1|x|1| imm2		|
+CHN_TST		NZ,chn,dst,>JC		|1 1 0 1 1 0 1|m| chn	|1 0 0 1| fsm		| dst		|
+CHN_TST		Z,chn,dst,>JC		|1 1 0 1 1 0 1|m| chn	|1 1 0 1| fsm		| dst		|
+CHN_TST		??,chn,dst,>JC		|1 1 0 1 1 0 1|m| chn	|1|y|x|1| fsm		| dst		|
 
-# XXX: Not sure about these lengths
-xDA_ac		var,imm2,>R		|1 1 0 1 1 0 1|m| col   |1|  x|0| var		| imm2		|
-xDA_ac		R2,imm2,>R		|1 1 0 1 1 0 1|m| col   |1|  x|1| imm2		|
+CHN_QQQ		-,>R			|1 1 0 1 1 0 1|m|
 
-MISS_xDA	>R			|1 1 0 1 1 0 1|m|
+P1		imm			|1 1 0 1 1 1 0|m| imm		|
+P2		imm			|1 1 0 1 1 1 1|m| imm		|
+P1_AO		imm,var			|1 1 1 0 0 0 0 0| imm		| var		|
+P1_AO		imm,imm2		|1 1 1 0 0 0 0 1| imm		| imm2		|
+P2_AO		imm,var			|1 1 1 0 0 0 1 0| imm		| var		|
+P2_AO		imm,imm2		|1 1 1 0 0 0 1 1| imm		| imm2		|
+CALL		DFLG,subr,>CC		|1 1 1 0 0 1| x |
+CALL		NDFLG,subr,>CC		|1 1 1 0 1 0| x |
+RET		DFLG,>RC		|1 1 1 0 1 1 1|m|
+JMP		DFLG,dst,>JC		|1 1 1 1 0 0 0|m| dst		|
+JMP		NDFLG,dst,>JC		|1 1 1 1 0 0 1|m| dst		|
 
 # Only implemented in MEM32 DIPROC
-FAIL4_MEM32	>R			|1 1 0 1|1 1| m |
-FAIL4_MEM32	>R			|1 1 1 0| m     |
-FAIL4_MEM32	>R			|1 1 1 1| m     |
+FAIL4LO		>R			|0| bla		|
+FAIL4HI		>R			|1| bla		|
+'''
+
+R1K_EXP_IOC = '''
+IOC_SND		imm,UIRSC01		|1 1 0 1 0 0 1 0| imm		|0 0 0 1 0 0 0 0|
+IOC_SND		imm,UIRSC23		|1 1 0 1 0 0 1 0| imm		|0 0 0 1 0 0 0 1|
+IOC_XFR		TYPVAL,DUMMY		|BC|51|
+'''
+
+
+R1K_EXP_FIU = '''
+FIU_SND		imm,MDREG		|1 1 0 1 0 0 1 0| imm		|0 0 0 1 0 0 0 0|
+FIU_SND		imm,PAREG		|1 1 0 1 0 0 1 0| imm		|0 1 0 1 0 0 0 0|
+
+FIU_RCV		PAREG,var		|1 1 0 1 0 1 0 0|0 0 0 0 1 0 0 0|0 1 0 1 0 0 0 1| var		|
 '''
 
 class R1kExpIns(assy.Instree_ins):
@@ -251,6 +289,26 @@ class R1kExpIns(assy.Instree_ins):
         ''' ... '''
         return assy.Arg_imm((self['imm'] << 8)| self['imm2'], wid=16)
 
+    def assy_chn(self):
+        ''' ... '''
+        chain = {
+            0x00: "M.00",
+            0x01: "M.01",
+            0x02: "M.02",
+            0x03: "TV.03", # probably registerfile
+            0x04: "V.04",
+            0x05: "T.05",
+            0x06: "F.MAR",
+            0x07: "F.MDREG",
+            0x08: "F.UIR",
+            0x09: "S.09",
+            0x0a: "S.0a",
+            0x0b: "S.0b",
+            0x0c: "S.0c",
+            0x0d: "I.DUMMY",
+        }.get(self['chn'], "%02x" % self['chn'])
+        return assy.Arg_verbatim("{" + chain + ":%02x}" % self['fsm'])
+
     def assy_fsm(self):
         ''' ... '''
         return assy.Arg_verbatim("{%02x}" % self['fsm'])
@@ -261,17 +319,17 @@ class R1kExpIns(assy.Instree_ins):
 
     def assy_var(self):
         ''' ... '''
-        a  = self['var']
-        if a >= self.lang.code_base:
-            self.lang.m.set_attr(a, 1)
-        return assy.Arg_dst(self.lang.m, a)
+        adr  = self['var']
+        if adr >= self.lang.code_base:
+            self.lang.m.set_attr(adr, 1)
+        return assy.Arg_dst(self.lang.m, adr)
 
     def assy_var2(self):
         ''' ... '''
-        a  = self['var2']
-        if a >= self.lang.code_base:
-            self.lang.m.set_attr(a, 1)
-        return assy.Arg_dst(self.lang.m, a)
+        adr  = self['var2']
+        if adr >= self.lang.code_base:
+            self.lang.m.set_attr(adr, 1)
+        return assy.Arg_dst(self.lang.m, adr)
 
     def assy_dst(self):
         ''' ... '''
@@ -280,17 +338,17 @@ class R1kExpIns(assy.Instree_ins):
 
     def assy_subr(self):
         ''' ... '''
-        a = self.lang.m[self.lo]
-        self.dst_adr = self.lang.m[a]
-        if not self.dst_adr:
+        adr = self['x'] + 0x18
+        self.dstadr = self.lang.m[adr]
+        if not self.dstadr:
             raise assy.Invalid()
-        self.lang.codeptr(a)
-        self.lang.subrs.add(self.dst_adr)
-        return assy.Arg_dst(self.lang.m, self.dst_adr)
+        self.lang.codeptr(adr)
+        self.lang.subrs.add(self.dstadr)
+        return assy.Arg_dst(self.lang.m, self.dstadr)
 
 class R1kExp(assy.Instree_disass):
     ''' Experiment "CPU" '''
-    def __init__(self, lang="R1KEXP"):
+    def __init__(self, lang="R1KEXP", board=None):
         super().__init__(
             lang,
             ins_word=8,
@@ -298,11 +356,18 @@ class R1kExp(assy.Instree_disass):
             abits=8,
         )
         self.add_ins(R1K_EXP, R1kExpIns)
-        self.verbatim += ("R2",)
-        self.verbatim += ("R3",)
-        self.verbatim += ("I",)
-        self.verbatim += ("UIRSC01",)
-        self.verbatim += ("UIRSC23",)
-        self.verbatim += ("TYPVAL",)
-        self.verbatim += ("DUMMY",)
-        self.verbatim += ("INV",)
+        extra = {
+            "IOC": R1K_EXP_IOC,
+            "FIU": R1K_EXP_FIU,
+        }.get(board)
+        if extra is not None:
+            self.add_ins(extra, R1kExpIns)
+        self.verbatim += (
+            "R2", "R3", "I", "@R2", "@R3",
+            "UIRSC01", "UIRSC23",
+            "TYPVAL", "DUMMY", "INV",
+            "PT", "PX", "NPT", "NPX",
+            "NZ", "Z", "NE", "EQ", "LT", "GT",
+            "DFLG", "NDFLG",
+            "UIR", "MDREG", "MAR", "PAREG",
+        )

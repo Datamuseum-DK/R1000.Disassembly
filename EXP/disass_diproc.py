@@ -228,7 +228,7 @@ unpermute the bits between the serial scan-chain and
 some "canonical" format.
 ''')
         for adr, lbl  in (
-            (0x0746, "BITSPEC_RF_TYP"),
+            (0x0746, "BITSPEC_TYP_RF"),
             (0x07c0, None),
             (0x0812, None),
             (0x0864, None),
@@ -240,8 +240,8 @@ some "canonical" format.
             (0x0bf4, None),
             (0x0c92, None),
             (0x0cbc, None),
-            (0x0d05, "BITSPEC_MDREG_FIU"),
-            (0x0d4e, "BITSPEC_UIR_FIU"),
+            (0x0d05, "BITSPEC_FIU_MDREG"),
+            (0x0d4e, "BITSPEC_FIU_UIR"),
             (0x0da0, None),
             (0x0e31, None),
             (0x0e83, None),

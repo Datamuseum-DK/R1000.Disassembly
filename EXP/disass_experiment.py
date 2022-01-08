@@ -37,8 +37,6 @@ from pyreveng import mem, assy, data, listing
 
 from exp_disass import R1kExp
 
-FILENAME = os.path.join(os.path.split(__file__)[0], "READ_NOVRAM.M32")
-
 class ExpMem(mem.ByteMem):
     '''
        Subclass with "volatile" attributes
@@ -55,9 +53,23 @@ class ExpMem(mem.ByteMem):
             return self.undef
         return "%02x" % d + [' ', "'", '"', '+'][self.get_attr(adr)]
 
+class Param():
+    def __init__(self, spec):
+        self.spec = spec
+        self.adr = int(spec[1:3], 16)
+        self.dir = spec[3]
+        self.typ = spec[4]
+        self.sz = int(spec[5:7], 16)
+        self.cmt = spec[7:].strip()
+
+    def __lt__(self, other):
+        if self.sz != other.sz:
+            return self.sz < other.sz
+        return 0
+
 def r1k_experiment(fn, ident=None):
     ''' Disassemble an experiment file '''
-    cx = R1kExp()
+    cx = R1kExp(board=fn[-3:])
     cx.ident = ident
     m = ExpMem(0, 0xff, attr=2)
     cx.m.map(m, 0)
@@ -70,7 +82,7 @@ def r1k_experiment(fn, ident=None):
         if not i:
             continue
         if i[0] == "P":
-            params.append(i)
+            params.append(Param(i))
         else:
             j = i.split()
             m[adr] = int(j[0], 16)
@@ -82,11 +94,9 @@ def r1k_experiment(fn, ident=None):
     try:
         hashmod = importlib.import_module("details_" + hash)
         cx.m.set_block_comment(0x10, "Hash " + hash + " (with python module)")
-        print("Hash", hash, "Module")
     except ModuleNotFoundError:
         cx.m.set_block_comment(0x10, " Hash " + hash + " (no python module)")
         hashmod = None
-        print("Hash", hash, "No module")
 
     if hashmod:
         hashmod.early(cx)
@@ -100,25 +110,12 @@ def r1k_experiment(fn, ident=None):
     for i in range(1, 8):
         cx.m.set_label(0x10 + i, "R%d_" % i)
 
-    for i in params:
-        a = int(i[1:3], 16)
-        b = int(i[5:6], 16)
-        if a+b <= cx.code_base:
-            cx.m.set_line_comment(a, i)
-            for j in range(a, a + b):
-                cx.m.set_attr(j, 2)
-            if b:
-                y = data.Const(cx.m, a, a + b)
-                y.typ = ".PARAM"
+    for p in sorted(params):
+        y = list(cx.m.find(p.adr))
+        if len(y) > 0:
+            cx.m.set_line_comment(y[0].lo, p.spec)
         else:
-            for j in range(a, a + b):
-                cx.m.set_attr(j, 2)
-            j = list(cx.m.find(lo=a, hi=a+b))
-            print(j, "A 0x%x" % a)
-            if len(j) > 0:
-                cx.m.set_line_comment(j[0].lo, i)
-            else:
-                cx.m.set_line_comment(a, i)
+            cx.m.set_line_comment(p.adr, p.spec)
 
     for i in cx.subrs:
         cx.m.set_block_comment(i, "Subroutine")
@@ -181,7 +178,7 @@ if __name__ == '__main__':
     ):
         for fn in sorted(glob.glob("/critter/DDHF/R1000/hack/X/*RF*" + ext)):
             bfn = os.path.basename(fn)
-            print(bfn)
+            # print("BFN", bfn)
             try:
                 cx = r1k_experiment(fn, bfn)
                 listing.Listing(
