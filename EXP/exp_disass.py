@@ -295,9 +295,9 @@ class R1kExpIns(assy.Instree_ins):
             0x00: "M.00",
             0x01: "M.01",
             0x02: "M.02",
-            0x03: "TV.03", # probably registerfile
-            0x04: "V.04",
-            0x05: "T.05",
+            0x03: "TV.WDR",
+            0x04: "V.UIR",
+            0x05: "T.UIR",
             0x06: "F.MAR",
             0x07: "F.MDREG",
             0x08: "F.UIR",
