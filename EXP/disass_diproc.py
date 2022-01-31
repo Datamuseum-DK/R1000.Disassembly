@@ -200,6 +200,15 @@ class DiprocStd(DiprocDisass):
         self.cx.m.set_label(0x133a, "da_set_a")
         self.cx.m.set_label(0x135c, "da_set_c")
 
+        self.cx.m.set_block_comment(0xed5, '''
+SEQ.SEQCHAIN
+============
+DIAG.D7:        BHREG0  8.2 8.1 8.0 7.0 BHREG1  7.1 7.2 7.4 7.3 MEVNT0  4.7 4.6 4.5 4.4 MEVNT1  4.3 4.2 4.1 4.0
+DIAG.D6:        UEVENT0 5.0 2.2 3.3 2.3 UEVNT1  3.4 3.5 3.6 3.7 UEVNT2  2.0 2.1 3.0 3.1 UEVNT3  3.2 2.4 2.5 2.6
+DIAG.D5:        UADR0   6.6 6.5 0.5 0.4 UADR1   0.3 0.2 0.1 0.0 UADR2   1.7 1.6 1.5 1.4 UADR3   1.3 1.2 1.1 1.0
+DIAG.D4:        RESTRG  7.7 --- 7.6 7.5 TSVLD   6.0 8.4 8.5 8.3 PAREG   5.4 5.3 5.2 5.1 LTCHRG  6.1 6.2 6.3 6.4
+''')
+
         for adr, rows, cols  in (
             (0x07b3, 0x0d, 8),
             (0x0809, 0x09, 8),
@@ -245,7 +254,7 @@ some "canonical" format.
             (0x0da0, None),
             (0x0e31, None),
             (0x0e83, None),
-            (0x0ed5, None),
+            (0x0ed5, "BITSPEC_SEQ_SEQCHAIN"),
         ):
             if lbl:
                 self.cx.m.set_label(adr, lbl)
