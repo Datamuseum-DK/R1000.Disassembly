@@ -212,8 +212,8 @@ RFSM.W		fsm,R3			|1 1 0 0 1 1 1 1| fsm		|
 FSM_8X		var,fsm			|1 1 0 1 0 0 0 0| var		| fsm		|
 FSM_8X		imm,fsm			|1 1 0 1 0 0 1|m| imm		| fsm		|
 
-xD4_RCV		imm,fsm,var		|1 1 0 1 0 1 0 0| imm		| fsm		| var		|
-xD5		imm,var,var2		|1 1 0 1 0 1 0 1| imm		| var		| var2		|
+RCV_P1		imm,fsm,var		|1 1 0 1 0 1 0 0| imm		| fsm		| var		|
+RCV_P2		imm,fsm,var		|1 1 0 1 0 1 0 1| imm		| fsm		| var		|
 FSM8		-			|1 1 0 1 0 1 1|m|
 FSM2		-			|1 1 0 1 1 0 0|m|
 
@@ -302,9 +302,9 @@ class R1kExpIns(assy.Instree_ins):
             0x07: "F.MDREG",
             0x08: "F.UIR",
             0x09: "S.09",
-            0x0a: "S.0a",
+            0x0a: "S.UIR",
             0x0b: "S.0b",
-            0x0c: "S.0c",
+            0x0c: "S.SEQCHAIN",
             0x0d: "I.DUMMY",
         }.get(self['chn'], "%02x" % self['chn'])
         return assy.Arg_verbatim("{" + chain + ":%02x}" % self['fsm'])
