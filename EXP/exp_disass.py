@@ -292,9 +292,9 @@ class R1kExpIns(assy.Instree_ins):
     def assy_chn(self):
         ''' ... '''
         chain = {
-            0x00: "M.00",
+            0x00: "M.MAR",
             0x01: "M.01",
-            0x02: "M.02",
+            0x02: "M.DREG",
             0x03: "TV.WDR",
             0x04: "V.UIR",
             0x05: "T.UIR",
