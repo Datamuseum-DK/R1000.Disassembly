@@ -186,7 +186,7 @@ VXOR		vec,R2,R3		|1 0 1 1 0 0 0 1|1 1 0| vec	|
 BAD_INS		-			|1 0 1 1 0 0 0|m|
 
 xB2		var,imm,imm2		|1 0 1 1 0 0 1|m| var		| imm		| imm2		|
-xB4		var,var2		|1 0 1 1 0 1 0|m| var		| var2		|
+PARITY		[0x8],var,var2		|1 0 1 1 0 1 0|m| var		| var2		|
 xB6		imm,var,imm2		|1 0 1 1 0 1 1 0| imm		| var		| imm2		|
 xB7		imm,var,var2		|1 0 1 1 0 1 1 1| imm		| var		| var2		|
 xB8		var			|1 0 1 1 1 0 0|m| var		|
@@ -264,6 +264,21 @@ FIU_SND		imm,MDREG		|1 1 0 1 0 0 1 0| imm		|0 0 0 1 0 0 0 0|
 FIU_SND		imm,PAREG		|1 1 0 1 0 0 1 0| imm		|0 1 0 1 0 0 0 0|
 
 FIU_RCV		PAREG,var		|1 1 0 1 0 1 0 0|0 0 0 0 1 0 0 0|0 1 0 1 0 0 0 1| var		|
+'''
+
+R1K_EXP_SEQ = '''
+SEQ_RCV		SEQDG.L,@R3		|1 1 0 0 1 0 1 1|0 0 1 1 0 0 0 1|
+'''
+
+R1K_EXP_TYP = '''
+TYP_RCV		PAREG,var		|1 1 0 1 0 1 0 0|0 0 0 0 1 0 0 0|0 1 0 0 0 0 0 1| var		|
+TYP_SND		imm,PAREG		|1 1 0 1 0 0 1 0| imm		|0 1 0 0 0 0 0 0|
+TYP_SND		@R2,DICNTR		|1 1 0 0 0 0 1 1|0 0 1 0 1 0 1 1|
+TYP_SND		wimm,DICNTR		|1 1 0 0 1 0 0 0| imm		| imm2		|0 0 1 0 1 0 1 1|
+'''
+
+R1K_EXP_MEM32 = '''
+MEM_SND	var,LAR			|1 1 0 0 0 0 0 0| var		|0 0 0 0 0 1 0 0|
 '''
 
 class R1kExpIns(assy.Instree_ins):
@@ -357,8 +372,11 @@ class R1kExp(assy.Instree_disass):
         )
         self.add_ins(R1K_EXP, R1kExpIns)
         extra = {
+            "SEQ": R1K_EXP_SEQ,
             "IOC": R1K_EXP_IOC,
             "FIU": R1K_EXP_FIU,
+            "MEM0": R1K_EXP_MEM32,
+            "TYP": R1K_EXP_TYP,
         }.get(board)
         if extra is not None:
             self.add_ins(extra, R1kExpIns)
@@ -370,4 +388,8 @@ class R1kExp(assy.Instree_disass):
             "NZ", "Z", "NE", "EQ", "LT", "GT",
             "DFLG", "NDFLG",
             "UIR", "MDREG", "MAR", "PAREG",
+            "LAR", "MDREG", "MAR", "PAREG",
+            "[0x8]",
+            "SEQDG.L",
+            "DICNTR",
         )
