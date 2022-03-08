@@ -37,7 +37,7 @@ import exp_disass
 
 MYDIR = os.path.split(__file__)[0]
 FILENAME1 = os.path.join(MYDIR, "P8052AH_9028.bin")
-FILENAME2 = "/home/phk/Proj/PHK110_R1000_DIAG/Take2_Analysis/mem32_diproc.bin"
+FILENAME2 = os.path.join(MYDIR, "DIPROC-01.bin")
 
 class ExpDisass():
     ''' Provide disassembled EXP instructions '''
@@ -251,10 +251,10 @@ some "canonical" format.
             (0x0cbc, None),
             (0x0d05, "BITSPEC_FIU_MDREG"),
             (0x0d4e, "BITSPEC_FIU_UIR"),
-            (0x0da0, None),
-            (0x0e31, None),
-            (0x0e83, None),
-            (0x0ed5, "BITSPEC_SEQ_SEQCHAIN"),
+            (0x0da0, "BITSPEC_SEQ_TYPVAL"),
+            (0x0e31, "BITSPEC_SEQ_UIR"),
+            (0x0e83, "BITSPEC_SEQ_DECODER"),
+            (0x0ed5, "BITSPEC_SEQ_MISC"),
         ):
             if lbl:
                 self.cx.m.set_label(adr, lbl)

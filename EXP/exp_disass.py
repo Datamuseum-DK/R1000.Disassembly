@@ -189,7 +189,7 @@ xB2		var,imm,imm2		|1 0 1 1 0 0 1|m| var		| imm		| imm2		|
 PARITY		[0x8],var,var2		|1 0 1 1 0 1 0|m| var		| var2		|
 xB6		imm,var,imm2		|1 0 1 1 0 1 1 0| imm		| var		| imm2		|
 xB7		imm,var,var2		|1 0 1 1 0 1 1 1| imm		| var		| var2		|
-xB8		var			|1 0 1 1 1 0 0|m| var		|
+IDENT		var			|1 0 1 1 1 0 0|m| var		|
 xBA		var,var2		|1 0 1 1 1 0 1 0| var		| var2		|
 FSM		fsm			|1 0 1 1 1 1 0|m| fsm		|
 
@@ -268,6 +268,8 @@ FIU_RCV		PAREG,var		|1 1 0 1 0 1 0 0|0 0 0 0 1 0 0 0|0 1 0 1 0 0 0 1| var		|
 
 R1K_EXP_SEQ = '''
 SEQ_RCV		SEQDG.L,@R3		|1 1 0 0 1 0 1 1|0 0 1 1 0 0 0 1|
+SHIFT		S.MISC,imm		|1 1 0 0 0 1 0 0| imm		|0 1 0 0 0 0 1 1|
+#SEQ_RCV	TYPVAL,var		|1 1 0 1 1 0 1 0|1 0 0 1 0 0 1 0| var		|0 0 1 1 0 0 0 0|
 '''
 
 R1K_EXP_TYP = '''
@@ -275,6 +277,10 @@ TYP_RCV		PAREG,var		|1 1 0 1 0 1 0 0|0 0 0 0 1 0 0 0|0 1 0 0 0 0 0 1| var		|
 TYP_SND		imm,PAREG		|1 1 0 1 0 0 1 0| imm		|0 1 0 0 0 0 0 0|
 TYP_SND		@R2,DICNTR		|1 1 0 0 0 0 1 1|0 0 1 0 1 0 1 1|
 TYP_SND		wimm,DICNTR		|1 1 0 0 1 0 0 0| imm		| imm2		|0 0 1 0 1 0 1 1|
+TYP_SND		imm,URSR		|1 1 0 1 0 0 1 0| imm		|0 0 1 1 1 0 1 1|
+FSM		WRITE_WCS		|1 0 1 1 1 1 0 0|0 1 0 0 1 1 0 0|
+FSM		LD_LCNT_FM_WDR		|1 0 1 1 1 1 0 0|0 0 1 1 0 0 1 1|
+FSM		FILL_RF			|1 0 1 1 1 1 0 0|0 0 0 1 1 0 0 1|
 '''
 
 R1K_EXP_MEM32 = '''
@@ -316,10 +322,10 @@ class R1kExpIns(assy.Instree_ins):
             0x06: "F.MAR",
             0x07: "F.MDREG",
             0x08: "F.UIR",
-            0x09: "S.09",
+            0x09: "S.TYPVAL",
             0x0a: "S.UIR",
-            0x0b: "S.0b",
-            0x0c: "S.SEQCHAIN",
+            0x0b: "S.DECODER",
+            0x0c: "S.MISC",
             0x0d: "I.DUMMY",
         }.get(self['chn'], "%02x" % self['chn'])
         return assy.Arg_verbatim("{" + chain + ":%02x}" % self['fsm'])
@@ -392,4 +398,9 @@ class R1kExp(assy.Instree_disass):
             "[0x8]",
             "SEQDG.L",
             "DICNTR",
+            "URSR",
+            "WRITE_WCS",
+            "LD_LCNT_FM_WDR",
+            "FILL_RF",
+            "S.MISC",
         )
