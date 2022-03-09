@@ -48,6 +48,7 @@ class Field():
         self.bits = []
         self.parts = []
         self.enum = {}
+        self.fmt = "0x%x"
 
     def __repr__(self):
         return "<Field " + self.name + " " + str(self.bits) + ">"
@@ -71,6 +72,8 @@ class Field():
         for pos, octet, bitpos in self.bits:
             j = 1 << (self.width - (pos + 1))
             self.parts.append((octet, 0x80 >> bitpos, j))
+        if self.width > 1:
+            self.fmt = "0x%0" + "%dx" % ((self.width + 3) // 4)
 
     def decode(self, data):
         ''' Get the value of this field '''
@@ -85,9 +88,9 @@ class Field():
         val = self.decode(data)
         i = self.enum.get(val)
         if i:
-            yield self.name + " = 0x%x = " % val + i
+            yield self.name + " = " + self.fmt % val + " " + i
         elif val != 0:
-            yield self.name + " = 0x%x" % val
+            yield self.name + " = " + self.fmt % val
 
 class ScanChain():
     ''' A R1000 Diagnostic Scan chain '''
