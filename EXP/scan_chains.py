@@ -103,7 +103,7 @@ class ScanChain():
     def explain(self, data):
         ''' Yield text strings explaining chain state '''
         for sig, val in sorted(self.decode(data).items()):
-            fld = getattr(self, "FIELD_" + sig, None)
+            fld = getattr(self, "FIELD_" + sig.replace(".", "_"), None)
             if fld and val in fld:
                 yield sig + " = 0x%x = " % val + fld[val]
             elif val > 1:
@@ -142,7 +142,6 @@ class SeqUir(ScanChain):
 
 	See also: https://datamuseum.dk/bits/30000958
     '''
-    BITSPEC = DPROC1[0xda0:0xe31]
     BITSPEC = DPROC1[0xe31:0xe7a]
     DIAG_D0 = [
         "BRNCH_ADR/13",
@@ -208,8 +207,115 @@ class SeqUir(ScanChain):
     DIAG_D7 = [
     ]
 
+    # SEQ page 62
+    FIELD_B_TIMING = {
+        0: "EARLY CONDITION",
+        1: "LATCH CONDITION",
+        2: "HINT TRUE",
+        3: "HINT FALSE",
+    }
+
+    # SEQ page 62
+    # See also: FUNCSPEC p109
+    FIELD_BR_TYPE = {
+        0x0: "BRANCH FALSE",
+        0x1: "BRANCH TRUE",
+        0x2: "PUSH (BRANCH ADDRESS)",
+        0x3: "UNCONDITIONAL BRANCH",
+        0x4: "CALL FALSE",
+        0x5: "CALL TRUE",
+        0x6: "CONTINUE",
+        0x7: "UNCONDITIONAL CALL",
+        0x8: "RETURN TRUE",
+        0x9: "RETURN FALSE",
+        0xa: "UNCONDITIONAL RETURN",
+        0xb: "CASE FALSE",
+        0xc: "DISPATCH TRUE",
+        0xd: "DISPATCH FALSE",
+        0xe: "DISPATCH",
+        0xf: "UNCONDITIONAL CASE_CALL",
+    }
+
+    FIELD_COND_SEL = {
+        # FUNCSPEC p135
+        0x40: "macro_restartable (E)",
+        0x41: "restartable_@(PC-1) (E)",
+        0x42: "valid_lex(loop_counter) (E)",
+        0x43: "loop_counter_zero (E)",
+        0x44: "TOS_LATCH_valid (L)",
+        0x45: "saved_latched_cond (E)",
+        0x46: "previously_latched_cond (E)",
+        0x47: "#_entries_in_stack_zero (E)",
+        0x48: "ME_CSA_underflow (L)",
+        0x49: "ME_CSA_overflow (L)",
+        0x4a: "ME_resolve_ref (L)",
+        0x4b: "ME_TOS_opt_error (L)",
+        0x4c: "ME_dispatch (L)",
+        0x4d: "ME_break_class (L)",
+        0x4e: "ME_ibuff_empty (L)",
+        0x4f: "ME_field_number_error (L)",
+    }
+
+    # SEQ page 77
+    FIELD_INT_READS = {
+        0: "TYP VAL BUS",
+        1: "CURRENT MACRO INSTRUCTION",
+        2: "DECODING MACRO INSTRUCTION",
+        3: "TOP OF THE MICRO STACK",
+        4: "SAVE OFFSET",
+        5: "RESOLVE RAM",
+        6: "CONTROL TOP",
+        7: "CONTROL PRED",
+    }
+
+    # From printout at the end of SEQ
     FIELD_RANDOM = {
+        0x01: "HALT",
+        0x10: "LOAD_TOS",
+        0x11: "LOAD_RESOLVE_NAME",
+        0x12: "LOAD_RESOLVE_OFFSET",
+        0x13: "LOAD_CURRENT_LEX",
+        0x14: "LOAD_CURRENT(_NAME)",
+        0x15: "LOAD_SAVE_OFFSET",
+        0x16: "LOAD_CONTROL_PRED_FIU",
+        0x17: "LOAD_CONTROL_PRED",
+        0x18: "LOAD_CONTROL_TOP_FIU",
+        0x19: "LOAD_CONTROL_TOP",
+        0x1a: "LOAD_NAME_OFFSET",	# XXX DUP
+        0x1a: "LOAD_RESOLVE",	# XXX DUP
+        0x1f: "LOAD_TOS_AND_SAVE",
+        0x20: "LOAD_RPC",
+        0x23: "LOAD_MPC_OFFSET_ONLY",
+        0x25: "INC_MACRO_PC",
+        0x27: "DEC_MACRO_PC",
+        0x28: "LOAD_MPC_NAME_ONLY",
+        0x2d: "INC_MACRO_PC",
+        0x2f: "CHECK_EXIT_AND_HALT",
         0x30: "LOAD_MPC_RANDOM_WORD",
+        0x31: "CHECK_EXIT",
+        0x401: "CONDITIONAL_LOAD_MPC",
+        0x40: "CLEAR_LEX",
+        0x41: "SET_LEX",
+        0x41d: "READ_MPC_AND_DEC",
+        0x42d: "READ_MPC_AND_INC",
+        0x435: "CONDITIONAL_INC_MPC",
+        0x439: "CONDITIONAL_DEC_MPC",
+        0x44: "CLEAR_GREATER_THAN_LEX",
+        0x47: "CLEAR_ALL_LEX",
+        0x48: "CONDITIONAL_NOP",
+        0x50: "LOAD_BREAK_MASK",
+        0x51: "LOAD_CUR_INSTR",
+        0x51: "LOAD_CUR_INSTR",
+        0x52: "LOAD_IBUFF",
+        0x60: "PUSH_STACK",
+        0x61: "POP_STACK",
+        0x62: "CLEAR_STACK",
+        0x63: "NOT_RESTARTABLE",
+        0x64: "RESTARTABLE_AT_PC",
+        0x65: "RESTARTABLE_AT_PC_DEC",
+        0x66: "ENABLE_FIELD_CHECK",
+        0x67: "LATE_ABORT",
+        0x69: "ENABLE_FIELD_CHECH_AND_HALT",
     }
 
 class SeqDecoder(ScanChain):
@@ -265,6 +371,18 @@ class SeqDecoder(ScanChain):
     DIAG_D5 = None
     DIAG_D6 = None
     DIAG_D7 = None
+
+    # SEQ Schematic 12
+    FIELD_MEM_STRT_DEC = {
+        0: "CONTROL READ, AT CONTROL PRED",
+        1: "CONTROL READ, AT LEX LEVEL DELTA",
+        2: "CONTROL READ, AT (INNER - PARAMS)",
+        3: "TYPE READ, AT TOS PLUS FIELD NUMBER",
+        4: "MEMORY NOT STARTED",
+        5: "PROGRAM READ, AT MACRO PC PLUS OFFSET",
+        6: "CONTROL READ, AT VALUE_ITEM.NAME PLUS FIELD NUMBER",
+        7: "TYPE READ, AT TOS TYPE LINK",
+    }
 
 class SeqMisc(ScanChain):
     '''
