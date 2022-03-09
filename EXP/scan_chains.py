@@ -38,6 +38,57 @@ FILENAME2 = os.path.join(MYDIR, "DIPROC-01.bin")
 DPROC1 = open(FILENAME1, "rb").read()
 DPROC2 = open(FILENAME2, "rb").read()
 
+class Field():
+    ''' A field of one or more bits in a scan-chain '''
+
+    def __init__(self, name):
+        self.name = name
+        self.invert = 0
+        self.width = 0
+        self.bits = []
+        self.parts = []
+        self.enum = {}
+
+    def __repr__(self):
+        return "<Field " + self.name + " " + str(self.bits) + ">"
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def add_bit(self, pos, octet, bitpos):
+        ''' Add a bit to a field '''
+        self.bits.append((pos, octet, bitpos))
+
+    def finalize(self, enum):
+        ''' ... '''
+        if enum:
+            self.enum = enum
+        self.width = 1 + max(a for a, b, c in self.bits)
+        assert self.width == len(self.bits)
+        if self.name[-1] == "~":
+            self.name = self.name[:-1]
+            self.invert = (1 << self.width) - 1
+        for pos, octet, bitpos in self.bits:
+            j = 1 << (self.width - (pos + 1))
+            self.parts.append((octet, 0x80 >> bitpos, j))
+
+    def decode(self, data):
+        ''' Get the value of this field '''
+        val = 0
+        for octet, mask, weight in self.parts:
+            if data[octet] & mask:
+                val |= weight
+        return val ^ self.invert
+
+    def explain(self, data):
+        ''' Yield string explanation if field is non-zero '''
+        val = self.decode(data)
+        i = self.enum.get(val)
+        if i:
+            yield self.name + " = 0x%x = " % val + i
+        elif val != 0:
+            yield self.name + " = 0x%x" % val
+
 class ScanChain():
     ''' A R1000 Diagnostic Scan chain '''
 
@@ -52,11 +103,15 @@ class ScanChain():
     DIAG_D7 = None
 
     def __init__(self):
-        return
+        self.fields = {}
+        self.parse()
+        for fld in self.fields.values():
+            enum = getattr(self, "FIELD_" + fld.name.replace(".", "_"), None)
+            fld.finalize(enum)
+        self.fields = list(sorted(self.fields.values()))
 
-    def decode(self, data):
-        ''' Return dictionary with symbolic chain state '''
-        signals = {}
+    def parse(self):
+        ''' Parse the bit-lists '''
         for bit, spec in enumerate(
             (
                 self.DIAG_D0,
@@ -78,45 +133,25 @@ class ScanChain():
                 if octet == 0x1f:
                     continue
                 bitpos = what >> 5
-                val = (data[octet] >> (7-bitpos)) & 1
-                #print("QQQ", bit, row, sig, octet, bitpos, val)
+
+                #print("QQQ", bit, row, sig, octet, bitpos)
                 if '/' in sig:
-                    sig, pos = sig.split('/')
-                    oval = signals.setdefault(sig, dict())
-                    pos = int(pos)
-                    oval[pos] = val
+                    fieldname, pos = sig.split('/')
+                    field = self.fields.get(fieldname)
+                    if not field:
+                        field = Field(fieldname)
+                        self.fields[fieldname] = field
+                    field.add_bit(int(pos), octet, bitpos)
                 else:
-                    signals[sig] = val
-        for sig, val in signals.items():
-            if isinstance(val, dict):
-                #print("WWW", sig, val)
-                newval = 0
-                for i in range(64):
-                    j = val.get(i)
-                    if j is None:
-                        break
-                    newval += newval + j
-                    #print("BB", i, j, "0x%x" % newval)
-                signals[sig] = newval
-        return signals
+                    assert sig not in self.fields
+                    field = Field(sig)
+                    self.fields[sig] = field
+                    field.add_bit(0, octet, bitpos)
 
     def explain(self, data):
         ''' Yield text strings explaining chain state '''
-        for sig, val in sorted(self.decode(data).items()):
-            fld = getattr(self, "FIELD_" + sig.replace(".", "_"), None)
-            if fld and val in fld:
-                yield sig + " = 0x%x = " % val + fld[val]
-            elif val > 1:
-                if sig[-1] == '~':
-                    # XXX: This is absurd...
-                    inv = bin(val).replace('0', '_').replace('1', '0').replace('_', '1')
-                    yield sig + " = 0x%x" % val + " = ~0x%x" % int(inv[2:], 2)
-                else:
-                    yield sig + " = 0x%x" % val
-            elif sig[-1] == "~" and val == 0:
-                yield sig + " " + str(val)
-            elif sig[-1] != "~" and val == 1:
-                yield sig + " " + str(val)
+        for i in self.fields:
+            yield from i.explain(data)
 
 class SeqTypVal(ScanChain):
     '''
@@ -281,8 +316,7 @@ class SeqUir(ScanChain):
         0x17: "LOAD_CONTROL_PRED",
         0x18: "LOAD_CONTROL_TOP_FIU",
         0x19: "LOAD_CONTROL_TOP",
-        0x1a: "LOAD_NAME_OFFSET",	# XXX DUP
-        0x1a: "LOAD_RESOLVE",	# XXX DUP
+        0x1a: "LOAD_NAME_OFFSET",	# or "LOAD_RESOLVE" ?
         0x1f: "LOAD_TOS_AND_SAVE",
         0x20: "LOAD_RPC",
         0x23: "LOAD_MPC_OFFSET_ONLY",
@@ -293,18 +327,12 @@ class SeqUir(ScanChain):
         0x2f: "CHECK_EXIT_AND_HALT",
         0x30: "LOAD_MPC_RANDOM_WORD",
         0x31: "CHECK_EXIT",
-        0x401: "CONDITIONAL_LOAD_MPC",
         0x40: "CLEAR_LEX",
         0x41: "SET_LEX",
-        0x41d: "READ_MPC_AND_DEC",
-        0x42d: "READ_MPC_AND_INC",
-        0x435: "CONDITIONAL_INC_MPC",
-        0x439: "CONDITIONAL_DEC_MPC",
         0x44: "CLEAR_GREATER_THAN_LEX",
         0x47: "CLEAR_ALL_LEX",
         0x48: "CONDITIONAL_NOP",
         0x50: "LOAD_BREAK_MASK",
-        0x51: "LOAD_CUR_INSTR",
         0x51: "LOAD_CUR_INSTR",
         0x52: "LOAD_IBUFF",
         0x60: "PUSH_STACK",
@@ -316,6 +344,11 @@ class SeqUir(ScanChain):
         0x66: "ENABLE_FIELD_CHECK",
         0x67: "LATE_ABORT",
         0x69: "ENABLE_FIELD_CHECH_AND_HALT",
+        0x401: "CONDITIONAL_LOAD_MPC",
+        0x41d: "READ_MPC_AND_DEC",
+        0x42d: "READ_MPC_AND_INC",
+        0x435: "CONDITIONAL_INC_MPC",
+        0x439: "CONDITIONAL_DEC_MPC",
     }
 
 class SeqDecoder(ScanChain):
