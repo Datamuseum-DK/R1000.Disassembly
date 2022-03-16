@@ -239,7 +239,7 @@ some "canonical" format.
         for adr, lbl  in (
             (0x0746, "BITSPEC_TYP_RF"),
             (0x07c0, None),
-            (0x0812, None),
+            (0x0812, "BITSPEC_TYP_UIR"),
             (0x0864, None),
             (0x08ad, None),
             (0x08f6, None),

@@ -516,6 +516,83 @@ class SeqMisc(ScanChain):
         "STOP_MACH.ME~",
     ]
 
+class TypUir(ScanChain):
+    '''
+	Type UIR scan chain
+
+    '''
+    BITSPEC = DPROC1[0x812:0x85b]
+    DIAG_D0 = [
+        "A/0",
+        "A/1",
+        "A/2",
+        "A/3",
+        "A/4",
+        "A/5",
+        "B/0",
+        "B/1",
+    ]
+    DIAG_D1 = [
+        "B/2",
+        "B/3",
+        "B/4",
+        "B/5",
+        "FRAME/0",
+        "FRAME/1",
+        "FRAME/2",
+        "FRAME/3",
+    ]
+    DIAG_D2 = [
+        "FRAME/4",
+        "CLIT/0",
+        "CLIT/1",
+        "PARITY",
+        "RAND/0",
+        "RAND/1",
+        "RAND/2",
+        "RAND/3",
+    ]
+    DIAG_D3 = [
+        "C/0",
+        "C/1",
+        "C/2",
+        "C/3",
+        "C/4",
+        "C/5",
+        "PRIV_CHEK/0",
+        "PRIV_CHEK/1",
+    ]
+    DIAG_D4 = [
+        "PRIV_CHEK/2",
+        "CMUX_SEL",
+        "ALU_FUNC/0",
+        "ALU_FUNC/1",
+        "ALU_FUNC/2",
+        "ALU_FUNC/3",
+        "ALU_FUNC/4",
+        "C_SOURCE",
+    ]
+    DIAG_D5 = [
+	"MAR_CNTL/0",
+	"MAR_CNTL/1",
+	"MAR_CNTL/2",
+	"MAR_CNTL/3",
+	"CSA_CNTL/0",
+	"CSA_CNTL/1",
+	"CSA_CNTL/2",
+    ]
+    DIAG_D6 = [
+        "NVE/0",
+        "NVE/1",
+        "NVE/2",
+        "NVE/3",
+        "D6.4",
+        "D6.5",
+        "INV_LAST~",
+        "PD_CYCLE1~",
+    ]
+    DIAG_D7 = [ "D7.0", "D7.1", "D7.2", "D7.3", "D7.4", "D7.5", "D7.6", "D7.7"]
+
 
 def test():
     ''' Trivial test function '''
