@@ -187,8 +187,11 @@ BAD_INS		-			|1 0 1 1 0 0 0|m|
 
 xB2		var,imm,imm2		|1 0 1 1 0 0 1|m| var		| imm		| imm2		|
 PARITY		[0x8],var,var2		|1 0 1 1 0 1 0|m| var		| var2		|
-xB6		imm,var,imm2		|1 0 1 1 0 1 1 0| imm		| var		| imm2		|
-xB7		imm,var,var2		|1 0 1 1 0 1 1 1| imm		| var		| var2		|
+
+# Set parity in bit `imm2` of `var[0:imm]`
+EVNPAR		imm,var,imm2		|1 0 1 1 0 1 1 0| imm		| var		| imm2		|
+ODDPAR		imm,var,imm2		|1 0 1 1 0 1 1 1| imm		| var		| imm2		|
+
 IDENT		var			|1 0 1 1 1 0 0|m| var		|
 xBA		var,var2		|1 0 1 1 1 0 1 0| var		| var2		|
 FSM		fsm			|1 0 1 1 1 1 0|m| fsm		|
@@ -284,7 +287,7 @@ FSM		FILL_RF			|1 0 1 1 1 1 0 0|0 0 0 1 1 0 0 1|
 '''
 
 R1K_EXP_MEM32 = '''
-MEM_SND	var,LAR			|1 1 0 0 0 0 0 0| var		|0 0 0 0 0 1 0 0|
+MEM_SND	var,SETLAR			|1 1 0 0 0 0 0 0| var		|0 0 0 0 0 1 0 0|
 '''
 
 class R1kExpIns(assy.Instree_ins):
@@ -314,8 +317,8 @@ class R1kExpIns(assy.Instree_ins):
         ''' ... '''
         chain = {
             0x00: "M.MAR",
-            0x01: "M.01",
-            0x02: "M.DREG",
+            0x01: "M.DREG_FULL",
+            0x02: "M.DREG_VAL_PAR",
             0x03: "TV.WDR",
             0x04: "V.UIR",
             0x05: "T.UIR",
@@ -382,6 +385,8 @@ class R1kExp(assy.Instree_disass):
             "IOC": R1K_EXP_IOC,
             "FIU": R1K_EXP_FIU,
             "MEM0": R1K_EXP_MEM32,
+            "MEM2": R1K_EXP_MEM32,
+            "M32": R1K_EXP_MEM32,
             "TYP": R1K_EXP_TYP,
         }.get(board)
         if extra is not None:
@@ -394,7 +399,7 @@ class R1kExp(assy.Instree_disass):
             "NZ", "Z", "NE", "EQ", "LT", "GT",
             "DFLG", "NDFLG",
             "UIR", "MDREG", "MAR", "PAREG",
-            "LAR", "MDREG", "MAR", "PAREG",
+            "SETLAR", "MDREG", "MAR", "PAREG",
             "[0x8]",
             "SEQDG.L",
             "DICNTR",

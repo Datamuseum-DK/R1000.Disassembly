@@ -63,6 +63,33 @@ class ExpDisass():
     def __getitem__(self, ins):
         yield from self.disass[ins]
 
+class BitSpec():
+    def __init__(self, cx, lo, lbl=None):
+        self.cx = cx
+        self.lo = lo
+        self.lbl = lbl
+
+        if self.lbl:
+            self.cx.m.set_label(self.lo, self.lbl)
+        else:
+            self.cx.m.set_label(self.lo, "BITSPEC_%04x" % self.lo)
+        adr = self.lo
+        while self.cx.m[adr] != 0xff:
+            item = data.Data(self.cx.m, adr, adr + 9)
+            tbl = []
+            for _j in range(8):
+                j = self.cx.m[adr]
+                adr += 1
+                if j != 0x1f:
+                    tbl.append("+0x%02x.%d" % (j & 0x1f, 7 - (j >> 5)))
+                else:
+                    tbl.append("NOP    ")
+            tbl.append("0x%02x" % self.cx.m[adr])
+            adr += 1
+            item.rendered = ".BITPOS\t" + ", ".join(tbl)
+            item.compact = True
+        data.Const(self.cx.m, adr, adr + 1)
+
 class DiprocDisass():
 
     def __init__(self, octets, output_file="/tmp/_", **kwargs):
@@ -256,25 +283,7 @@ some "canonical" format.
             (0x0e83, "BITSPEC_SEQ_DECODER"),
             (0x0ed5, "BITSPEC_SEQ_MISC"),
         ):
-            if lbl:
-                self.cx.m.set_label(adr, lbl)
-            else:
-                self.cx.m.set_label(adr, "BITSPEC_%04x" % adr)
-            while self.cx.m[adr] != 0xff:
-                item = data.Data(self.cx.m, adr, adr + 9)
-                tbl = []
-                for _j in range(8):
-                    j = self.cx.m[adr]
-                    adr += 1
-                    if j != 0x1f:
-                        tbl.append("+0x%02x.%d" % (j & 0x1f, 7 - (j >> 5)))
-                    else:
-                        tbl.append("NOP    ")
-                tbl.append("0x%02x" % self.cx.m[adr])
-                adr += 1
-                item.rendered = ".BITPOS\t" + ", ".join(tbl)
-                item.compact = True
-            data.Const(self.cx.m, adr, adr + 1)
+            BitSpec(self.cx, adr, lbl)
 
 class DiprocMem32(DiprocDisass):
 
@@ -289,17 +298,18 @@ class DiprocMem32(DiprocDisass):
         self.switch_labeled(0x3be, 0x3d2)
         self.switch_labeled(0x3e7, 0x3fb)
         self.switch_labeled(0x1023, 0x105a)
-        for adr in (
-            0x800,
-            0x86d,
-            0x8da,
-            0x9b3,
-            0xa8c,
-            0xb65,
-            0xbf6,
-            0xc0f,
+
+        for adr, lbl in (
+            (0x0800, None),
+            (0x086d, None),
+            (0x08da, "BITSPEC_MEM32_DREG_FULL"),
+            (0x0a8c, "BITSPEC_MEM32_DREG_VAL_PAR"),
+            (0x9b3, None),
+            (0xb65, None),
+            (0xbf6, None),
+            # (0xc0f, None),
         ):
-            self.cx.m.set_label(adr, "L_%04x" % adr)
+            BitSpec(self.cx, adr, lbl)
 
 def disassemble_file(input_file, *args, **kwargs):
     ''' Disassemble a single file '''

@@ -90,7 +90,7 @@ class Field():
         if i:
             yield self.name + " = " + self.fmt % val + " " + i
         elif val != 0:
-            yield self.name + " = " + self.fmt % val
+            yield self.name + " = " + self.fmt % val + " "
 
 class ScanChain():
     ''' A R1000 Diagnostic Scan chain '''
@@ -109,7 +109,13 @@ class ScanChain():
         self.fields = {}
         self.parse()
         for fld in self.fields.values():
-            enum = getattr(self, "FIELD_" + fld.name.replace(".", "_"), None)
+            fldnm = "FIELD_" + fld.name
+            for find,replace in (
+                (".", "_"),
+                ("~", ""),
+            ):
+                fldnm = fldnm.replace(find, replace)
+            enum = getattr(self, fldnm, None)
             fld.finalize(enum)
         self.fields = list(sorted(self.fields.values()))
 
@@ -275,23 +281,135 @@ class SeqUir(ScanChain):
     }
 
     FIELD_COND_SEL = {
+        # Ref: R1000_SCHEMATIC_VAP.PDF p44
+        0x00: "VAL.ALU_ZERO(late)",
+        0x01: "VAL.ALU_NONZERO(late)",
+        0x02: "VAL.ALU_A_LT_OR_LE_B(late)",
+        0x03: "VAL.spare",
+        0x04: "VAL.LOOP_COUNTER_ZERO(early)",
+        0x05: "VAL.spare",
+        0x06: "VAL.ALU_NONZERO(late)",
+        0x07: "VAL.ALU_32_CO(late)",
+        0x08: "VAL.ALU_CARRY(late)",
+        0x09: "VAL.ALU_OVERFLOW(late)",
+        0x0a: "VAL.ALU_LT_ZERO(late)",
+        0x0b: "VAL.ALU_LE_ZERO(late)",
+        0x0c: "VAL.SIGN_BITS_EQUAL(med_late)",
+        0x0f: "VAL.PREVIOUS(early)",
+        0x10: "VAL.ALU_32_ZERO(late)",
+        0x11: "VAL.ALU_40_ZERO(late)",
+        0x12: "VAL.ALU_MIDDLE_ZERO(late)",
+        0x13: "VAL.Q_BIT(early)",
+        0x14: "VAL.false",
+        0x15: "VAL.M_BIT(early)",
+        0x16: "VAL.TRUE(early)",
+        0x17: "VAL.FALSE(early)",
+
+        # Ref: R1000_SCHEMATIC_TYP.PDF p40
+        0x18: "TYP.ALU_ZERO(late)",
+        0x19: "TYP.ALU_NONZERO(late)",
+        0x1a: "TYP.ALU_A_GT_OR_GE_B(late)",
+        0x1b: "TYP.spare",
+        0x1c: "TYP.LOOP_COUNTER_ZERO(early)",
+        0x1d: "TYP.spare",
+        0x1e: "TYP.ALU_ZERO(late, combo)",
+        0x1f: "TYP.ALU_32_CARRY_OUT(late)",
+        0x20: "TYP.ALU_CARRY(late)",
+        0x21: "TYP.ALU_OVERFLOW(late)",
+        0x22: "TYP.ALU_LT_ZERO(late)",
+        0x23: "TYP.ALU_LE_ZERO(late)",
+        0x24: "TYP.SIGN_BITS_EQUAL(med_late)",
+        0x25: "TYP.FALSE (early)",
+        0x26: "TYP.TRUE (early)",
+        0x27: "TYP.PREVIOUS (early)",
+        0x28: "TYP.OF_KIND_MATCH (med_late)",
+        0x29: "TYP.CLASS_A_EQ_LIT (med_late)",
+        0x2a: "TYP.CLASS_B_EQ_LIT (med_late)",
+        0x2b: "TYP.CLASS_A_EQ_B (med_late)",
+        0x2c: "TYP.CLASS_A_B_EQ_LIT (med_late)",
+        0x2d: "TYP.PRIVACY_A_OP_PASS (med_late)",
+        0x2e: "TYP.PRIVACY_B_OP_PASS (med_late)",
+        0x2f: "TYP.PRIVACY_BIN_EQ_PASS (med_late)",
+        0x30: "TYP.PRIVACY_BIN_OP_PASS (med_late)",
+        0x31: "TYP.PRIVACY_NAMES_EQ (med_late)",
+        0x32: "TYP.PRIVACY_PATHS_EQ (med_late)",
+        0x33: "TYP.PRIVACY_STRUCTURE (med_late)",
+        0x34: "TYP.PASS_PRIVACY_BIT (early)",
+        0x35: "TYP.D_BUS_BIT_32 (med_late)",
+        0x36: "TYP.D_BUS_BIT_33 (med_late)",
+        0x37: "TYP.D_BUS_BIT_34 (med_late)",
+        0x38: "TYP.D_BUS_BIT_35 (med_late)",
+        0x39: "TYP.D_BUS_BIT_36 (med_late)",
+        0x3a: "TYP.D_BUS_BIT_33_34_OR_36 (med_late)",
+        0x3b: "TYP.pull_up",
+        0x3c: "TYP.pull_up",
+        0x3d: "TYP.pull_up",
+        0x3e: "TYP.pull_up",
+        0x3f: "TYP.D_BUS_BIT_21 (med_late)",
+
         # FUNCSPEC p135
-        0x40: "macro_restartable (E)",
-        0x41: "restartable_@(PC-1) (E)",
-        0x42: "valid_lex(loop_counter) (E)",
-        0x43: "loop_counter_zero (E)",
-        0x44: "TOS_LATCH_valid (L)",
-        0x45: "saved_latched_cond (E)",
-        0x46: "previously_latched_cond (E)",
-        0x47: "#_entries_in_stack_zero (E)",
-        0x48: "ME_CSA_underflow (L)",
-        0x49: "ME_CSA_overflow (L)",
-        0x4a: "ME_resolve_ref (L)",
-        0x4b: "ME_TOS_opt_error (L)",
-        0x4c: "ME_dispatch (L)",
-        0x4d: "ME_break_class (L)",
-        0x4e: "ME_ibuff_empty (L)",
-        0x4f: "ME_field_number_error (L)",
+        # More in /home/phk/Proj/R1kMicrocode/r1k_ucode_explain.py
+        0x40: "RESTARTABLE - macro_restartable (E)",
+        0x41: "REST_PC_DEC - restartable_@(PC-1) (E)",
+        0x42: "IMPORT.COND~ - valid_lex(loop_counter) (E)",
+        0x43: "LEX_VLD.COND~ - loop_counter_zero (E)",
+        0x44: "TOS_VLD.COND~ - TOS_LATCH_valid (L)",
+        0x45: "SAVED_LATCHED - saved_latched_cond (E)",
+        0x46: "LATCHED_COND - previously_latched_cond (E)",
+        0x47: "STACK_SIZE_0 - #_entries_in_stack_zero (E)",
+        0x48: "M_UNDERFLOW~ - ME_CSA_underflow (L)",
+        0x49: "M_OVERFLOW~ - ME_CSA_overflow (L)",
+        0x4a: "M_RES_REF~ - ME_resolve_ref (L)",
+        0x4b: "M_TOS_INVLD~ - ME_TOS_opt_error (L)",
+        0x4c: "M_BRK_CLASS~ - ME_dispatch (L)",
+        0x4d: "M_IBUFF_MT~ - ME_break_class (L)",
+        0x4e: "{unused seq pg54}",
+        0x4f: "DISP_COND0 - ME_field_number_error (L)",
+
+        # Ref: R1000_SCHEMATIC_SEQ p60 - SEQ.COND2
+        0x50: "E_MACRO_EVNT~0 - SEQ.E_MACRO_EVENT~0",
+        0x51: "E_MACRO_EVNT~2 - SEQ.E_MACRO_EVENT~2",
+        0x52: "E_MACRO_EVNT~3 - SEQ.E_MACRO_EVENT~3",
+        0x53: "E_MACRO_EVNT~5 - SEQ.E_MACRO_EVENT~5",
+        0x54: "E_MACRO_EVNT~6 - SEQ.E_MACRO_EVENT~6",
+        0x55: "E_MACRO_PEND - SEQ.E_MACRO_PEND",
+        0x56: "LATCHED_COND - SEQ.LATCHED_COND",
+        0x57: "FIELD_NUM_ERR - SEQ.FIELD_NUM_ERR",
+
+        # Ref: R1000_SCHEMATIC_FIU.PDF p60
+        0x60: "FIU.MEM_EXCEPTION~",
+        0x61: "FIU.PHYSICAL_LAST~",
+        0x62: "FIU.WRITE_LAST",
+        0x63: "CSA_HIT",
+        0x64: "OFFSET_REGISTER_????",
+        0x65: "CROSS_WORD_FIELD~",
+        0x66: "NEAR_TOP_OF_PAGE",
+        0x67: "REFRESH_MACRO_EVENT",
+        0x68: "CONTROL_ADDRESS_OUT_OF_RANGE",
+        0x69: "SCAVENGER_HIT~",
+        0x6a: "PAGE_CROSSING~",
+        0x6b: "CACHE_MISS~",
+        0x6c: "INCOMPLETE_MEMORY_CYCLE",
+        0x6d: "MAR_MODIFIED",
+        0x6e: "INCOMPLETE_MEMORY_CYCLE_FOR_PAGE_CROSSING",
+        0x6f: "MAR_WORD_EQUAL_ZERO~",
+        0x70: "IOC.70_pullup",
+        0x71: "IOC.71_pullup",
+        0x72: "IOC.72_pullup",
+        0x73: "IOC.73_pullup",
+        0x74: "IOC.74_pullup",
+        0x75: "IOC.75_pullup",
+        0x76: "IOC.76_pullup",
+        0x77: "IOC.77_pullup",
+        0x78: "IOC.MULTIBIT_ERROR",
+        0x79: "IOC.PFR",
+        0x7a: "IOC.CHECKBIT_ERROR~",
+        0x7b: "IOC.REQUEST_EMPTY~",
+        0x7c: "IOC.IOADDR.OVERFLOW",
+        0x7d: "IOC.IOC_XFER.PERR~",
+        0x7e: "IOC.RESPONSE_EMPTY~",
+        0x7f: "IOC.7f_pullup",
+
     }
 
     # SEQ page 77
@@ -592,6 +710,42 @@ class TypUir(ScanChain):
         "PD_CYCLE1~",
     ]
     DIAG_D7 = [ "D7.0", "D7.1", "D7.2", "D7.3", "D7.4", "D7.5", "D7.6", "D7.7"]
+
+class MemDreg(ScanChain):
+    '''
+	MEM32 DREG scan chain, (must be subclassed)
+
+    '''
+
+    def __init__(self):
+        for bit in range(8):
+            i = []
+            for j in range(bit*8, bit*8+8):
+                i.append("TYPB/%d" % j)
+            for j in range(bit*8, bit*8+8):
+                i.append("VALB/%d" % j)
+            if bit == 7:
+                for j in range(bit*8, bit*8+8):
+                    i.append("VAL_P/%d" % (j & 7))
+            else:
+                for j in range(bit*8, bit*8+8):
+                    i.append("D%d/%d" % (bit, j & 7))
+            setattr(self, "DIAG_D%d" % bit, i)
+        super().__init__()
+
+class MemDregValPar(MemDreg):
+    '''
+	MEM32 DREG scan chain, but only VAL+VAL_PAR
+    '''
+
+    BITSPEC = DPROC2[0xa8c:0xb65]
+
+class MemDregFull(MemDreg):
+    '''
+	MEM32 DREG scan chain
+    '''
+
+    BITSPEC = DPROC2[0x8da:0x9b3]
 
 
 def test():
