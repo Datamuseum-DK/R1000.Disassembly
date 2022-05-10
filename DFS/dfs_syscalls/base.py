@@ -96,8 +96,8 @@ class DfsSysCalls():
     def __init__(self, hi=0x1061c):
         self.hi = hi
         for number in range(0x40):
-            adr = 0x10200 + number + 2
-            if number not in KERNCALLS:
+            adr = 0x10200 + number * 2
+            if number not in KERNCALLS and adr not in SYSCALLS:
                 DfsKernCall(number)
         for adr in range(0x10280, 0x10460, 4):
             if adr not in SYSCALLS:
