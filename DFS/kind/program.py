@@ -30,9 +30,73 @@
    -------------------------
 '''
 
+from pyreveng import mem, data
 import pascal_pseudo_ins
 
 import dfs_syscalls
+
+class CmdTable():
+    ''' ... '''
+
+    def __init__(self, cx, adr):
+        self.adr = adr
+        self.words = []
+        print("CMD TABLE AT 0x%x" % adr)
+        cx.m.set_label(adr, "COMMAND_TABLE_%x" % adr)
+        cx.m.set_block_comment(adr, "COMMAND TABLE")
+        while True:
+            self.words.append(data.Txt(cx.m, adr, adr+10, label=False).txt.rstrip())
+            if cx.m.bu32(adr) == 0x41534349:
+                break
+            adr += 10
+
+def FindPushPopArg(cx, adr):
+    for i in cx.m.find(adr + 0x00024f6c - 0x00024f4a):
+        mne = getattr(i, "mne", None)
+        if mne == "JSR":
+            cx.m.set_label(i.dstadr, "Pop_Arg(?)")
+    for i in cx.m.find(adr + 0x00024f86 - 0x00024f4a):
+        mne = getattr(i, "mne", None)
+        if mne == "JSR":
+            cx.m.set_label(i.dstadr, "Push_Arg(?)")
+
+def FindFindVar(cx, adr):
+    for i in cx.m.find(adr + 0x000244de - 0x000244b4):
+        mne = getattr(i, "mne", None)
+        if mne != "JSR":
+            continue
+        cx.m.set_label(i.dstadr, "Find_Var(?)")
+        j = i.dstadr + (0x00023fec - 0x00023fd0)
+        if cx.m.bu16(j) == 0x26b9:
+            cx.m.set_label(cx.m.bu32(j + 2), "variables")
+
+def TryPrim(cx, adr, word):
+    for n in range(2):
+        item = list(cx.m.find(adr))[0]
+        if item.mne == "JSR":
+            cx.m.set_label(item.dstadr, "PRIM_" + word + "(?)")
+            if word == "XOR":
+                FindPushPopArg(cx, item.dstadr)
+            if word == "KILL":
+                FindFindVar(cx, item.dstadr)
+            return
+        adr = item.hi
+
+def CmdTableRef(cx, item):
+    # Look for "CMPI.W  #0x002a,D1"
+    if cx.m.bu32(item.lo + (0x00026356 - 0x00026332)) != 0x0c41002a:
+        return
+    cmdtbl = cx.dfs_cmd_tables[item.dstadr]
+
+    for i in cx.m.find(item.lo + (0x0002634c - 0x00026332)):
+        if getattr(i, "mne", None) == "JSR":
+            cx.m.set_label(i.dstadr, "CHECK_ARG_CNT(Int32)")
+
+    tbl = []
+    adr = item.lo + (0x00026368 - 0x00026332)
+    for i in range(0x2b):
+        dst = adr + cx.m.bu16(adr + 2 * i)
+        TryPrim(cx, dst, cmdtbl.words[i + 1])
 
 def flow_check(asp, ins):
     ''' Quench the "No Memory..." messges from trying to disassemble FS '''
@@ -49,6 +113,17 @@ def round_0(cx):
     cx.dfs_syscalls.round_0(cx)
     cx.flow_check.append(flow_check)
 
+    cx.dfs_cmd_tables = {}
+    for adr in range(0x20000, cx.m.hi - 7):
+        try:
+            if cx.m[adr] != 0x21:
+                continue
+        except mem.MemError:
+            break
+        if cx.m.bu32(adr) != 0x21402324 or cx.m.bu32(adr + 4) != 0x255e262a:
+            continue
+        cx.dfs_cmd_tables[adr] = CmdTable(cx, adr)
+
 def round_1(cx):
     ''' Let the disassembler loose '''
     y = cx.codeptr(0x20004)
@@ -64,3 +139,9 @@ def round_2(cx):
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
+
+    for item in cx.m:
+        dst = getattr(item, "dstadr", None)
+        if not dst in cx.dfs_cmd_tables:
+            continue
+        CmdTableRef(cx, item)
