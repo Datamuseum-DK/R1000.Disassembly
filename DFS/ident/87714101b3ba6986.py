@@ -43,8 +43,6 @@ def round_0(cx):
         (0x204f0, 0x20540, 10),
         (0x205de, 0x20638, 10),
         (0x2095c, 0x20c5e, 10),
-        (0x2276e, 0x2291c, 10),
-        (0x22b66, 0x22d10, 10),
     ):
         for i in range(a, b, n):
             data.Txt(cx.m, i, i + n, label=False)
@@ -53,61 +51,13 @@ def round_0(cx):
     cx.m.set_label(0x20bdc, "TXTTBL_CLOCK_MARGINS")
     cx.m.set_label(0x20c04, "TXTTBL_CMDS")
     cx.m.set_label(0x20a74, "TXTTBL__ALL_COND_SYS_VAL...")
-    cx.m.set_label(0x22b5c, "TBL_something")
 
-    cx.m.set_label(0x23272, "CHECK_ARG_CNT(Int)")
-    cx.m.set_label(0x23b98, "POP_ARG(?)")
-    cx.m.set_label(0x23c90, "PUSH_ARG(?)")
-    cx.m.set_label(0x279a8, "variables")
     cx.m.set_label(0x27982, "eval_buffer?")
-    cx.m.set_label(0x23fd0, "FIND_VAR(?)")
     cx.m.set_label(0x225dc, "DISPATCH_CMDS(?)")
     cx.m.set_label(0x22472, "MATCH_CMDS(?)")
     cx.m.set_label(0x221f8, "MATCH_CLOCK_MARGINS(?)")
     cx.m.set_label(0x22168, "MATCH_POWER_MARGINS(?)")
     cx.m.set_label(0x25516, "TRY_SCRIPT_FILE(?)")
-    for adr, prim in (
-         (0x23cee, "WRITE"),
-         (0x23ecc, "ABORT"),
-         (0x241f2, "SET"),
-         (0x24364, "VAR"),
-         (0x24452, "VARS"),
-         (0x2484e, "EQ"),
-         (0x248c6, "NE"),
-         (0x2493e, "CASE"),
-         (0x2496a, "INSERT"),
-         (0x24a6a, "EXTRACT"),
-         (0x24b50, "#CASE"),
-         (0x24b7c, "#EQ"),
-         (0x24bc8, "#NE"),
-         (0x24c14, "#LT"),
-         (0x24c60, "#GT"),
-         (0x24cac, "#LE"),
-         (0x24cf8, "#GE"),
-         (0x24d44, "ADD"),
-         (0x24d8e, "SUB"),
-         (0x24dd8, "MUL"),
-         (0x24e22, "DIV"),
-         (0x24e6c, "MOD"),
-         (0x24eb6, "OR"),
-         (0x24f00, "AND"),
-         (0x24f4a, "XOR"),
-         (0x24f94, "LSHIFT"),
-         (0x24fd8, "RSHIFT"),
-         (0x2501e, "NOT"),
-         (0x25054, "#INSERT"),
-         (0x250e4, "#EXTRACT"),
-         (0x25156, "READ"),
-         (0x244b4, "KILL"),
-         (0x2451e, "PUSH"),
-         (0x244f0, "LEVEL"),
-         (0x251c8, "CONVERT"),
-         (0x2534a, "COUNT_ONES"),
-         (0x252ca, "REPEAT"),
-         (0x2538e, "MODEL"),
-         (0x253ae, "ASCII"),
-    ):
-        cx.m.set_label(adr, "PRIM_" + prim + "(?)")
 
     for adr, cmd in (
          (0x21746, "TEST"),
