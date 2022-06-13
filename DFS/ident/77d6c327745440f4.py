@@ -348,19 +348,11 @@ def round_1(cx):
     for a in range(0xa878, 0x0a8a0, 2):
         data.Const(cx.m, a, a + 2)
 
-    cx.m.set_block_comment(0x263e, "(Vector 0x46) MODEM.RXRDY Interrupt")
-    cx.m.set_block_comment(0x2b82, "(Vector 0x42) CONSOLE.BREAK Interrupt")
-    cx.m.set_block_comment(0x2ab0, "(Vector 0x49) CONSOLE.TXRDY Interrupt")
-    cx.m.set_block_comment(0x2ada, "(Vector 0x45) CONSOLE.RXRDY Interrupt")
-    cx.m.set_block_comment(0x36b0, "(Vector 0x48) DIAG_BUS.TXRDY Interrupt")
-    cx.m.set_block_comment(0x370c, "(Vector 0x44) DIAG_BUS.RXRDY Interrupt")
     cx.m.set_block_comment(0x3970, "Reset INT_MODEM by writing 3 zeros to cmd reg")
     cx.m.set_block_comment(0x3b3e, "(Vector 0x4c) INT_MODEM Interrupt (1)")
     cx.m.set_block_comment(0x4120, "(Vector 0x47) INT_MODEM Interrupt (2)")
     cx.m.set_block_comment(0x5a02, "(Vector 0x91) SCSI_D Interrupt")
-    cx.m.set_block_comment(0x8c3c, "(Vector 0x4e) FIFO Interrupt")
     cx.m.set_block_comment(0x98aa, "(Vector 0x92) SCSI_T Interrupt")
-    cx.m.set_block_comment(0x9e30, "(Vector 0x4f) PIT Interrupt")
 
 
 def round_2(cx):

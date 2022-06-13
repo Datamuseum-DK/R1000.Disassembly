@@ -47,6 +47,8 @@ def round_0(cx):
         for i in range(a, b, n):
             data.Txt(cx.m, i, i + n, label=False)
 
+    data.Txt(cx.m, 0x20952, 0x20952 + 10)
+
     cx.m.set_label(0x20bb4, "TXTTBL_POWER_MARGINS")
     cx.m.set_label(0x20bdc, "TXTTBL_CLOCK_MARGINS")
     cx.m.set_label(0x20c04, "TXTTBL_CMDS")
@@ -58,6 +60,7 @@ def round_0(cx):
     cx.m.set_label(0x221f8, "MATCH_CLOCK_MARGINS(?)")
     cx.m.set_label(0x22168, "MATCH_POWER_MARGINS(?)")
     cx.m.set_label(0x25516, "TRY_SCRIPT_FILE(?)")
+    cx.m.set_label(0x23dc2, "TRY_HLP_FILE(?)")
 
     for adr, cmd in (
          (0x21746, "TEST"),

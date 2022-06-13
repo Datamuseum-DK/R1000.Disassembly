@@ -116,6 +116,9 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
         hi=high,
         **kwargs
     )
+    if False:
+        from pyreveng import partition
+        partition.Partition(cx.m)
     return cx
 
 def main():

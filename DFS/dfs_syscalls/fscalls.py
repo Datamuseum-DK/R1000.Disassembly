@@ -92,6 +92,7 @@ DfsFsCall(0x1047e, "?exp_xmit(EXP.L,NODE.B)")
 DfsFsCall(0x10472, "DiagGetOutParam(&Byte, Long, Long)")
 DfsFsCall(0x10496, "?experiment_close")        # ref: FS.0 0x18f4e
 DfsFsCall(0x104ba, "DiagDownload(Byte, Byte addr, &Byte)")
+DfsFsCall(0x1057a, "Read_HARDWARE.M200_CONFIG(&Byte[6],&Byte[1])")
 DfsFsCall(0x10592, "ReadConfig(Long, &Word)")
 DfsFsCall(0x10610, "Check_FC07(&Byte)")
 

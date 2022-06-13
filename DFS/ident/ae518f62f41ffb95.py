@@ -77,10 +77,20 @@ def round_0(cx):
 
     cx.m.set_label(0x11a36, "Str2Int(String, &LongInt, Long, Long, &Byte)")
     cx.m.set_label(0x11ab4, "Month(String, &LongInt, &Void)")
+
+    cx.m.set_label(0x130f2, "Legal_Filename_BitMap")
+    cx.m.set_block_comment(0x130f2, "Legal characters in filename:  $.0-9?A-Z[\]_")
+    data.Const(cx.m, 0x130f2, 0x13112)
+
     cx.m.set_label(0x1330a, "ReportError(Byte error, Byte mode, String)")
+
+    cx.m.set_label(0x1346a, "CheckFilename()")
+    cx.m.set_line_comment(0x13544, "Filename hashing")
+
     cx.m.set_label(0x1371a, "NameI(Char*, &void)")
 
     cx.m.set_label(0x1b0b8, "cur_push_level");
+
 
 def round_1(cx):
     ''' Let the disassembler loose '''
