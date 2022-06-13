@@ -186,7 +186,8 @@ VXOR		vec,R2,R3		|1 0 1 1 0 0 0 1|1 1 0| vec	|
 BAD_INS		-			|1 0 1 1 0 0 0|m|
 
 xB2		var,imm,imm2		|1 0 1 1 0 0 1|m| var		| imm		| imm2		|
-PARITY		[0x8],var,var2		|1 0 1 1 0 1 0|m| var		| var2		|
+EVNPAR		[0x8],var,var2		|1 0 1 1 0 1 0 0| var		| var2		|
+ODDPAR		[0x8],var,var2		|1 0 1 1 0 1 0 1| var		| var2		|
 
 # Set parity in bit `imm2` of `var[0:imm]`
 EVNPAR		imm,var,imm2		|1 0 1 1 0 1 1 0| imm		| var		| imm2		|
@@ -238,12 +239,12 @@ CHN_TST		??,chn,dst,>JC		|1 1 0 1 1 0 1|m| chn	|1|y|x|1| fsm		| dst		|
 
 CHN_QQQ		-,>R			|1 1 0 1 1 0 1|m|
 
-P1		imm			|1 1 0 1 1 1 0|m| imm		|
-P2		imm			|1 1 0 1 1 1 1|m| imm		|
-P1_AO		imm,var			|1 1 1 0 0 0 0 0| imm		| var		|
-P1_AO		imm,imm2		|1 1 1 0 0 0 0 1| imm		| imm2		|
-P2_AO		imm,var			|1 1 1 0 0 0 1 0| imm		| var		|
-P2_AO		imm,imm2		|1 1 1 0 0 0 1 1| imm		| imm2		|
+RD_P1		var			|1 1 0 1 1 1 0|m| var		|
+RD_P2		var			|1 1 0 1 1 1 1|m| var		|
+P1_RS		imm,var			|1 1 1 0 0 0 0 0| imm		| var		|
+P1_RS		imm,imm2		|1 1 1 0 0 0 0 1| imm		| imm2		|
+P2_RS		imm,var			|1 1 1 0 0 0 1 0| imm		| var		|
+P2_RS		imm,imm2		|1 1 1 0 0 0 1 1| imm		| imm2		|
 CALL		DFLG,subr,>CC		|1 1 1 0 0 1| x |
 CALL		NDFLG,subr,>CC		|1 1 1 0 1 0| x |
 RET		DFLG,>RC		|1 1 1 0 1 1 1|m|
@@ -288,6 +289,7 @@ FSM		FILL_RF			|1 0 1 1 1 1 0 0|0 0 0 1 1 0 0 1|
 
 R1K_EXP_MEM32 = '''
 MEM_SND	var,SETLAR			|1 1 0 0 0 0 0 0| var		|0 0 0 0 0 1 0 0|
+RFSM.H	MISCDRV,var			|1 1 0 0 1 1 0 0|0 0 0 0 1 0 1 0| var		|
 '''
 
 class R1kExpIns(assy.Instree_ins):
@@ -408,4 +410,5 @@ class R1kExp(assy.Instree_disass):
             "LD_LCNT_FM_WDR",
             "FILL_RF",
             "S.MISC",
+            "MISCDRV",
         )
