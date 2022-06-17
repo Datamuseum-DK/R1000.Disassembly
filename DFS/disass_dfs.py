@@ -130,7 +130,8 @@ def main():
     elif len(sys.argv) > 1:
         assert "-AutoArchaeologist" not in sys.argv
         for i in sys.argv[1:]:
-            cx = disassemble_file(i)
+            j = i.split("/")[-1]
+            cx = disassemble_file(i, "/tmp/_" + j)
             dotplot.dot_plot(cx)
     else:
         cx = disassemble_file(FILENAME, pil=True)
