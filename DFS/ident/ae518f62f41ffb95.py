@@ -89,7 +89,10 @@ def round_0(cx):
 
     cx.m.set_label(0x1371a, "NameI(Char*, &void)")
 
-    cx.m.set_label(0x1b0b8, "cur_push_level");
+    cx.m.set_label(0x1aa5e, "_Write_fc0c(word *)")
+
+    cx.m.set_label(0x1b0b8, "cur_push_level")
+
 
 
 def round_1(cx):

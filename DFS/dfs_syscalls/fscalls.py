@@ -95,6 +95,8 @@ DfsFsCall(0x104ba, "DiagDownload(Byte, Byte addr, &Byte)")
 DfsFsCall(0x1057a, "Read_HARDWARE.M200_CONFIG(&Byte[6],&Byte[1])")
 DfsFsCall(0x10592, "ReadConfig(Long, &Word)")
 DfsFsCall(0x105b0, "FifoInit(void)")
+DfsFsCall(0x105b6, "R1000_Reset_L(void)")
+DfsFsCall(0x105bc, "R1000_Reset_H(void)")
 DfsFsCall(0x105ce, "ReadKeySwitch(&Byte)")
 DfsFsCall(0x10610, "Check_FC07(&Byte)")
 

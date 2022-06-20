@@ -150,14 +150,14 @@ class DiprocDisass():
             (0x00, "SERIAL_INTERRUPT()"),
             (0x4d, "DIAG_DO_CMD_R0"),
             (0x4e, "DIAG_DO_CMD_A"),
-            (0x53, "DIAG_CMD_6"),
+            (0x53, "DIAG_CMD_6_ENABLE"),
             (0x5d, "DIAG_CMD_0_STATUS"),
             (0x71, "DIAG_CMD_A_DOWNLOAD"),
             (0xa3, "DIAG_CMD_2_UPLOAD"),
-            (0xc1, "DIAG_CMD_C"),
-            (0xce, "DIAG_CMD_E"),
-            (0xdb, "DIAG_CMD_4"),
-            (0xdf, "DIAG_CMD_8"),
+            (0xc1, "DIAG_CMD_C_UNPAUSE"),
+            (0xce, "DIAG_CMD_E_UNLOOP"),
+            (0xdb, "DIAG_CMD_4_DISABLE"),
+            (0xdf, "DIAG_CMD_8_RESET"),
         ):
             self.cx.m.set_label(uart_vector + offset, lbl)
 
