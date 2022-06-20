@@ -26,25 +26,19 @@
 #
 
 '''
-   Bootblocks
-   ----------
+   Bootblock
+   ---------
 '''
 
 from pyreveng import data
 
-def flow_check(asp, ins):
-    if ins.dstadr == 0x5403e:
-        ins.flow_out.pop(-1)
-        data.Txt(asp, ins.hi, align=2, label=False)
-
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
-    cx.m.set_label(0x5403e, "PRINT_MSG")
-    cx.flow_check.append(flow_check)
+
+    data.Txt(cx.m, 0x0005437a, label=False)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
-    cx.disass(0x54000)
 
 def round_2(cx):
     ''' Spelunking in what we alrady found '''

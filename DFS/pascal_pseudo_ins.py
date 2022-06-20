@@ -126,7 +126,7 @@ class PascalPushtxtIns(m68020.m68020_ins):
             elif j in (9, 10, 13):
                 pass
             else:
-                print("BAD char 0x%02x" % j)
+                print("BAD char 0x%02x" % j, "at adr 0x%x" % adr)
                 raise assy.Invalid()
         y = data.Txt(self.lang.m, adr, adr+length, label=False)
         return '"' + y.txt + '"'

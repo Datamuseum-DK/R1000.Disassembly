@@ -122,6 +122,8 @@ def round_0(cx):
             break
         if cx.m.bu32(adr) != 0x21402324 or cx.m.bu32(adr + 4) != 0x255e262a:
             continue
+        if cx.m[adr + 10] != 0x57:
+            continue
         cx.dfs_cmd_tables[adr] = CmdTable(cx, adr)
 
 def round_1(cx):
