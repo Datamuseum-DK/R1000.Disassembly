@@ -85,10 +85,15 @@ class DfsKernCall(DfsSysCall):
 class DfsFsCall(DfsSysCall):
     ''' FS system-call '''
 
-    def __init__(self, adr, name=None, **kwargs):
+    def __init__(self, adr, name=None, dead=False, **kwargs):
         if name is None:
             name = "FSCALL_%x" % adr
         super().__init__(adr, name, **kwargs)
+        self.dead = dead
+
+    def flow_check(self, asp, ins):
+        if self.dead:
+            ins.flow_out.pop(-1)
 
 class DfsSysCalls():
     ''' ... '''
