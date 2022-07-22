@@ -237,6 +237,8 @@ def round_1(cx):
         cx.m.set_block_comment(a, b)
 
     for a, b in (
+        (0x4eb, "kc12_sleep_callout_flag"),
+        (0x784, "kc12_sleep_callout"),
         (0x1429, "XE1201_CTRL_COPY"),
         (0x1434, "MODEM_TXBUF"),
         (0x1438, "MODEM_VEC_1"),
@@ -247,9 +249,19 @@ def round_1(cx):
         (0x144c, "MODEM_VEC_6"),
         (0x1481, "MODEM_EXPECT"),
         (0x1485, "MODEM_STATE"),
+        (0x14dd, "diagbus_rxsum"),
+        (0x14e0, "diagbus_rxwant"),
+        (0x14e4, "diagbus_rxptr"),
+        (0x150c, "diagbus_inbuf"),
+        (0x160c, "diagbus_callout_flag"),
+        (0x160e, "diagbus_callout"),
         (0x163c, "Timeout_chain"),
-        (0x2374, "TEXT_TO_CONSOLE()"),
+        (0x2204, "D0=MODEM_GET_CHAR(D0)"),
+        (0x2244, "TEXT_TO_MODEM(A2=ptr, D1=len, D2, D3)"),
+        (0x2374, "TEXT_TO_CONSOLE(A2=ptr,D1=len, D3)"),
+        (0x3112, "START_MODEM(void)"),
         (0x32f4, "INIT_KERNEL_05_UARTS"),
+        (0x36aa, "DiagBusTimeoutCallback()"),
         (0x3970, "INT_MODEM_RESET"),
         (0x3b4a, "MODEM_VEC_1_XE1201"),
         (0x3b58, "MODEM_VEC_1_DUART"),
@@ -300,6 +312,7 @@ def round_1(cx):
         (0x6072, "SCSI_D_WRITE_10_SOMETHING(scsi_id=D0,src=D4,blockno=D6)"),
         (0x66a8, "INIT_KERNEL_10"),
         (0x8398, "BOUNCE_TO_FS"),
+        (0x8480, "KC12_Sleep_CallBack"),
         (0x8acc, "INIT_KERNEL_04"),
         (0x8bec, "Stuff_Response_Fifo(A1)"),
         (0x8df0, "GET_SECTOR_BUFFER([A0+0x13].B => A1)"),
@@ -318,7 +331,7 @@ def round_1(cx):
         (0x9fde, "INIT_KERNEL_09"),
         (0xa710, "SCSI_OPS_TABLE"),
         (0x4b20, "CHS512_TO_LBA1024(A0=CHAN)"),
-        (0x374c, "DO_KC_15_DiagBus(D0,A0)"),
+        (0x374c, "DO_KC_15_DiagBus(D0=cmd,A0=ptr)"),
         (0x362c, "DiagBusResponse(D2)"),
     ):
         cx.m.set_label(a, b)

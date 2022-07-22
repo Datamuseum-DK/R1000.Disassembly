@@ -26,8 +26,8 @@
 #
 
 '''
-   IOC FS_?.M200 - DFS filesystem
-   ------------------------------
+   Disassemble .M200 files
+   -----------------------
 '''
 
 import os
@@ -45,7 +45,7 @@ MYDIR = os.path.split(__file__)[0]
 
 FILENAME = os.path.join(MYDIR, "FS_0.M200")
 
-def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
+def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, **kwargs):
     ''' Disassemble a single file '''
     cx = m68020.m68020()
     try:
@@ -92,9 +92,10 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
     for i in tryout:
         try:
             contrib.append(importlib.import_module(i))
-        except ModuleNotFoundError:
+        except ModuleNotFoundError as err:
             cx.m.set_block_comment(low, "  no " + i)
             print("  no", i)
+            print(err)
             continue
         print("  import", i)
         cx.m.set_block_comment(low, "  import " + i)
@@ -111,14 +112,21 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, **kwargs):
         fn=output_file,
         align_blank=True,
         align_xxx=True,
-        ncol=8,
+        ncol=4,
         lo=low,
         hi=high,
         **kwargs
     )
-    if False:
+    if svg:
         from pyreveng import partition
-        partition.Partition(cx.m)
+        pp = partition.Partition(cx.m)
+        for st in pp.stretches:
+            print(st, len(st.nodes))
+            for nd in st.nodes:
+                print("\t", nd)
+                for lf in nd.leaves:
+                    print("\t\t", lf, lf.render())
+                    print("\t\t\t" + lf.pil.render().replace("\n", "\n\t\t\t"))
     return cx
 
 def main():
@@ -131,10 +139,10 @@ def main():
         assert "-AutoArchaeologist" not in sys.argv
         for i in sys.argv[1:]:
             j = i.split("/")[-1]
-            cx = disassemble_file(i, "/tmp/_" + j)
+            cx = disassemble_file(i, "/tmp/_" + j, pil=False, svg=False)
             dotplot.dot_plot(cx)
     else:
-        cx = disassemble_file(FILENAME, pil=True)
+        cx = disassemble_file(FILENAME, pil=True, svg=False)
         dotplot.dot_plot(cx)
 
 if __name__ == '__main__':

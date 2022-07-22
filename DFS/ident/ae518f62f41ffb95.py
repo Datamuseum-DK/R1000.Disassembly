@@ -26,42 +26,40 @@
 #
 
 '''
-   FS/ae518f62f41ffb95
-   -------------------
+   FS_0.M200/ae518f62f41ffb95
+   --------------------------
 '''
 
 from pyreveng import data
 
+def text_table(cx, lo, label, cnt, length, *args, **kwargs):
+    if label is None:
+        label = "texttable_0x%x" % lo
+    cx.m.set_label(lo, label)
+    for i in range(cnt):
+        y = data.Txt(cx.m, lo, lo + length, label=False, *args, **kwargs)
+        lo = y.hi
+
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
 
-    cx.m.set_label(0x116ca, 'months')
-    for a in range(0x116ca, 0x116ee, 0x3):
-        data.Txt(cx.m, a, a + 0x3, label=False)
+    text_table(cx, 0x116ca, 'months', 12, 3)
+    text_table(cx, 0x12f12, 'error_messages', 16, 0x1e)
+    text_table(cx, 0x1312a, 'error_messages2', 16, 0x1e)
+    text_table(cx, 0x14368, None, 17, 6)
+    text_table(cx, 0x143f2, None, 17, 6)
+    text_table(cx, 0x14824, 'push_error_messages', 15, 0x1e)
+    text_table(cx, 0x149e6, 'exp_error_messages', 15, 0x1e)
+    text_table(cx, 0x15ca8, 'tape_error_messages', 14, 0x1e)
+    text_table(cx, 0x15eb2, 'tape2_error_messages', 14, 0x1e)
+    text_table(cx, 0x18282, 'board_names', 16, 10)
+    text_table(cx, 0x1832e, 'status_names', 10, 10)
 
-    cx.m.set_label(0x12f12, 'error_messages')
-    for a in range(0x12f12, 0x130f2, 0x1e):
-        data.Txt(cx.m, a, a + 0x1e, label=False)
-
-    cx.m.set_label(0x1312a, 'error_messages2')
-    for a in range(0x1312a, 0x1330a, 0x1e):
-        data.Txt(cx.m, a, a + 0x1e, label=False)
-
-    cx.m.set_label(0x14824, 'push_error_messages')
-    for a in range(0x14824, 0x149e6, 0x1e):
-        data.Txt(cx.m, a, a + 0x1e, label=False)
-
-    cx.m.set_label(0x149e6, 'exp_error_messages')
-    for a in range(0x149e6, 0x14ba8, 0x1e):
-        data.Txt(cx.m, a, a + 0x1e, label=False)
-
-    cx.m.set_label(0x15ca8, 'tape_error_messages')
-    for a in range(0x15ca8, 0x15e4c, 0x1e):
-        data.Txt(cx.m, a, a + 0x1e, label=False)
-
-    cx.m.set_label(0x15eb2, 'tape_error2_messages')
-    for a in range(0x15eb2, 0x16056, 0x1e):
-        data.Txt(cx.m, a, a + 0x1e, label=False)
+    for adr in (
+        0x18322,
+    ):
+        for i in range(3):
+            data.Txt(cx.m, adr + i, adr + i + 1)
 
     cx.m.set_label(0x1a2aa, 'config_strings')
     for a in range(0x1a2aa, 0x1a43a, 0x14):
@@ -87,17 +85,44 @@ def round_0(cx):
     cx.m.set_label(0x1346a, "CheckFilename()")
     cx.m.set_line_comment(0x13544, "Filename hashing")
 
-    cx.m.set_label(0x1371a, "NameI(Char*, &void)")
+    cx.m.set_label(0x13718, "NameI(Char*, &void)")
 
     cx.m.set_label(0x1aa5e, "_Write_fc0c(word *)")
 
     cx.m.set_label(0x1b0b8, "cur_push_level")
+
+    for i in range(9, 16):
+        adr = 0x1a0d8 + 4 * i
+        data.Const(cx.m, adr, adr + 4, fmt="0x%02x")
+        cx.m.set_line_comment(adr, "Param Type 0x%x" % i)
+
+    cx.m.set_line_comment(0x0001a11c, "Return PC")
+    cx.m.set_line_comment(0x0001a122, "Stack Delta")
+    cx.m.set_line_comment(0x0001a12a, "Name Length")
+    cx.m.set_line_comment(0x0001a15a, "D1 => number of O_params")
+    cx.m.set_line_comment(0x0001a15c, "D0 => number of I_params")
+    cx.m.set_line_comment(0x0001a1a2, "I_Param: length - 1")
+    cx.m.set_line_comment(0x0001a196, "I_Param: 8 (flag)")
+    cx.m.set_line_comment(0x0001a1c6, "D1 => number of O_params")
+    cx.m.set_line_comment(0x0001a20c, "O_Param: length - 1")
+    cx.m.set_line_comment(0x0001a200, "O_Param: 8 (flag)")
+
+    cx.m.set_label(0x18458, "diproc_adr_valid")
+    data.Const(cx.m, 0x18458, 0x18458+0x10)
+    cx.m.set_label(0x18474, "diproc_adr_table[TVISF]")
+    data.Const(cx.m, 0x18474, 0x18474+0x5)
 
 
 
 def round_1(cx):
     ''' Let the disassembler loose '''
     cx.disass(0x11a36)
+    cx.m.set_label(0x10704, "Program.Program_Failure()")
+    cx.disass(0x10704)
+    cx.m.set_label(0x1070c, "Program.Experiment_Failure()")
+    cx.disass(0x1070c)
+
+    cx.disass(0x118a2)
 
 def round_2(cx):
     ''' Spelunking in what we alrady found '''

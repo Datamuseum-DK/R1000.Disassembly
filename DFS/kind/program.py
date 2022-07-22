@@ -99,7 +99,7 @@ def CmdTableRef(cx, item):
         TryPrim(cx, dst, cmdtbl.words[i + 1])
 
 def flow_check(asp, ins):
-    ''' Quench the "No Memory..." messges from trying to disassemble FS '''
+    ''' Quench the "No Memory..." messages from trying to disassemble FS '''
     for f in ins.flow_out:
         syscall = dfs_syscalls.base.SYSCALLS.get(f.to)
         if syscall:
@@ -128,10 +128,15 @@ def round_0(cx):
 
 def round_1(cx):
     ''' Let the disassembler loose '''
+
     y = cx.codeptr(0x20004)
-    z = cx.codeptr(0x20018)
-    z = cx.codeptr(0x2001c)
     cx.m.set_label(y.dst, "START")
+
+    z = cx.codeptr(0x20018)
+    cx.m.set_label(z.dst, "ProgramFailureHandler()")
+    z = cx.codeptr(0x2001c)
+    cx.m.set_label(z.dst, "ExperimentFailureHandler()")
+
     # XXX: should be done through flow-check
     cx.disass(y.dst + 10)
     cx.m.set_label(y.dst + 10, "MAIN")
