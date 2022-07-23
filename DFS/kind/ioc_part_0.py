@@ -30,10 +30,64 @@
    ---------------------------
 '''
 
+from pyreveng import assy, data
+
 import ioc_eeprom_exports
+
+#                                    . . . . . . . . . . . . . . . .       . . . . . . . .|. . . . . . . .|
+call_a1 = 'call_a1      |43|F9|80|00| aa            | bb            |60|00| cc            | dd            |'
+
+class call_a1_ins(assy.Instree_ins):
+
+    def __init__(self, lim, lang):
+        super().__init__(lim, lang)
+        lang.m.set_line_comment(self.lo, "CALL_A1")
+        # print("CALL_A1", self['aa'], self['bb'], self['cc'], self['dd'])
+        adr = 0x80000000
+        adr |= self['aa'] << 8
+        adr |= self['bb']
+        self.lang.disass(adr)
+        raise assy.Invalid()
+
+#                                    . . . . . . . . . . . . . . . .          . . . . . . . .
+dir_uart = 'dir_uart	|43|F9|80|00| aa            | bb            |10|19|67| cc            |'
+
+class dir_uart_ins(assy.Instree_ins):
+
+    def __init__(self, lim, lang):
+        super().__init__(lim, lang)
+        lang.m.set_line_comment(self.lo, "DIR_UART")
+        # print("DIR_UART", self['aa'], self['bb'], self['cc'])
+        adr = 0x80000000
+        adr |= self['aa'] << 8
+        adr |= self['bb']
+        y = data.Txt(self.lang.m, adr)
+        raise assy.Invalid()
+
+#
+switch_1 = 'switch_1	|4E|F0|05|B1|\n'
+switch_1 += 'switch_1	|4E|F0|75|B1|\n'
+
+class switch_1_ins(assy.Instree_ins):
+
+    def __init__(self, lim, lang):
+        super().__init__(lim, lang)
+        lang.m.set_line_comment(self.lo, "SWITCH1")
+        # print("SWITCH1 %08x" % self.lo)
+        n = {
+            0x05: 5,
+            0x75: 8,
+        }[self.lang.m[self.lo + 2]]
+        for i in range(n):
+            y = self.lang.codeptr(self.lo + 8 + 4 * i)
+            self.lang.m.set_label(y.dst, "SWITCH_%08x_%d" % (self.lo, i))
+        raise assy.Invalid()
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
+    cx.add_ins(call_a1, call_a1_ins)
+    cx.add_ins(dir_uart, dir_uart_ins)
+    cx.add_ins(switch_1, switch_1_ins)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
@@ -42,35 +96,19 @@ def round_1(cx):
     for i in ioc_eeprom_exports.IOC_EEPROM_PART0_EXPORTS:
         cx.disass(i)
 
+
     for a, b in (
         (0x80000020, "IOC_20_XXX"),
         (0x80000088, "_TEST_FAILED"),
-        (0x800000d8, "OUTSTR_PRESERVE_D0(A0)"),
-        (0x800000f8, "OUTSTR_SMASH_D0(A0)"),
-        (0x80000142, "OUTSTR_OK()"),
-        (0x8000014c, "OUTSTR_CRNL()"),
-        (0x8000015e, "DELAY(D0)"),
-        (0x8000016c, "CHECKSUM_FUNC"),
-        (0x800001e4, "CHECKSUM_EEPROM"),
-        (0x800001f6, None),
-        (0x80000208, None),
-        (0x8000021a, None),
-        (0x80001524, None),
-        (0x80001566, None),
-        (0x800015a8, None),
-        (0x800015d4, None),
-        (0x80001628, None),
-        (0x80001672, None),
-        (0x800016a2, None),
-        (0x800016c2, None),
     ):
         cx.disass(a)
         cx.m.set_line_comment(a, "Manual")
         if b:
             cx.m.set_label(a, b)
+    return
 
 def round_2(cx):
-    ''' Spelunking in what we alrady found '''
+    ''' Spelunking in what we already found '''
     ioc_eeprom_exports.add_exports(
         cx.m,
         ioc_eeprom_exports.IOC_EEPROM_PART0_EXPORTS

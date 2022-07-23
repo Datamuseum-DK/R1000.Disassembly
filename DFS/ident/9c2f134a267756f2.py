@@ -48,7 +48,7 @@ def round_1(cx):
     ''' Let the disassembler loose '''
 
 def round_2(cx):
-    ''' Spelunking in what we alrady found '''
+    ''' Spelunking in what we already found '''
     cx.disass(0x207fc)
     cx.disass(0x20928)
     cx.disass(0x20aa6)

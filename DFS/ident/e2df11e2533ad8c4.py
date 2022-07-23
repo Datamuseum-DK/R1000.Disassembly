@@ -48,7 +48,6 @@ def boot_reason(cx, a):
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
-
     for a in (
         0x8000221c,
         0x80002232,
@@ -96,10 +95,6 @@ def round_1(cx):
         if b:
             cx.m.set_label(a, b)
 
-    for a in range(0x800038ce, 0x800038ee, 4):
-        cx.codeptr(a)
-    for a in range(0x8000310e, 0x80003122, 4):
-        cx.codeptr(a)
 
     # EEprom writing trampoline
     data.Const(cx.m, 0x80003a2a, 0x80003a2c)
@@ -137,10 +132,8 @@ def round_1(cx):
     ):
         cx.m.set_label(a, b)
 
-
-
 def round_2(cx):
-    ''' Spelunking in what we alrady found '''
+    ''' Spelunking in what we already found '''
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''

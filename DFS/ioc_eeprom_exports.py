@@ -151,7 +151,7 @@ def flow_check(asp, ins):
         if f.to in (
             0x80002010,
             0x80002028,
-            0x80002aa8
+            asp.bu16(0x8000202a) + 0x8000202a
         ):
             y = data.Txt(asp, ins.hi, label=False, align=2, splitnl=True)
             ins.dstadr = y.hi
@@ -171,7 +171,7 @@ def flow_check(asp, ins):
                 y = data.Txt(asp, a, splitnl=True)
         elif f.to in (
             0x8000001c,
-            0x800000e2
+            asp.bu16(0x8000001e) + 0x8000001e,
         ):
             y = data.Txt(asp, ins.hi, label=False, align=2, splitnl=True)
             ins.dstadr = y.hi

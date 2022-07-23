@@ -30,10 +30,14 @@
    ---------------------------
 '''
 
+from pyreveng import data
 import ioc_eeprom_exports
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
+    for a in range(0x80004a7a, 0x80004a9a, 4):
+        y = cx.dataptr(a)
+        data.Txt(cx.m, y.dst)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
@@ -41,7 +45,7 @@ def round_1(cx):
         cx.disass(i)
 
 def round_2(cx):
-    ''' Spelunking in what we alrady found '''
+    ''' Spelunking in what we already found '''
     ioc_eeprom_exports.add_exports(
         cx.m,
         ioc_eeprom_exports.IOC_EEPROM_PART2_EXPORTS

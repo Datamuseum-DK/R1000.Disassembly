@@ -39,10 +39,7 @@ def round_0(cx):
     y = data.Txt(cx.m, 0x80000156, y.lo)
 
     for a in (
-        0x80000072,
         0x800001c4,
-        0x80000314,
-        0x80000374,
     ):
         data.Txt(cx.m, a, splitnl=True)
 
@@ -108,7 +105,7 @@ def round_1(cx):
     ''' Let the disassembler loose '''
 
 def round_2(cx):
-    ''' Spelunking in what we alrady found '''
+    ''' Spelunking in what we already found '''
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''

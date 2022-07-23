@@ -47,7 +47,7 @@ def round_1(cx):
     cx.disass(0x54000)
 
 def round_2(cx):
-    ''' Spelunking in what we alrady found '''
+    ''' Spelunking in what we already found '''
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''

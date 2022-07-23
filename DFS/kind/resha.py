@@ -133,7 +133,7 @@ def round_1(cx):
         cx.m.set_line_comment(a, b)
 
 def round_2(cx):
-    ''' Spelunking in what we alrady found '''
+    ''' Spelunking in what we already found '''
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
