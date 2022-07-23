@@ -84,7 +84,9 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, 
         for a in range(4):
             tryout.append("kind.ioc_part_%d" % a)
             b = 0x80000000 + 0x2000 * a
-            i = hashlib.sha256(cx.m.bytearray(b, 0x2000)).hexdigest()[:16]
+            # One of the last 8 bytes varies between otherwise identical
+            # sources of the IOC EEPROM
+            i = hashlib.sha256(cx.m.bytearray(b, 0x1ff8)).hexdigest()[:16]
             tryout.append("ident." + i)
 
     contrib = []

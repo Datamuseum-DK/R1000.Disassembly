@@ -55,6 +55,21 @@ def load_m200_file(asp, load_address, octets):
     # Ident is hash of the bytes
     return hashlib.sha256(octets).hexdigest()[:16]
 
+def load_ioc_eeprom(asp, octets):
+    ''' IOC EEPROM '''
+
+    load_address = 0x80000000
+
+    memory = mem.ByteMem(load_address, load_address + len(octets))
+    memory.load_data(load_address, 1, octets[:0x2000])
+    memory.load_data(load_address + 0x2000, 1, octets[0x4000:0x6000])
+    memory.load_data(load_address + 0x4000, 1, octets[0x2000:0x4000])
+    memory.load_data(load_address + 0x6000, 1, octets[0x6000:])
+    asp.map(memory, memory.lo, memory.hi, offset=memory.lo)
+
+    # Ident is hash of the bytes
+    return hashlib.sha256(octets).hexdigest()[:16]
+
 
 def load_s_records(asp, octets):
     ''' S-Record Load '''
@@ -102,12 +117,15 @@ def load_dfs_file(asp, filename):
     if b[:3] == b'\x00\x0f\x58':
         raise LoadError("Wrong file type (R1000 code segment)")
 
-    i = {
-        b'NqH\xe7': 0x54000,            # Bootblocks
-        b'\x00\x00\xfc\x00': 0x0,       # KERNEL
-        b'\x00\x02\x00\x00': 0x10000,   # FS
-        b'\x00\x04\x00\x00': 0x20000,   # PROGRAM
+    if b == b'\x00\x07\xff\xfc':
+        # IOC EEPROM, swap two middle quarters
+        return load_ioc_eeprom(asp, octets=b + fi.read())
 
+    i = {
+        b'NqH\xe7': 0x54000,               # Bootblocks
+        b'\x00\x00\xfc\x00': 0x0,          # KERNEL
+        b'\x00\x02\x00\x00': 0x10000,      # FS
+        b'\x00\x04\x00\x00': 0x20000,      # PROGRAM
     }.get(b)
     if i is not None:
         return load_m200_file(asp, load_address=i, octets=b + fi.read())
