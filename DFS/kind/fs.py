@@ -58,6 +58,13 @@ def round_0(cx):
     cx.it.load_string(FS_DESC, FsIns)
     cx.dfs_syscalls = dfs_syscalls.DfsSysCalls(hi=cx.m.bu32(0x10004))
     cx.dfs_syscalls.round_0(cx)
+    cx.m.set_label(0x20024, "exp_init_done")
+    cx.m.set_label(0x10008, "mounted_drive")
+    cx.m.set_label(0x1000a, "sec_per_track")
+    cx.m.set_label(0x1000c, "sec_per_cyl")
+    cx.m.set_label(0x1000e, "superblock_sector")
+    cx.m.set_label(0x10010, "superblock_sector.freelist_lba")
+    cx.m.set_label(0x10022, "freelist_sector")
 
 def round_1(cx):
     ''' Let the disassembler loose '''

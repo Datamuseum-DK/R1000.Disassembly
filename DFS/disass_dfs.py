@@ -114,7 +114,7 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, 
         fn=output_file,
         align_blank=True,
         align_xxx=True,
-        ncol=4,
+        ncol=8,
         lo=low,
         hi=high,
         **kwargs
@@ -122,6 +122,9 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, 
     if svg:
         from pyreveng import partition
         pp = partition.Partition(cx.m)
+        pp.dot_plot(pfx=output_file+".part")
+
+    if False:
         for st in pp.stretches:
             print(st, len(st.nodes))
             for nd in st.nodes:
@@ -142,9 +145,9 @@ def main():
         for i in sys.argv[1:]:
             j = i.split("/")[-1]
             cx = disassemble_file(i, "/tmp/_" + j, pil=False, svg=False)
-            dotplot.dot_plot(cx)
+            # dotplot.dot_plot(cx)
     else:
-        cx = disassemble_file(FILENAME, pil=True, svg=False)
+        cx = disassemble_file(FILENAME, pil=True, svg=True)
         dotplot.dot_plot(cx)
 
 if __name__ == '__main__':

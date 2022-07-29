@@ -129,6 +129,9 @@ def round_0(cx):
 def round_1(cx):
     ''' Let the disassembler loose '''
 
+    y = data.Const(cx.m, 0x20024, 0x20025)
+    cx.m.set_label(y.lo, "exp_init_done")
+
     y = cx.codeptr(0x20004)
     cx.m.set_label(y.dst, "START")
 

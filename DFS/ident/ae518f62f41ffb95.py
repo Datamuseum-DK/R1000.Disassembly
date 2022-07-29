@@ -91,6 +91,8 @@ def round_0(cx):
 
     cx.m.set_label(0x1b0b8, "cur_push_level")
 
+    cx.m.set_label(0x1b1c6, "console_config")
+
     for i in range(9, 16):
         adr = 0x1a0d8 + 4 * i
         data.Const(cx.m, adr, adr + 4, fmt="0x%02x")

@@ -38,7 +38,7 @@ DfsKernCall(
 )
 DfsKernCall(
     0x02,
-    "KC02_Start_Disk_IO",
+    "KC02_Start_Disk_IO(desc : Pointer; dst : Pointer ; c : W) ",
     bcmt='''
 D1 = 2 -> READ
 D1 = 3 -> WRITE
@@ -62,14 +62,14 @@ CHS is 512 byte sectors
 '''
     )
 
-DfsKernCall(0x03, "KC03_Wait_Disk_IO")
+DfsKernCall(0x03, "KC03_Wait_Disk_IO(a : W; VAR status : Byte)")
 DfsKernCall(0x05, "KC05_Write_Console_String")
-DfsKernCall(0x06, "KC06_Write_Console_Char(Word, Char)")
+DfsKernCall(0x06, "KC06_Write_Console_Char(a : Word; b : char)")
 DfsKernCall(0x07, "KC07_Read_Console_Char")
-DfsKernCall(0x0c, "KC0c_Write_Modem_Char(Word, Word, Char)")
+DfsKernCall(0x0c, "KC0c_Write_Modem_Char(a, b: Word ; c : char)")
 DfsKernCall(0x0d, "KC0d_Write_Modem_String(Word, Word, Char)")
 DfsKernCall(0x0f, "KC0f_ReInit")
-DfsKernCall(0x10, "KC10_Panic")
+DfsKernCall(0x10, "KC10_Panic(code : Long)")
 DfsKernCall(0x13, "KC13_RTC")
 DfsKernCall(0x12, "KC12_Sleep(ticks.L)")
 DfsKernCall(0x15, "KC15_Diag_Bus(X.L, Y.W, &byte.L)")

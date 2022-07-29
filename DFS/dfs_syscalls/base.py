@@ -32,6 +32,8 @@
 
 from pyreveng import mem
 
+import pascal
+
 SYSCALLS = {}
 KERNCALLS = {}
 
@@ -43,9 +45,24 @@ class DfsSysCall():
         self.adr = adr
         self.name = name
         self.bcmt = bcmt
+        if ':' in name:
+            self.pascal = pascal.PascalDecl(name)
+        elif '(void)' in name:
+            self.pascal = pascal.PascalDecl(name)
+        else:
+            self.pascal = None
+
+    def __repr__(self):
+        return "<DfsSysCall 0x%x %s>" % (self.adr, self.name)
+
+    def __lt__(self, other):
+        return self.adr < other.adr 
 
     def set_block_comment(self, cx, adr):
         cx.m.set_block_comment(adr, self.name)
+        if self.pascal:
+            for i in self.pascal.stack_map():
+                cx.m.set_block_comment(adr, i)
         if self.bcmt:
             cx.m.set_block_comment(adr, "=" * len(self.name))
             cx.m.set_block_comment(adr, self.bcmt)
