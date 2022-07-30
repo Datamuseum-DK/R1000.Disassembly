@@ -26,12 +26,15 @@
 #
 
 '''
-    DFS system calls (KERNEL & FS)
-    ==============================
+    Data locations in programs
+    ==========================
 '''
 
-from .base import DfsSysCalls
+from pyreveng import data
 
-from .kerncalls import _x
-from .fscalls import _fs
-from .prog_from_fs import prog_from_fs
+def prog_from_fs(cx, mapped):
+    ''' Add labels for data FS knows about in programs '''
+    cx.m.set_label(0x20024, "exp_init_done")
+    cx.m.set_label(0x200ec, "file_ERROR_LOG")
+    if mapped:
+        cx.dataptr(0x200ec)

@@ -58,7 +58,7 @@ def round_0(cx):
     cx.it.load_string(FS_DESC, FsIns)
     cx.dfs_syscalls = dfs_syscalls.DfsSysCalls(hi=cx.m.bu32(0x10004))
     cx.dfs_syscalls.round_0(cx)
-    cx.m.set_label(0x20024, "exp_init_done")
+    dfs_syscalls.prog_from_fs(cx, mapped=False)
     cx.m.set_label(0x10008, "mounted_drive")
     cx.m.set_label(0x1000a, "sec_per_track")
     cx.m.set_label(0x1000c, "sec_per_cyl")
