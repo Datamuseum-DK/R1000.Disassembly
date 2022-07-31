@@ -90,6 +90,7 @@ def round_0(cx):
     cx.m.set_label(0x1aa5e, "_Write_fc0c(word *)")
 
     cx.m.set_label(0x1b0b8, "cur_push_level")
+    cx.m.set_label(0x1b0be, "argv")
 
     cx.m.set_label(0x1b1c6, "console_config")
 
