@@ -35,6 +35,15 @@ from pyreveng import data
 def prog_from_fs(cx, mapped):
     ''' Add labels for data FS knows about in programs '''
     cx.m.set_label(0x20024, "exp_init_done")
+
     cx.m.set_label(0x200ec, "file_ERROR_LOG")
     if mapped:
         cx.dataptr(0x200ec)
+
+    cx.m.set_label(0x200f0, "is_open_ERROR_LOG")
+    if mapped:
+        data.Const(cx.m, 0x200f0, 0x200f1)
+
+    cx.m.set_label(0x200f1, "?write_error_ERROR_LOG")
+    if mapped:
+        data.Const(cx.m, 0x200f1, 0x200f2)

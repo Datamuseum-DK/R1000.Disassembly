@@ -107,6 +107,8 @@ class PascalDecl():
         if self.argstring and self.argstring != "void":
             for argatom in self.argstring.split(";"):
                 tmp = argatom.split(":")
+                if len(tmp) != 2:
+                    print("BAD ARG", argatom, "IN", self.decl)
                 assert len(tmp) == 2
                 argtype = PREDEF_TYPES[tmp[1].strip()]
                 for argname in tmp[0].split(","):
