@@ -263,6 +263,51 @@ This table is used by `READ_RF_A.TYP` and seens to
 unpermute the bits between the serial scan-chain and
 some "canonical" format.
 ''')
+
+        self.cx.m.set_block_comment(0xe83, '''
+Decode RAMS
+===========
++0.0    UADR.DEC4
++0.1    UADR.DEC3
++0.2    UADR.DEC2
++0.3    UADR.DEC1
++0.4    UADR.DEC0
++0.5
++0.6
++0.7
++1.0    UADR.DEC12
++1.1    UADR.DEC11
++1.2    UADR.DEC10
++1.3    UADR.DEC9
++1.4    UADR.DEC8
++1.5    UADR.DEC7
++1.6    UADR.DEC6
++1.7    UADR.DEC5
++2.0    CSA_FREE.DEC1
++2.1    CSA_FREE.DEC0
++2.2    N/C
++2.3    N/C
++2.4    N/C
++2.5
++2.6
++2.7
++3.0    CSA_VALID.DEC2
++3.1    CSA_VALID.DEC1
++3.2    CSA_VALID.DEC0
++3.3    ???ES_TOS.DEC
++3.4    BUFF_FILL~.DEC
++3.5    N/C
++3.6    DECODER.PARITY
++3.7
++4.0    CUR_CLASS3
++4.1    CUR_CLASS2
++4.2    CUR_CLASS1
++4.3    CUR_CLASS0
++4.4    MEM_STRT.DEC2
++4.5    MEM_STRT.DEC1
++4.6    MEM_STRT.DEC0
++4.7
+''')
         for adr, lbl  in (
             (0x0746, "BITSPEC_TYP_RF"),
             (0x07c0, None),
@@ -280,7 +325,7 @@ some "canonical" format.
             (0x0d4e, "BITSPEC_FIU_UIR"),
             (0x0da0, "BITSPEC_SEQ_TYPVAL"),
             (0x0e31, "BITSPEC_SEQ_UIR"),
-            (0x0e83, "BITSPEC_SEQ_DECODER"),
+            (0x0e83, "BITSPEC_SEQ_DECODE"),
             (0x0ed5, "BITSPEC_SEQ_MISC"),
         ):
             BitSpec(self.cx, adr, lbl)
