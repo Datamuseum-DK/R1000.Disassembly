@@ -155,6 +155,8 @@ def round_1(cx):
             y = cx.codeptr(i)
             cx.m.set_block_comment(y.dst, "PTR @ 0x%x" % i)
 
+    cx.m.set_block_comment(0xa8a0, "Probably dispatch vector for FIFO requests (0x8cba)")
+
     for n, a in enumerate(range(0xa641, 0xa689, 4)):
         y = cx.codeptr(a)
         cx.m.set_label(y.dst, "MODEM_0x%x" % n)
@@ -335,6 +337,7 @@ def round_1(cx):
         (0x362c, "DiagBusResponse(D2)"),
     ):
         cx.m.set_label(a, b)
+
     for a, b in (
         (0x4b2a, "chan.drive"),
         (0x4b2e, "chan.cyl"),

@@ -71,7 +71,7 @@ def vector_line_a(cx):
         return
 
     cx.m.set_label(tbl, "KERNCALL_VECTORS")
-    for sc in range(32):
+    for sc in range(33):
         i = tbl + sc * 4
         y = cx.codeptr(i)
         syscall = cx.dfs_syscalls[sc * 2 + 0x10200]

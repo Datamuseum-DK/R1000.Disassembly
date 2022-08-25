@@ -77,6 +77,8 @@ DfsKernCall(0x16, "KC16_Clock_Margin")
 DfsKernCall(0x17, "KC17_Power_Margin")
 DfsKernCall(0x1c, "KC1c_ProtCopy(src.P, dst.P, len.W)")
 DfsKernCall(0x1d, "KC1d_SpaceRead(src.P, sfc.W, dst.P, dfc.W, len.W)")
-DfsKernCall(0x1e, "KC1e_Fifo_Response(chan.W, ptr.P)")
+DfsKernCall(0x1e, "KC1e_Fifo_Tx_Response(ptr : Pointer; chan : Word)")
+DfsKernCall(0x1f, "KC1f_Fifo_Rx_Request(ptr : Pointer; chan : Word; VAR flag : Bool)")
+DfsKernCall(0x20, "KC20_Estop(void)")
 
 _x = 0

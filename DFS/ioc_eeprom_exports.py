@@ -30,7 +30,7 @@
    ------------------------------------
 '''
 
-from pyreveng import data, code
+from pyreveng import data, code, mem
 
 IOC_RAM_EXPORTS = {
     0x0000fc07: "MACHINE_TYPE",
@@ -148,12 +148,21 @@ def flow_check(asp, ins):
         0x80002028,
     ):
         return
+
+    txt1_flows = [0x80002010, 0x80002028]
+    try:
+        txt1_flows.append(asp.bu16(0x8000202a) + 0x8000202a)
+    except mem.MemError:
+        pass
+
+    txt2_flows = [0x8000001c]
+    try:
+        txt2_flows.append(asp.bu16(0x8000001e) + 0x8000001e)
+    except mem.MemError:
+        pass
+
     for f in ins.flow_out:
-        if f.to in (
-            0x80002010,
-            0x80002028,
-            asp.bu16(0x8000202a) + 0x8000202a
-        ):
+        if f.to in txt1_flows:
             y = data.Txt(asp, ins.hi, label=False, align=2, splitnl=True)
             ins.dstadr = y.hi
             ins.flow_out.pop(-1)
@@ -170,10 +179,7 @@ def flow_check(asp, ins):
             if asp.bu16(ins.lo - 6) == 0x47f9:
                 a = asp.bu32(ins.lo - 4)
                 y = data.Txt(asp, a, splitnl=True)
-        elif f.to in (
-            0x8000001c,
-            asp.bu16(0x8000001e) + 0x8000001e,
-        ):
+        elif f.to in txt2_flows:
             y = data.Txt(asp, ins.hi, label=False, align=2, splitnl=True)
             ins.dstadr = y.hi
             ins.flow_out.pop(-1)
