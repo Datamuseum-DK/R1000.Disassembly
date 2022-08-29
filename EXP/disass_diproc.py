@@ -320,7 +320,7 @@ Decode RAMS
             (0x0b2a, None),
             (0x0bf4, None),
             (0x0c92, None),
-            (0x0cbc, None),
+            (0x0cbc, "BITSPEC_FIU_MAR"),
             (0x0d05, "BITSPEC_FIU_MDREG"),
             (0x0d4e, "BITSPEC_FIU_UIR"),
             (0x0da0, "BITSPEC_SEQ_TYPVAL"),
