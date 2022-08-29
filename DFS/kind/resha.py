@@ -35,6 +35,7 @@
 from pyreveng import data
 
 import ioc_eeprom_exports
+import ioc_hardware
 
 BASE = 0x70000
 SIZE = 0x8000
@@ -47,6 +48,14 @@ def round_0(cx):
     for a in range(BASE, BASE+SIZE, SEGMENT):
         cx.m.set_block_comment(a, "PROGRAM VECTORS")
         data.Const(cx.m, a, a + 2)
+
+    for adr in (
+        0x00071ffa,
+        0x00073ffa,
+        0x00075ffa,
+        0x00077ffa,
+    ):
+        ioc_hardware.eeprom_checksum(cx.m, adr)
 
     for a, b in (
         (0x76084, 0x760c8),

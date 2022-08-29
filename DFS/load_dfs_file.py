@@ -53,7 +53,7 @@ def load_m200_file(asp, load_address, octets):
     asp.map(memory, memory.lo, memory.hi, offset=memory.lo)
 
     # Ident is hash of the bytes
-    return hashlib.sha256(octets).hexdigest()[:16]
+    return hashlib.sha256(octets).hexdigest()[:16], memory.lo, memory.hi
 
 def load_ioc_eeprom(asp, octets):
     ''' IOC EEPROM '''
@@ -68,7 +68,7 @@ def load_ioc_eeprom(asp, octets):
     asp.map(memory, memory.lo, memory.hi, offset=memory.lo)
 
     # Ident is hash of the bytes
-    return hashlib.sha256(octets).hexdigest()[:16]
+    return hashlib.sha256(octets).hexdigest()[:16], memory.lo, memory.hi
 
 
 def load_s_records(asp, octets):
@@ -106,7 +106,8 @@ def load_s_records(asp, octets):
             if i.strip():
                 asp.set_block_comment(low, "    " + i.strip())
 
-    return ident.hexdigest()[:16]
+    low, high = srecset.range()
+    return ident.hexdigest()[:16], low, high
 
 
 def load_dfs_file(asp, filename):

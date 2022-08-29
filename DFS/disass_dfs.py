@@ -49,17 +49,11 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, 
     ''' Disassemble a single file '''
     cx = m68020.m68020()
     try:
-        ident = load_dfs_file.load_dfs_file(cx.m, input_file)
+        ident, low, high = load_dfs_file.load_dfs_file(cx.m, input_file)
     except load_dfs_file.LoadError as err:
         if verbose:
             print(input_file, err)
         return
-
-    high = 0
-    low = 1<<32
-    for i, j  in cx.m.gaps():
-        high = max(high, j)
-        low = min(low, i)
 
     tryout = []
     tryout.append("all")

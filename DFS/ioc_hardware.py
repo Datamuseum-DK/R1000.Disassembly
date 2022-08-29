@@ -30,6 +30,8 @@
    ------------------------
 '''
 
+from pyreveng import data
+
 INTERRUPT_VECTORS = {
     0x40: "PS.AC_PF",
     0x41: "MAP_PERR",
@@ -205,3 +207,16 @@ def add_symbols(asp):
     ''' Add our symbols to an address-space '''
     for a, b in DEVICE_SYMBOLS.items():
         asp.set_label(a, b)
+
+def eeprom_checksum(asp, lo):
+    ''' See R1000 Knowledge Transfer Manual, pdf page 89 '''
+    asp.set_block_comment(lo, "Test, Revision, slot and checksum")
+    y = data.Const(asp, lo + 0, lo + 1, fmt="%02x")
+    y.typ = ".TEST"
+    y = data.Const(asp, lo + 1, lo + 4, fmt="%02x")
+    y.typ = ".REV"
+    y = data.Const(asp, lo + 4, lo + 5, fmt="0x%02x")
+    y.typ = ".SLOT"
+    y = data.Const(asp, lo + 5, lo + 6, fmt="0x%02x")
+    y.typ = ".CSUM"
+        
