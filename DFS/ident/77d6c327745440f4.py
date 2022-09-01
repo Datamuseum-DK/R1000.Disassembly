@@ -151,6 +151,21 @@ R1K_OPS_DISK = {
     0x02: "PROBE",
 }
 
+MODEM_FSM_1 = {
+}
+
+MODEM_FSM_2 = {
+}
+
+MODEM_FSM_3 = {
+    0x00: "Expect_COM",
+    0x04: "Expect_password",
+    0x06: "Expect_1200_BAUD",
+    0x08: "Expect_to_call:",
+    0x0a: "Expect_Online:",
+    0x0d: "Expect_CRNL:",
+}
+
 def round_1(cx):
     ''' Let the disassembler loose '''
 
@@ -167,13 +182,13 @@ def round_1(cx):
         y = cx.codeptr(a)
         cx.m.set_block_comment(y.dst, "KC_15 BoardCommand=0x%x" % n)
 
-    Dispatch_Table(cx, 0xa8a0, 40, "R1K_OP", R1K_OPS, "(A0=mailbox)")
+    Dispatch_Table(cx, 0xa8a0,  8, "R1K_OP", R1K_OPS, "(A0=mailbox)")
     Dispatch_Table(cx, 0x2448,  3, "R1K_OP_01", {}, "(A0=mailbox)", "JSR")
     Dispatch_Table(cx, 0xa68c, 40, "R1K_OP_DISK", R1K_OPS_DISK, "(A0=mailbox)")
     Dispatch_Table(cx, 0xa19c,  6, "R1K_OP_04", {}, "(A0=mailbox)", "JSR")
     Dispatch_Table(cx, 0xa79c,  9, "R1K_OP_06", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0x8188,  6, "R1K_OP_07", {}, "(A0=mailbox)")
-    Dispatch_Table(cx, 0xa8c0, 31, "R1K_OP_03", {}, "(A0=mailbox)")
+    Dispatch_Table(cx, 0xa8c0, 32, "R1K_OP_03", {}, "(A0=mailbox)")
 
     for i in range(16):
         adr = 0xa1fc + i * 2
@@ -190,6 +205,14 @@ def round_1(cx):
                 cx.m.set_label(val2, "0xa1fc[%d][%d]" % (i, j))
                 cx.disass(val2)
 
+    Dispatch_Table(cx, 0xa5b1, 18, "MODEM_FSM_1", MODEM_FSM_1)
+    Dispatch_Table(cx, 0xa5f9, 18, "MODEM_FSM_2", MODEM_FSM_2)
+    Dispatch_Table(cx, 0xa641, 18, "MODEM_FSM_3", MODEM_FSM_3)
+    Dispatch_Table(cx, 0xa4e0, 14, "MODEM_TIMEOUT", {})
+    cx.m.set_label(0x1454, "modem_timeout")
+    cx.m.set_label(0x1460, "modem_fsm_next")
+    cx.m.set_label(0x40e2, "MODEM_FSM_ADVANCE(D0=tmo, D1=nxt)")
+
     for a, b in (
         (0x6962, 0x6972),
         (0x6720, 0x6734),
@@ -197,9 +220,7 @@ def round_1(cx):
         (0x7b5c, 0x7b6c),
         (0x7e1e, 0x7e3a),
         (0x8234, 0x824c),
-        (0xa4e0, 0xa518),
-        (0xa5b1, 0xa641),
-        # (0xa641, 0xa688),
+        # (0xa4e0, 0xa518),
         (0xa718, 0xa72c),
         (0xa734, 0xa740),
         (0xa744, 0xa748),
@@ -210,10 +231,6 @@ def round_1(cx):
         for i in range(a, b, 4):
             y = cx.codeptr(i)
             cx.m.set_block_comment(y.dst, "PTR @ 0x%x" % i)
-
-    for n, a in enumerate(range(0xa641, 0xa689, 4)):
-        y = cx.codeptr(a)
-        cx.m.set_label(y.dst, "MODEM_0x%x" % n)
 
     for a, b in (
         (0x2602, "see 0x2612"),
@@ -358,6 +375,8 @@ def round_1(cx):
         (0x8398, "BOUNCE_TO_FS"),
         (0x8480, "KC12_Sleep_CallBack"),
         (0x8acc, "INIT_KERNEL_04"),
+        (0x8ae8, "ReturnMailbox_0()"),
+        (0x8af0, "ReturnMailbox_1()"),
         (0x8bec, "Stuff_Response_Fifo(A1)"),
         (0x8df0, "GET_SECTOR_BUFFER([A0+0x13].B => A1)"),
         (0x8e12, "CONFIG_IO_MAP()"),
