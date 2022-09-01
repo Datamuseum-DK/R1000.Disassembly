@@ -111,15 +111,52 @@ def round_0(cx):
 
     cx.m.set_label(0x944, "SCSI_D_DESC")
 
+class Dispatch_Table():
+
+    def __init__(self, cx, lo, length, pfx, funcs, sfx="", kind=None):
+        self.cx = cx
+        self.lo = lo
+        self.length = length
+        self.pfx = pfx
+        self.funcs = funcs
+        self.sfx = sfx
+        self.kind = kind
+
+        self.proc()
+
+    def proc(self):
+        self.cx.m.set_label(self.lo, self.pfx.lower() + "_dispatch")
+        for n in range(self.length):
+            adr = self.lo + 4 * n
+            what = self.funcs.get(n)
+            lbl = self.pfx + "_%02x" % n
+            if what:
+                lbl += "_" + what
+            lbl += self.sfx
+            if self.kind is None:
+                y = self.cx.codeptr(adr)
+                self.cx.m.set_label(y.dst, lbl)
+            else:
+                y = self.cx.disass(adr)
+                if y.dstadr:
+                    self.cx.m.set_label(y.dstadr, lbl)
+                else:
+                    self.cx.m.set_label(adr, lbl)
+
+R1K_OPS = {
+    0x02: "DISK",
+}
+
+R1K_OPS_DISK = {
+    0x02: "PROBE",
+}
 
 def round_1(cx):
     ''' Let the disassembler loose '''
 
     for a, b, c in (
-        (0x2448, 0x2454, 4),
         (0x3b82, 0x3b90, 4),
         (0x42e6, 0x42f2, 2),
-        (0xa19c, 0xa1b4, 4),
     ):
         for i in range(a, b, c):
             cx.disass(i)
@@ -130,47 +167,53 @@ def round_1(cx):
         y = cx.codeptr(a)
         cx.m.set_block_comment(y.dst, "KC_15 BoardCommand=0x%x" % n)
 
+    Dispatch_Table(cx, 0xa8a0, 40, "R1K_OP", R1K_OPS, "(A0=mailbox)")
+    Dispatch_Table(cx, 0x2448,  3, "R1K_OP_01", {}, "(A0=mailbox)", "JSR")
+    Dispatch_Table(cx, 0xa68c, 40, "R1K_OP_DISK", R1K_OPS_DISK, "(A0=mailbox)")
+    Dispatch_Table(cx, 0xa19c,  6, "R1K_OP_04", {}, "(A0=mailbox)", "JSR")
+    Dispatch_Table(cx, 0xa79c,  9, "R1K_OP_06", {}, "(A0=mailbox)")
+    Dispatch_Table(cx, 0x8188,  6, "R1K_OP_07", {}, "(A0=mailbox)")
+    Dispatch_Table(cx, 0xa8c0, 31, "R1K_OP_03", {}, "(A0=mailbox)")
+
+    for i in range(16):
+        adr = 0xa1fc + i * 2
+        val = cx.m.bu16(adr)
+        data.Const(cx.m, adr, adr + 2, fmt="0x%08x", func=cx.m.bu16, size=2)
+        if val:
+            cx.m.set_line_comment(adr, "0xa1fc[%d]_dispatch" % i)
+            cx.m.set_label(val, "0xa1fc[%d]_dispatch" % i)
+            for j in range(21):
+                adr2 = val + j * 2
+                val2 = cx.m.bu16(adr2)
+                data.Const(cx.m, adr2, adr2 + 2, fmt="0x%08x", func=cx.m.bu16, size=2)
+                cx.m.set_line_comment(adr2, "0xa1fc[%d][%d]" % (i, j))
+                cx.m.set_label(val2, "0xa1fc[%d][%d]" % (i, j))
+                cx.disass(val2)
+
     for a, b in (
         (0x6962, 0x6972),
         (0x6720, 0x6734),
         (0x7890, 0x78b0),
         (0x7b5c, 0x7b6c),
         (0x7e1e, 0x7e3a),
-        (0x8188, 0x81a0),
         (0x8234, 0x824c),
         (0xa4e0, 0xa518),
         (0xa5b1, 0xa641),
         # (0xa641, 0xa688),
-        (0xa68c, 0xa710),
         (0xa718, 0xa72c),
         (0xa734, 0xa740),
         (0xa744, 0xa748),
         (0xa750, 0xa794),
-        (0xa79c, 0xa7c4),
         (0xa7c4, 0xa7c8),
-        (0xa8a0, 0xa940),
         (0xa954, 0xa994),
     ):
         for i in range(a, b, 4):
             y = cx.codeptr(i)
             cx.m.set_block_comment(y.dst, "PTR @ 0x%x" % i)
 
-    cx.m.set_block_comment(0xa8a0, "Probably dispatch vector for FIFO requests (0x8cba)")
-
     for n, a in enumerate(range(0xa641, 0xa689, 4)):
         y = cx.codeptr(a)
         cx.m.set_label(y.dst, "MODEM_0x%x" % n)
-
-    for a, b in (
-        (0xa21c, 0xa246),
-        (0xa3b7, 0xa3c5),
-        (0xa3d8, 0xa456),
-        (0xa4b4, 0xa4de),
-    ):
-        for i in range(a, b, 2):
-            y = data.Pstruct(cx.m, i, ">H", fmt="0x%08x")
-            cx.disass(y.data[0])
-            cx.m.set_block_comment(y.data[0], "TBL @ 0x%x" % i)
 
     for a, b in (
         (0x2602, "see 0x2612"),
@@ -278,7 +321,6 @@ def round_1(cx):
         (0x3f32, "MODEM_VEC_5_DUART"),
         (0x4208, "MODEM_VEC_6_XE1201"),
         (0x4214, "MODEM_VEC_6_DUART"),
-        (0x4b0a, "MAYBE_DISK_IO_THING()"),
         (0x4cdc, "SCSI_OPERATION()"),
         (0x520c, "SCSI_D_REQ_SENSE(scsi_id=D2)"),
         (0x5596, "DO_READ_6(A1)"),

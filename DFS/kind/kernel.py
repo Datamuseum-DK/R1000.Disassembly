@@ -111,10 +111,29 @@ def round_0(cx):
     cx.dfs_syscalls = dfs_syscalls.DfsSysCalls()
     ioc_eeprom_exports.add_flow_check(cx)
 
-    cx.dataptr(0x408)
+    cx.m.set_block_comment(0x400, "Microcode Information Block")
+
+    y = data.Const(cx.m, 0x400, 0x404, "0x%08x", cx.m.bu32, 4)
+    cx.m.set_line_comment(y.lo, "?Number of slots")
+
+    y = data.Const(cx.m, 0x404, 0x406, "0x%04x", cx.m.bu16, 2)
+    cx.m.set_line_comment(y.lo, "?Buffer size")
+
+    y = data.Const(cx.m, 0x406, 0x408, "0x%04x", cx.m.bu16, 2)
+    cx.m.set_line_comment(y.lo, "?Mailbox size")
+
+    y = cx.dataptr(0x408)
+    cx.m.set_line_comment(y.lo, "?Mailbox Base Address")
+
+    y = cx.dataptr(0x40c)
+    cx.m.set_line_comment(y.lo, "?Buffer Base Address")
 
     y = data.Const(cx.m, 0x410, 0x416, "%d", cx.m.bu16, 2)
     cx.m.set_line_comment(y.lo, "Version number")
+
+    
+    y = data.Const(cx.m, 0x77a, 0x77c, "0x%04x", cx.m.bu16, 2)
+    cx.m.set_label(y.lo, "live0_boot1")
 
     cx.dataptr(0x416)
 
