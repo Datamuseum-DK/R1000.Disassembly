@@ -99,8 +99,10 @@ def hunt_vectors(cx):
                 continue
             cx.disass(src)
             cand.add((src, dst))
-    for i,j in cand:
-        cx.m.set_line_comment(i, "Via vector at 0x%x" % j)
+    for i, j in cand:
+        dst = cx.m.bu32(j) 
+        lbl = list(cx.m.get_labels(dst))
+        cx.m.set_line_comment(i, "Via " + lbl[0])
 
 #######################################################################
 

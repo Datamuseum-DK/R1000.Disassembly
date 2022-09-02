@@ -156,6 +156,7 @@ class Dispatch_Table():
 
 R1K_OPS = {
     0x02: "DISK",
+    0x06: "VME",
 }
 
 R1K_OPS_DISK = {
@@ -220,7 +221,7 @@ def round_1(cx):
     Dispatch_Table(cx, 0x2448,  3, "R1K_OP_01", {}, "(A0=mailbox)", "JSR")
     Dispatch_Table(cx, 0xa68c, 33, "R1K_OP_DISK", R1K_OPS_DISK, "(A0=mailbox)")
     Dispatch_Table(cx, 0xa19c,  6, "R1K_OP_04", {}, "(A0=mailbox)", "JSR")
-    Dispatch_Table(cx, 0xa79c, 10, "R1K_OP_06", {}, "(A0=mailbox)")
+    Dispatch_Table(cx, 0xa79c, 10, "R1K_OP_06_VME", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0x8188,  6, "R1K_OP_07", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0xa8c0, 32, "R1K_OP_03", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0x695e,  5, "R1K_OP_06_01", {}, "(A0=mailbox)")
@@ -289,14 +290,14 @@ def round_1(cx):
         (0x49ba, "via 0x128"),
         (0x50b8, "MANUAL"),
         (0x5b52, "MANUAL"),
-        (0x6246, "via 0x177c"),
+        (0x6246, "via VME_LONGJMP2"),
         (0x6312, "via 0x520"),
         (0x6734, "MANUAL"),
         (0x6738, "MANUAL"),
         (0x6940, "via 0x09c4()"),
         (0x6a0e, "via 0x520"),
         (0x6b8e, "via 0x09c4()"),
-        (0x7fd4, "via 0x177c"),
+        (0x7fd4, "via VME_LONGJMP2"),
         (0x8208, "via 0x520"),
         (0x82bc, "Via 0x8"),
         (0x842a, "MANUAL"),
@@ -317,9 +318,9 @@ def round_1(cx):
         (0x784, "kc12_sleep_callout"),
         (0x1429, "XE1201_CTRL_COPY"),
         (0x1434, "MODEM_TXBUF"),
-        (0x1438, "MODEM_VEC_1"),
-        (0x143c, "MODEM_VEC_2"),
-        (0x1440, "MODEM_VEC_3"),
+        (0x1438, "MODEM_VEC_1_SEND_BYTE"),
+        (0x143c, "MODEM_VEC_2_ENABLE_TX"),
+        (0x1440, "MODEM_VEC_3_DISABLE_TX"),
         (0x1444, "MODEM_VEC_4_RAISE_DTR"),
         (0x1448, "MODEM_VEC_5_LOWER_DTR"),
         (0x144c, "MODEM_VEC_6"),
@@ -339,17 +340,17 @@ def round_1(cx):
         (0x32f4, "INIT_KERNEL_05_UARTS"),
         (0x36aa, "DiagBusTimeoutCallback()"),
         (0x3970, "INT_MODEM_RESET"),
-        (0x3b4a, "MODEM_VEC_1_XE1201"),
-        (0x3b58, "MODEM_VEC_1_DUART"),
+        (0x3b4a, "MODEM_VEC_1_XE1201_SEND_BYTE"),
+        (0x3b58, "MODEM_VEC_1_DUART_SEND_BYTE"),
         (0x3e96, "MODEM_IS_X"),
-        (0x3ede, "MODEM_VEC_2_XE1201"),
-        (0x3ee0, "MODEM_VEC_2_DUART"),
-        (0x3eee, "MODEM_VEC_3_XE1201"),
-        (0x3efc, "MODEM_VEC_3_DUART"),
-        (0x3f08, "MODEM_VEC_4_XE1201"),
-        (0x3f16, "MODEM_VEC_4_DUART"),
-        (0x3f24, "MODEM_VEC_5_XE1201"),
-        (0x3f32, "MODEM_VEC_5_DUART"),
+        (0x3ed2, "MODEM_VEC_2_XE1201_ENABLE_TX"),
+        (0x3ee0, "MODEM_VEC_2_DUART_ENABLE_TX"),
+        (0x3eee, "MODEM_VEC_3_XE1201_DISABLE_TX"),
+        (0x3efc, "MODEM_VEC_3_DUART_DISABLE_TX"),
+        (0x3f08, "MODEM_VEC_4_XE1201_RAISE_DTR"),
+        (0x3f16, "MODEM_VEC_4_DUART_RAISE_DTR"),
+        (0x3f24, "MODEM_VEC_5_XE1201_LOWER_DTR"),
+        (0x3f32, "MODEM_VEC_5_DUART_LOWER_DTR"),
         (0x4208, "MODEM_VEC_6_XE1201"),
         (0x4214, "MODEM_VEC_6_DUART"),
         (0x4cdc, "SCSI_OPERATION(A0=mailbox)"),
@@ -365,7 +366,7 @@ def round_1(cx):
         (0x5f74, "INIT_KERNEL_11"),
         (0x5f7a, "SAVECORE()"),
         (0x6072, "SCSI_D_WRITE_10_SOMETHING(scsi_id=D0,src=D4,blockno=D6)"),
-        (0x66a8, "INIT_KERNEL_10"),
+        (0x66a8, "INIT_KERNEL_10_VME"),
         (0x8398, "BOUNCE_TO_FS"),
         (0x8480, "KC12_Sleep_CallBack"),
         (0x8acc, "INIT_KERNEL_04"),
@@ -419,10 +420,20 @@ def round_1(cx):
         data.Const(cx.m, a, a + 2)
 
     cx.m.set_block_comment(0x3970, "Reset INT_MODEM by writing 3 zeros to cmd reg")
-    cx.m.set_block_comment(0x3b3e, "(Vector 0x4c) INT_MODEM Interrupt (1)")
-    cx.m.set_block_comment(0x4120, "(Vector 0x47) INT_MODEM Interrupt (2)")
-    cx.m.set_block_comment(0x5a02, "(Vector 0x91) SCSI_D Interrupt")
-    cx.m.set_block_comment(0x98aa, "(Vector 0x92) SCSI_T Interrupt")
+
+    cx.codeptr(0x51c)
+    cx.m.set_label(0x51c, "IO_TIMEOUT_TMP")
+    cx.codeptr(0x520)
+    cx.m.set_label(0x520, "IO_TIMEOUT")
+
+    cx.codeptr(0x1778)
+    cx.m.set_label(0x1778, "VME_LONGJMP1")
+    cx.codeptr(0x177c)
+    cx.m.set_label(0x177c, "VME_LONGJMP2")
+
+
+    y = data.Const(cx.m, 0xa7e4, 0xa7f4)
+    cx.m.set_label(y.lo, "stack_adjust")
 
 
 def round_2(cx):
