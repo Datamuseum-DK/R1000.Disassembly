@@ -35,6 +35,7 @@ from pyreveng import assy, data
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
 
+    cx.m.set_label(0x28d8, "PANIC_0x824")
     for a in (
         0x0000800c,
         0x0000a46a,
@@ -113,7 +114,9 @@ def round_0(cx):
 
 class Dispatch_Table():
 
-    def __init__(self, cx, lo, length, pfx, funcs, sfx="", kind=None):
+    def __init__(self, cx, lo, length, pfx = None, funcs = {}, sfx="", kind=None, width=4):
+        if pfx is None:
+            pfx = "AT_%x" % lo
         self.cx = cx
         self.lo = lo
         self.length = length
@@ -121,27 +124,35 @@ class Dispatch_Table():
         self.funcs = funcs
         self.sfx = sfx
         self.kind = kind
+        self.width = width
 
         self.proc()
 
     def proc(self):
         self.cx.m.set_label(self.lo, self.pfx.lower() + "_dispatch")
         for n in range(self.length):
-            adr = self.lo + 4 * n
+            adr = self.lo + self.width * n
             what = self.funcs.get(n)
             lbl = self.pfx + "_%02x" % n
             if what:
                 lbl += "_" + what
             lbl += self.sfx
             if self.kind is None:
-                y = self.cx.codeptr(adr)
-                self.cx.m.set_label(y.dst, lbl)
+                if self.width == 4:
+                    dst = self.cx.m.bu32(adr)
+                else:
+                    dst = self.cx.m.bu16(adr)
+                y = data.Codeptr(self.cx.m, adr, adr + self.width, dst)
+                if dst == 0:
+                    continue
+                self.cx.disass(dst)
+                self.cx.m.set_first_label(dst, lbl)
             else:
                 y = self.cx.disass(adr)
                 if y.dstadr:
-                    self.cx.m.set_label(y.dstadr, lbl)
+                    self.cx.m.set_first_label(y.dstadr, lbl)
                 else:
-                    self.cx.m.set_label(adr, lbl)
+                    self.cx.m.set_first_label(adr, lbl)
 
 R1K_OPS = {
     0x02: "DISK",
@@ -155,82 +166,93 @@ MODEM_FSM_1 = {
 }
 
 MODEM_FSM_2 = {
+    0x01: "Expect_COM",
+    0x0b: "Expect_Online",
+    0x0e: "Expect_CRNLCRNL",
+    0x05: "Expect_password",
+    0x07: "Expect_1200_BAUD",
+    0x09: "Expect_to_call",
+    0x00: "Expect_SERVICE",
 }
 
 MODEM_FSM_3 = {
     0x00: "Expect_COM",
     0x04: "Expect_password",
     0x06: "Expect_1200_BAUD",
-    0x08: "Expect_to_call:",
-    0x0a: "Expect_Online:",
-    0x0d: "Expect_CRNL:",
+    0x08: "Expect_to_call",
+    0x0a: "Expect_Online",
+    0x0d: "Expect_CRNL",
+}
+
+SCSI_OP = {
+    0x02: "READ_6",
+    0x03: "WRITE_6",
+    0x04: "READ_6_1024",
+    0x09: "REQUEST_SENSE",
+    0x0a: "READ_DEFECT_DATA_10",
+    0x0d: "FORMAT_UNIT",
+    0x12: "SEEK_6",
+    0x13: "MODE_SELECT_6",
+    0x14: "MODE_SENSE_6",
+    0x15: "WRITE_SAME_512",
+    0x16: "VENDOR_0x06",
+    0x17: "SEND_DIAGNOSTIC",
+    0x18: "RECEIVE_DIAGNOSTIC",
+    0x19: "READ_BUFFER",
+    0x1b: "READ_LONG_10",
+    0x1a: "WRITE_BUFFER",
+    0x1c: "WRITE_LONG_10",
+    0x1d: "VENDOR_0xda",
+    0x1e: "VENDOR_0xd8",
+    0x1f: "VENDOR_0xd2",
+    0x20: "VENDOR_0xd1",
 }
 
 def round_1(cx):
     ''' Let the disassembler loose '''
 
-    for a, b, c in (
-        (0x3b82, 0x3b90, 4),
-        (0x42e6, 0x42f2, 2),
-    ):
-        for i in range(a, b, c):
-            cx.disass(i)
-            cx.m.set_block_comment(i, "TBL @ 0x%x" % i)
+    Dispatch_Table(cx, 0x3b82, 4, "MODEM_VEC1_DUART", kind="JSR")
+    Dispatch_Table(cx, 0x42e6, 6, kind="JSR", width=2)
 
-    cx.m.set_label(0xa494, "KC_15_Board_Commands")
-    for n, a in enumerate(range(0xa494, 0xa4b4, 4)):
-        y = cx.codeptr(a)
-        cx.m.set_block_comment(y.dst, "KC_15 BoardCommand=0x%x" % n)
+    Dispatch_Table(cx, 0xa494, 8, "KC15_BoardCmds")
 
     Dispatch_Table(cx, 0xa8a0,  8, "R1K_OP", R1K_OPS, "(A0=mailbox)")
     Dispatch_Table(cx, 0x2448,  3, "R1K_OP_01", {}, "(A0=mailbox)", "JSR")
-    Dispatch_Table(cx, 0xa68c, 40, "R1K_OP_DISK", R1K_OPS_DISK, "(A0=mailbox)")
+    Dispatch_Table(cx, 0xa68c, 33, "R1K_OP_DISK", R1K_OPS_DISK, "(A0=mailbox)")
     Dispatch_Table(cx, 0xa19c,  6, "R1K_OP_04", {}, "(A0=mailbox)", "JSR")
-    Dispatch_Table(cx, 0xa79c,  9, "R1K_OP_06", {}, "(A0=mailbox)")
+    Dispatch_Table(cx, 0xa79c, 10, "R1K_OP_06", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0x8188,  6, "R1K_OP_07", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0xa8c0, 32, "R1K_OP_03", {}, "(A0=mailbox)")
+    Dispatch_Table(cx, 0x695e,  5, "R1K_OP_06_01", {}, "(A0=mailbox)")
 
     for i in range(16):
         adr = 0xa1fc + i * 2
         val = cx.m.bu16(adr)
-        data.Const(cx.m, adr, adr + 2, fmt="0x%08x", func=cx.m.bu16, size=2)
+        data.Dataptr(cx.m, adr, adr + 2, dst = val)
         if val:
-            cx.m.set_line_comment(adr, "0xa1fc[%d]_dispatch" % i)
-            cx.m.set_label(val, "0xa1fc[%d]_dispatch" % i)
-            for j in range(21):
-                adr2 = val + j * 2
-                val2 = cx.m.bu16(adr2)
-                data.Const(cx.m, adr2, adr2 + 2, fmt="0x%08x", func=cx.m.bu16, size=2)
-                cx.m.set_line_comment(adr2, "0xa1fc[%d][%d]" % (i, j))
-                cx.m.set_label(val2, "0xa1fc[%d][%d]" % (i, j))
-                cx.disass(val2)
+            Dispatch_Table(cx, val, 21, width=2, pfx="0xa1fc[0x%x]" % i)
+
+    Dispatch_Table(cx, 0xa3b7, 7, width=2)
 
     Dispatch_Table(cx, 0xa5b1, 18, "MODEM_FSM_1", MODEM_FSM_1)
     Dispatch_Table(cx, 0xa5f9, 18, "MODEM_FSM_2", MODEM_FSM_2)
     Dispatch_Table(cx, 0xa641, 18, "MODEM_FSM_3", MODEM_FSM_3)
-    Dispatch_Table(cx, 0xa4e0, 14, "MODEM_TIMEOUT", {})
+    Dispatch_Table(cx, 0xa4e0, 14, "MODEM_TIMEOUT")
     cx.m.set_label(0x1454, "modem_timeout")
     cx.m.set_label(0x1460, "modem_fsm_next")
     cx.m.set_label(0x40e2, "MODEM_FSM_ADVANCE(D0=tmo, D1=nxt)")
 
-    for a, b in (
-        (0x6962, 0x6972),
-        (0x6720, 0x6734),
-        (0x7890, 0x78b0),
-        (0x7b5c, 0x7b6c),
-        (0x7e1e, 0x7e3a),
-        (0x8234, 0x824c),
-        # (0xa4e0, 0xa518),
-        (0xa718, 0xa72c),
-        (0xa734, 0xa740),
-        (0xa744, 0xa748),
-        (0xa750, 0xa794),
-        (0xa7c4, 0xa7c8),
-        (0xa954, 0xa994),
-    ):
-        for i in range(a, b, 4):
-            y = cx.codeptr(i)
-            cx.m.set_block_comment(y.dst, "PTR @ 0x%x" % i)
+    Dispatch_Table(cx, 0x6720,  5)
+    Dispatch_Table(cx, 0x7890,  8)
+    Dispatch_Table(cx, 0x7e1e,  7)
+    Dispatch_Table(cx, 0x7b5c,  4)
+    Dispatch_Table(cx, 0x8234,  6)
+    Dispatch_Table(cx, 0xa42c,  21, width=2)
+    Dispatch_Table(cx, 0xa710,  33, "SCSI_OP", SCSI_OP)
+
+    cx.codeptr(0xa7c4)
+
+    Dispatch_Table(cx, 0xa954,  16, None, {})
 
     for a, b in (
         (0x2602, "see 0x2612"),
@@ -266,8 +288,10 @@ def round_1(cx):
         (0x46c8, "MANUAL"),
         (0x49ba, "via 0x128"),
         (0x50b8, "MANUAL"),
+        (0x5b52, "MANUAL"),
         (0x6246, "via 0x177c"),
         (0x6312, "via 0x520"),
+        (0x6734, "MANUAL"),
         (0x6738, "MANUAL"),
         (0x6940, "via 0x09c4()"),
         (0x6a0e, "via 0x520"),
@@ -275,25 +299,15 @@ def round_1(cx):
         (0x7fd4, "via 0x177c"),
         (0x8208, "via 0x520"),
         (0x82bc, "Via 0x8"),
+        (0x842a, "MANUAL"),
         (0x8480, "via 0x09c4()"),
         (0x8d72, "MANUAL"),
         (0x9cb8, "via 0x520"),
         (0x9cc0, "MANUAL"),
         (0x9e88, "Wake after stop"),
         (0x9f0e, "via 0x09c4()"),
-        #(0xac06, "MANUAL"),
-        #(0xad58, "MANUAL"),
-        #(0xad6e, "MANUAL"),
-        #(0xae90, "MANUAL"),
-        #(0xafd8, "MANUAL"),
-        #(0xb458, "MANUAL"),
-        #(0xb5f6, "MANUAL"),
-        #(0xb8ca, "MANUAL"),
-        #(0xbbe8, "MANUAL"),
-        #(0xbc28, "MANUAL"),
-        #(0x62c6, "MANUAL"),
-        #(0x9756, "MANUAL"),
-        #(0x9756, "MANUAL"),
+        (0x62c6, "via 0xa7c4"),
+        (0x9756, "MANUAL"),
     ):
         cx.disass(a)
         cx.m.set_block_comment(a, b)
@@ -338,28 +352,8 @@ def round_1(cx):
         (0x3f32, "MODEM_VEC_5_DUART"),
         (0x4208, "MODEM_VEC_6_XE1201"),
         (0x4214, "MODEM_VEC_6_DUART"),
-        (0x4cdc, "SCSI_OPERATION()"),
+        (0x4cdc, "SCSI_OPERATION(A0=mailbox)"),
         (0x520c, "SCSI_D_REQ_SENSE(scsi_id=D2)"),
-        (0x5596, "DO_READ_6(A1)"),
-        (0x55be, "DO_WRITE_6(A1)"),
-        (0x55e8, "DO_READ_DEFECT_DATA(A1)"),
-        (0x5634, "DO_FORMAT_UNIT(A1)"),
-        (0x565e, "DO_SEND_DIAGNOSTICS(A1)"),
-        (0x5688, "DO_RECEIVE_DIAGNOSTICS(A1)"),
-        (0x56aa, "DO_WRITE_BUFFER(A1)"),
-        (0x56ec, "DO_READ_BUFFER(A1)"),
-        (0x572e, "DO_READ_LONG_10(A1)"),
-        (0x5770, "DO_WRITE_LONG_10(A1)"),
-        (0x57bc, "DO_WRITE_SAME_10(A1)"),
-        (0x57fe, "DO_VENDOR_X06(A1)"),
-        (0x584c, "DO_VENDOR_XDA(A1)"),
-        (0x5888, "DO_VENDOR_XD8(A1)"),
-        (0x58c4, "DO_VENDOR_XD2(A1)"),
-        (0x5902, "DO_VENDOR_XD1(A1)"),
-        (0x5940, "DO_MODE_SELECT(A1)"),
-        (0x596e, "DO_MODE_SENSE(A1)"),
-        (0x59b4, "DO_MODE_SENSE_X03(A1)"),
-        (0x59d6, "DO_SEEK(A1)"),
         (0x5b98, "INIT_KERNEL_06_DISKS"),
         (0x5d14, "DELAY_LOOP(D1)"),
         (0x5d28, "PROBE_DISK_GEOMETRY(D2)"),
@@ -392,7 +386,6 @@ def round_1(cx):
         (0x9e74, "AwaitInterrupt()"),
         (0x9f0e, "INIT_KERNEL_08"),
         (0x9fde, "INIT_KERNEL_09"),
-        (0xa710, "SCSI_OPS_TABLE"),
         (0x4b20, "CHS512_TO_LBA1024(A0=CHAN)"),
         (0x374c, "DO_KC_15_DiagBus(D0=cmd,A0=ptr)"),
         (0x362c, "DiagBusResponse(D2)"),

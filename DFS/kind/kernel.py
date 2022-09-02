@@ -48,6 +48,7 @@ class KernelIns(m68020.m68020_ins):
 
     def assy_tvect(self):
         ''' vector number/message '''
+        self.lang.m.set_label(self.lo, "PANIC_0x%x" % self['w'])
         return assy.Arg_imm(self['w'])
 
 #######################################################################
