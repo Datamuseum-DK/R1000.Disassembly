@@ -224,7 +224,7 @@ def round_1(cx):
     Dispatch_Table(cx, 0xa79c, 10, "R1K_OP_06_VME", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0x8188,  6, "R1K_OP_07", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0xa8c0, 32, "R1K_OP_03", {}, "(A0=mailbox)")
-    Dispatch_Table(cx, 0x695e,  5, "R1K_OP_06_01", {}, "(A0=mailbox)")
+    Dispatch_Table(cx, 0x695e,  5, "R1K_OP_06_VME_01", {}, "(A0=mailbox)")
 
     for i in range(16):
         adr = 0xa1fc + i * 2

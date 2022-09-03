@@ -48,6 +48,18 @@ CHKSTRLEN	dreg		| 0C8 |0| d   | 00 | 00 | 00 | 7D | &
 				| 63 | 02 | &
 				| 4E | 4F | {
 }
+IS_LT		dreg,lconst	| 0C8 |0| d   | &
+				| a0		| a1		| &
+				| a2		| a3		| &
+				| 63 | 02 | &
+				| 4E | 4F |
+IS_LT		dreg,wconst	| 0C4 |0| d   | &
+				| a0		| a1		| &
+				| 63 | 02 | &
+				| 4E | 4F |
+
+FAIL12		wconst		| 4E | 4C | &
+				| a0		| a1		| &
 '''
 
 class PascalIns(m68020.m68020_ins):
@@ -56,6 +68,16 @@ class PascalIns(m68020.m68020_ins):
     def assy_dreg(self):
         ''' data register '''
         return "D%d" % self['d']
+
+    def assy_lconst(self):
+        ''' Long Constant '''
+        return "#0x%02x%02x%02x%02x" % (
+            self['a0'], self['a1'], self['a2'], self['a3'],
+        )
+
+    def assy_wconst(self):
+        ''' Word Constant '''
+        return "#0x%02x%02x" % ( self['a0'], self['a1'] )
 
     def assy_areg(self):
         ''' address register '''

@@ -33,11 +33,12 @@
 from pyreveng import mem
 
 import pascal
+import rounds
 
 SYSCALLS = {}
 KERNCALLS = {}
 
-class DfsSysCall():
+class DfsSysCall(rounds.Rounds):
     ''' Base class for system-calls'''
 
     def __init__(self, adr, name, bcmt=None):
@@ -81,15 +82,25 @@ class DfsSysCall():
             return
         cx.disass(self.adr)
 
-    def round_2(self, cx):
+    def round_4(self, cx):
         y = list(cx.m.find(self.adr))
-        if len(y) == 1:
-            ins = y[0]
-            i = getattr(ins, "flow_out", [])
-            if len(i) == 1:
-                f = i[0]
-                if isinstance(f.to, int):
-                    self.set_block_comment(cx, f.to)
+        if len(y) != 1:
+            return
+        ins = y[0]
+        i = getattr(ins, "flow_out", [])
+        if len(i) != 1:
+            return
+        f = i[0]
+        if not isinstance(f.to, int):
+            return
+        if cx.m.bu16(f.to) == 0x4e56:
+            try:
+                pascal.PascalFunction(cx, f.to, "_" + self.name)
+                return
+            except pascal.BadPascalFunction:
+                pass
+        cx.m.set_label(f.to, "_" + self.name)
+        self.set_block_comment(cx, f.to)
 
 class DfsKernCall(DfsSysCall):
     ''' KERNEL system-call '''
@@ -112,7 +123,7 @@ class DfsFsCall(DfsSysCall):
         if self.dead:
             ins.flow_out.pop(-1)
 
-class DfsSysCalls():
+class DfsSysCalls(rounds.Rounds):
     ''' ... '''
 
     def __init__(self, hi=0x1061c):
@@ -139,6 +150,15 @@ class DfsSysCalls():
     def round_2(self, cx):
         for sc in SYSCALLS.values():
             sc.round_2(cx)
+
+    def round_3(self, cx):
+        for sc in SYSCALLS.values():
+            sc.round_3(cx)
+
+    def round_4(self, cx):
+        print("R4")
+        for sc in SYSCALLS.values():
+            sc.round_4(cx)
 
     def __getitem__(self, adr):
         return SYSCALLS[adr]

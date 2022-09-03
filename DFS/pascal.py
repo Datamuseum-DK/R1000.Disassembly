@@ -30,6 +30,14 @@
    ==================
 '''
 
+from pyreveng import code, data
+
+class BadPascalSyntax(Exception):
+    ''' Not a well-formed PASCAL syntax '''
+
+class BadPascalFunction(Exception):
+    ''' Not a well-formed PASCAL function '''
+
 class PascalType():
     ''' A PASCAL data type '''
 
@@ -93,12 +101,16 @@ class PascalDecl():
 
         tmp = decl.split('(', 1)
         self.name = tmp.pop(0).strip()
-        assert ' ' not in self.name
+        if ' ' in self.name:
+            raise BadPascalSyntax("SP in name")
+        if not tmp:
+            raise BadPascalSyntax("no '(' in name")
         tmp = tmp[0].split(')', 1)
         self.argstring = tmp.pop(0).strip()
         if tmp and ':' in tmp[0]:
             tmp = tmp[0].split(":", 1)
-            assert tmp[0].strip() == ""
+            if tmp[0].strip() != "":
+                raise BadPascalSyntax("SP after colon")
             self.retval = PREDEF_TYPES[tmp[1].strip()]
             self.stack.append(PascalStackEntity("RETURN", self.retval, True))
         else:
@@ -108,8 +120,7 @@ class PascalDecl():
             for argatom in self.argstring.split(";"):
                 tmp = argatom.split(":")
                 if len(tmp) != 2:
-                    print("BAD ARG", argatom, "IN", self.decl)
-                assert len(tmp) == 2
+                    raise BadPascalSyntax("BAD ARG", argatom, "IN", self.decl)
                 argtype = PREDEF_TYPES[tmp[1].strip()]
                 for argname in tmp[0].split(","):
                     tmp2 = argname.split()
@@ -139,6 +150,57 @@ class PascalDecl():
             txt += " %s : " % sentry.name
             txt += sentry.ptyp.tdesc
             yield txt
+
+class PascalFunction():
+
+    def __init__(self, cx, lo, proto=None):
+        self.cx = cx
+        self.lo = lo
+        if not proto:
+            proto = "PF%x(void)" % lo
+        self.proto = proto
+
+        cx.m.set_label(lo, proto)
+
+        self.ins = []
+        nxt = self.lo
+        had_switch = False
+        while True:
+            i = list(self.cx.m.find(lo = nxt))
+            if len(i) != 1:
+                # print(hex(nxt), i, '#' * 20)
+                raise BadPascalFunction
+            i = i[0]
+            assert i.lo == nxt
+            self.ins.append(i)
+            if had_switch and isinstance(i, data.Data):
+                pass
+            elif not isinstance(i, code.Code) or i.lang != cx:
+                # print(hex(i.lo), i.render(), '=' * 20)
+                raise BadPascalFunction
+            else:
+                had_switch = i.mne == "SWITCH"
+                if i.mne == "RTS":
+                    break
+            nxt = i.hi
+        self.hi = self.ins[-1].hi
+
+        try:
+            self.pd = PascalDecl(proto)
+        except BadPascalSyntax as e:
+            print(proto, e)
+            self.pd = None
+
+        cx.m.set_block_comment(lo,
+            "Pascal Function 0x%x-0x%x" % (self.lo, self.hi)
+        )
+        cx.m.set_block_comment(lo, " ")
+        cx.m.set_block_comment(lo, proto)
+        cx.m.set_block_comment(lo, " ")
+        if self.pd:
+            for i in self.pd.stack_map():
+                cx.m.set_block_comment(lo, i)
+        
 
 def main():
     ''' ... '''

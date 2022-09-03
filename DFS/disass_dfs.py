@@ -96,7 +96,7 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, 
         print("  import", i)
         cx.m.set_block_comment(low, "  import " + i)
 
-    for turnus in range(4):
+    for turnus in range(5):
         i = "round_%d" % turnus
         for j in contrib:
             k = getattr(j, i, None)

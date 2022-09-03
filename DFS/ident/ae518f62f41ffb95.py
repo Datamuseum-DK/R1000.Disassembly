@@ -32,6 +32,8 @@
 
 from pyreveng import data
 
+import pascal
+
 def text_table(cx, lo, label, cnt, length, *args, **kwargs):
     if label is None:
         label = "texttable_0x%x" % lo
@@ -132,3 +134,24 @@ def round_2(cx):
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
+
+    for adr, proto in (
+        (0x13a70, None),
+        (0x1411a, None),
+        (0x14ba8, None),
+        (0x14d74, None),
+        (0x14dda, None),
+        (0x154f6, None),
+        (0x155c0, None),
+        (0x1564a, None),
+        (0x16056, None),
+        (0x160c8, None),
+        (0x16124, None),
+        (0x16184, None),
+        (0x161b4, None),
+        (0x162ee, None),
+        (0x16392, None),
+        (0x163d4, None),
+        (0x169d4, None),
+    ):
+        pascal.PascalFunction(cx, adr, proto)

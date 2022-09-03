@@ -79,6 +79,7 @@ def round_2(cx):
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
+    cx.dfs_syscalls.round_3(cx)
     for sc in cx.dfs_syscalls:
         i = cx.m.bu16(sc.adr)
         if i == 0x6000:
@@ -87,4 +88,7 @@ def round_3(cx):
             j = cx.m.bu32(sc.adr + 2)
         else:
             continue
-        cx.m.set_label(j, "_" + sc.name)
+        # cx.m.set_label(j, "_" + sc.name)
+
+def round_4(cx):
+    cx.dfs_syscalls.round_4(cx)
