@@ -157,10 +157,8 @@ class PascalFunction():
         self.cx = cx
         self.lo = lo
         if not proto:
-            proto = "PF%x(void)" % lo
+            proto = "PF%x()" % lo
         self.proto = proto
-
-        cx.m.set_label(lo, proto)
 
         self.ins = []
         nxt = self.lo
@@ -191,6 +189,7 @@ class PascalFunction():
             print(proto, e)
             self.pd = None
 
+        cx.m.set_label(lo, proto)
         cx.m.set_block_comment(lo,
             "Pascal Function 0x%x-0x%x" % (self.lo, self.hi)
         )

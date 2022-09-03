@@ -35,9 +35,12 @@ import pyreveng.cpu.m68020 as m68020
 #######################################################################
 
 PASCAL_DESC = '''
-STACKCHECK	-		| BF | D5 | &
+STACKCHECK1	-		| BF | D5 | &
 				| 62 | 06 | &
 				| 44 | FC | 00 | 02 | &
+				| 4E | 76 | {
+}
+STACKCHECK2	-		| BF | D5 | &
 				| 4E | 76 | {
 }
 CHKSTR		areg		|1 0 1 1| a   |1|1 1 1 0|1| b   | FF | FC | &

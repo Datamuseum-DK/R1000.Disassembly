@@ -75,8 +75,6 @@ def round_0(cx):
     for a in range(0x18519, 0x1857d, 10):
         data.Txt(cx.m, a, a + 10, label=False)
 
-    cx.m.set_label(0x11a36, "Str2Int(String, &LongInt, Long, Long, &Byte)")
-    cx.m.set_label(0x11ab4, "Month(String, &LongInt, &Void)")
 
     cx.m.set_label(0x130f2, "Legal_Filename_BitMap")
     cx.m.set_block_comment(0x130f2, "Legal characters in filename:  $.0-9?A-Z[\]_")
@@ -136,6 +134,9 @@ def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
 
     for adr, proto in (
+        (0x118a2, "TwoDigSuffix(A4 : String; val : Long; suffix : char)"),
+        (0x11a36, "GetNumberPrefix(a : String; VAR got : Long; min : Long; max : Long; VAR e : Bool)"),
+        (0x11ab4, "Month(input : String; VAR got : Long; VAR status : Bool)"),
         (0x13a70, None),
         (0x1411a, None),
         (0x14ba8, None),
