@@ -35,6 +35,8 @@ from pyreveng import assy, data
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
 
+    cx.m.set_label(0x55a, "req_fifo_ready_flag")
+    data.Const(cx.m, 0x55a, 0x55b)
     cx.m.set_label(0x28d8, "PANIC_0x824")
     for a in (
         0x0000800c,

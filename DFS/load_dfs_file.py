@@ -127,6 +127,7 @@ def load_dfs_file(asp, filename):
         b'\x00\x00\xfc\x00': 0x0,          # KERNEL
         b'\x00\x02\x00\x00': 0x10000,      # FS
         b'\x00\x04\x00\x00': 0x20000,      # PROGRAM
+        b'\x08\xa5\x00\x22': 0x70000,      # RESHA
     }.get(b)
     if i is not None:
         return load_m200_file(asp, load_address=i, octets=b + fi.read())

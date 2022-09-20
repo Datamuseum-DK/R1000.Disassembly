@@ -26,41 +26,37 @@
 #
 
 '''
-   IOC EEPROMs
-   -----------
+   P2ABUS.M200 / 4d4298301994e8
+   ----------------------------
 '''
 
 from pyreveng import data
-import ioc_hardware
-import ioc_eeprom_exports
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
-    ioc_hardware.add_symbols(cx.m)
-    ioc_eeprom_exports.add_symbols(cx.m)
-    ioc_eeprom_exports.add_flow_check(cx)
 
-    for adr in (
-        0x80001ffa,
-        0x80003ffa,
-        0x80005ffa,
-        0x80007dfa,
-    ):
-        ioc_hardware.eeprom_checksum(cx.m, adr)
+    # data.Txt(cx.m, 0x201ce, label=False)
+    cx.m.set_label(0x2253a, "READ_PARITY_MEMBOARD(adr : Byte; VAR TAGSTORE0_ERROR : Byte; VAR TAGSTORE1_ERROR : Byte; VAR ADDRESS_ERROR : Byte)")
+    cx.m.set_block_comment(0x2251a, '''
+SomethingMem()
+--------------
 
-    data.Txt(cx.m, 0x8000240c, label=False)
-    data.Txt(cx.m, 0x8000254e, label=False)
-    data.Txt(cx.m, 0x80002873, label=False)
-    data.Txt(cx.m, 0x8000288d, label=False)
-    data.Txt(cx.m, 0x80002d0d, label=False)
-    data.Txt(cx.m, 0x800033ce, label=False)
-
-    for a in range(0x800043aa, 0x80004488, 4):
-        data.Const(cx.m, a, a + 4, fmt="%02x")
+    A6+0x14: Board address
+    A6+0x10: Out param 1, Byte, ?TAGSTORE0_ERROR
+    A6+0x0c: Out param 2, Byte, ?TAGSTORE1_ERROR
+    A6+0x08: Out param 3, Byte, ?ADDRESS_ERROR
+''')
 
 def round_1(cx):
     ''' Let the disassembler loose '''
-    # cx.disass(0x800043aa + 0x27)
+
+    for adr in (
+        0x204e8,
+        0x20590,
+        0x205c6,
+    ):
+        cx.disass(adr)
+        cx.m.set_line_comment(adr, "Manual")
 
 def round_2(cx):
     ''' Spelunking in what we already found '''

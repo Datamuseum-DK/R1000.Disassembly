@@ -43,7 +43,9 @@ SEGMENT = 0x2000
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
+
     ioc_eeprom_exports.add_flow_check(cx)
+    ioc_hardware.add_symbols(cx.m)
 
     for a in range(BASE, BASE+SIZE, SEGMENT):
         cx.m.set_block_comment(a, "PROGRAM VECTORS")

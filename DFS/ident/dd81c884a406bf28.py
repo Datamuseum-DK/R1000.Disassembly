@@ -26,41 +26,27 @@
 #
 
 '''
-   IOC EEPROMs
-   -----------
+   RESHA EEPROM SREC
+   -----------------
+
 '''
 
-from pyreveng import data
-import ioc_hardware
-import ioc_eeprom_exports
+from pyreveng import mem
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
-    ioc_hardware.add_symbols(cx.m)
-    ioc_eeprom_exports.add_symbols(cx.m)
-    ioc_eeprom_exports.add_flow_check(cx)
 
-    for adr in (
-        0x80001ffa,
-        0x80003ffa,
-        0x80005ffa,
-        0x80007dfa,
-    ):
-        ioc_hardware.eeprom_checksum(cx.m, adr)
-
-    data.Txt(cx.m, 0x8000240c, label=False)
-    data.Txt(cx.m, 0x8000254e, label=False)
-    data.Txt(cx.m, 0x80002873, label=False)
-    data.Txt(cx.m, 0x8000288d, label=False)
-    data.Txt(cx.m, 0x80002d0d, label=False)
-    data.Txt(cx.m, 0x800033ce, label=False)
-
-    for a in range(0x800043aa, 0x80004488, 4):
-        data.Const(cx.m, a, a + 4, fmt="%02x")
+    # Fill gaps in S-Records
+    m0 = mem.ByteMem(0, 4)
+    m0[0] = 0
+    m0[1] = 0
+    m0[2] = 0
+    m0[3] = 0
+    cx.m.map(m0, 0x70638)
+    cx.m.map(m0, 0x74680)
 
 def round_1(cx):
     ''' Let the disassembler loose '''
-    # cx.disass(0x800043aa + 0x27)
 
 def round_2(cx):
     ''' Spelunking in what we already found '''
