@@ -26,26 +26,20 @@
 #
 
 '''
-   RESHA EEPROM SREC
-   -----------------
-
+   CEDIT.M200/d94867300bda0973
+   ---------------------------
 '''
 
-from pyreveng import mem
+from pyreveng import data
+
+import pascal
 
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
-
-    # Fill gaps in S-Records
-    m0 = mem.ByteMem(0, 4)
-    m0[0] = 0
-    m0[1] = 0
-    m0[2] = 0
-    m0[3] = 0
-    cx.m.map(m0, 0x70638)
-    cx.m.map(m0, 0x74680)
-
-    cx.m.set_label(0x707c0, "IMODEM_SLEEP()")
+    y = data.Const(cx.m, 0x2059e, 0x2059e+6)
+    cx.m.set_label(y.lo, "proto_hw_config")
+    data.Txt(cx.m, 0x201a4, 0x201be)
+    data.Txt(cx.m, 0x2055e, 0x20566)
 
 def round_1(cx):
     ''' Let the disassembler loose '''

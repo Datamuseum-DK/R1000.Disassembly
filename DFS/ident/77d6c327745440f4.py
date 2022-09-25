@@ -337,6 +337,7 @@ def round_1(cx):
         (0x163c, "Timeout_chain"),
         (0x2204, "D0=MODEM_GET_CHAR(D0)"),
         (0x2244, "TEXT_TO_MODEM(A2=ptr, D1=len, D2, D3)"),
+        (0x2288, "_KC09_MODEM(D0.W)"),
         (0x2374, "TEXT_TO_CONSOLE(A2=ptr,D1=len, D3)"),
         (0x3112, "START_MODEM(void)"),
         (0x32f4, "INIT_KERNEL_05_UARTS"),

@@ -94,12 +94,25 @@ class PascalIns(m68020.m68020_ins):
 
 PASCAL_PUSHTXT_DESC = '''
 
+# MOVEA.L A7,As
 +PTA		-		|0 0 1 0|sreg |0|0 1 0 0|1 1 1 1|
+
+# LEA.L   0xHHHH,Aa
 +PTB		-		|0 1 0 0|areg |1|1 1 1 1|1 0 1 0|x				|
+
+# MOVEQ.L #0xHH,Dd
 +PTC		-		|0 1 1 1|dreg |0|0| y		|
+
+# MOVE.B  (Aa)+,(As)+
 +PTDB+		-		|0 0 0 1|sreg |0|1 1 0 1|1|areg |
+
+# MOVE.W  (Aa)+,(As)+
 +PTDW-		-		|0 0 1 1|sreg |1|0 0 1 0|0|areg |
+
+# MOVE.L  (Aa)+,(As)+
 +PTDL-		-		|0 0 1 0|sreg |1|0 0 1 0|0|areg |
+
+# DBF     Dd,0xHHHH
 PUSHTXT		pushtxt		|0 1 0 1|0 0 0 1|1 1 0 0 1|dreg | FF | FC |
 '''
 

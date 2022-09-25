@@ -89,6 +89,7 @@ def round_0(cx):
 
     cx.m.set_label(0x1aa5e, "_Write_fc0c(word *)")
 
+    cx.m.set_label(0x1b0b6, "?popping")
     cx.m.set_label(0x1b0b8, "cur_push_level")
     cx.m.set_label(0x1b0be, "argv")
 
@@ -115,6 +116,7 @@ def round_0(cx):
     cx.m.set_label(0x18474, "diproc_adr_table[TVISF]")
     data.Const(cx.m, 0x18474, 0x18474+0x5)
 
+    data.Txt(cx.m, 0x1481e, 0x13822)
 
 
 def round_1(cx):
@@ -154,5 +156,7 @@ def round_3(cx):
         (0x16392, None),
         (0x163d4, None),
         (0x169d4, None),
+        (0x1a43a, "_PF1a43a(b : L) : Pointer"),
+        (0x1a482, None),
     ):
         pascal.PascalFunction(cx, adr, proto)
