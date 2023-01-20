@@ -46,6 +46,8 @@ def round_0(cx):
     cx.m.map(m0, 0x74680)
 
     cx.m.set_label(0x707c0, "IMODEM_SLEEP()")
+    cx.m.set_label(0x772d2, "ERROR_Tape_is_not_in_MT_Format")
+    cx.m.set_label(0x772de, "ERROR_Program_image_too_large")
 
 def round_1(cx):
     ''' Let the disassembler loose '''

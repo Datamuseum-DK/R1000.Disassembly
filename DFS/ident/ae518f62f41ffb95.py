@@ -116,7 +116,7 @@ def round_0(cx):
     cx.m.set_label(0x18474, "diproc_adr_table[TVISF]")
     data.Const(cx.m, 0x18474, 0x18474+0x5)
 
-    data.Txt(cx.m, 0x1481e, 0x13822)
+    #data.Txt(cx.m, 0x1481e, 0x14822)
 
 
 def round_1(cx):

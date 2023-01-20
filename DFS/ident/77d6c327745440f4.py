@@ -258,6 +258,7 @@ def round_1(cx):
     Dispatch_Table(cx, 0xa954,  16, None, {})
 
     for a, b in (
+        (0x0d1c, "console_desc { B, B, W, L }"),
         (0x2602, "see 0x2612"),
         (0x2602, "via 0x09c4()"),
         (0x263e, "via 0x118"),
@@ -316,8 +317,11 @@ def round_1(cx):
         cx.m.set_block_comment(a, b)
 
     for a, b in (
-        (0x4eb, "kc12_sleep_callout_flag"),
-        (0x784, "kc12_sleep_callout"),
+        (0x04eb, "kc12_sleep_callout_flag"),
+        (0x0784, "kc12_sleep_callout"),
+        (0x0d1c, "CONSOLE_1_DESC"),
+        (0x0d24, "CONSOLE_2_DESC"),
+        (0x0d2c, "CONSOLE_3_DESC"),
         (0x1429, "XE1201_CTRL_COPY"),
         (0x1434, "MODEM_TXBUF"),
         (0x1438, "MODEM_VEC_1_SEND_BYTE"),
@@ -338,10 +342,15 @@ def round_1(cx):
         (0x2204, "D0=MODEM_GET_CHAR(D0)"),
         (0x2244, "TEXT_TO_MODEM(A2=ptr, D1=len, D2, D3)"),
         (0x2288, "_KC09_MODEM(D0.W)"),
+        (0x22f4, "_KC07_READ_CONSOLECHAR(D0<=port, D0=>char)"),
         (0x2374, "TEXT_TO_CONSOLE(A2=ptr,D1=len, D3)"),
+        (0x2410, "kc08_meat(D3=W, D0=B)"),
+        (0x2978, "GET_CONSOLE_DESC(D0=port.W)"),
         (0x3112, "START_MODEM(void)"),
         (0x32f4, "INIT_KERNEL_05_UARTS"),
+        (0x362c, "DiagBusResponse(D2)"),
         (0x36aa, "DiagBusTimeoutCallback()"),
+        (0x374c, "DO_KC_15_DiagBus(D0=cmd,A0=ptr)"),
         (0x3970, "INT_MODEM_RESET"),
         (0x3b4a, "MODEM_VEC_1_XE1201_SEND_BYTE"),
         (0x3b58, "MODEM_VEC_1_DUART_SEND_BYTE"),
@@ -356,6 +365,7 @@ def round_1(cx):
         (0x3f32, "MODEM_VEC_5_DUART_LOWER_DTR"),
         (0x4208, "MODEM_VEC_6_XE1201"),
         (0x4214, "MODEM_VEC_6_DUART"),
+        (0x4b20, "CHS512_TO_LBA1024(A0=CHAN)"),
         (0x4cdc, "SCSI_OPERATION(A0=mailbox)"),
         (0x520c, "SCSI_D_REQ_SENSE(scsi_id=D2)"),
         (0x5b98, "INIT_KERNEL_06_DISKS"),
@@ -371,6 +381,7 @@ def round_1(cx):
         (0x6072, "SCSI_D_WRITE_10_SOMETHING(scsi_id=D0,src=D4,blockno=D6)"),
         (0x66a8, "INIT_KERNEL_10_VME"),
         (0x8398, "BOUNCE_TO_FS"),
+        (0x8420, "Assert_612_still_booting"),
         (0x8480, "KC12_Sleep_CallBack"),
         (0x8acc, "INIT_KERNEL_04"),
         (0x8ae8, "ReturnMailbox_0()"),
@@ -390,9 +401,7 @@ def round_1(cx):
         (0x9e74, "AwaitInterrupt()"),
         (0x9f0e, "INIT_KERNEL_08"),
         (0x9fde, "INIT_KERNEL_09"),
-        (0x4b20, "CHS512_TO_LBA1024(A0=CHAN)"),
-        (0x374c, "DO_KC_15_DiagBus(D0=cmd,A0=ptr)"),
-        (0x362c, "DiagBusResponse(D2)"),
+        (0xe000, "CONSOLE_N_DESC"),
     ):
         cx.m.set_label(a, b)
 

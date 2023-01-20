@@ -202,7 +202,7 @@ DEVICE_SYMBOLS = {
     0xfffff900: "IO_CLEAR_BERR_p24",
     0xfffffa00: "IO_MARGIN_CLOCK_p74",
     0xfffffb00: "IO_RD_IO_SLOT_p33",
-    0xfffffc00: "IO_CONTROL_p28",
+    0xfffffc00: "IO_CONTROL_pg18",
     0xfffffd00: "IO_CLR_PFINT_p23",
     0xfffffe00: "IO_CPU_CONTROL_PSU_MARGIN_BREG4_p23",
     0xffffff00: "IO_READ_SENSE_p25",

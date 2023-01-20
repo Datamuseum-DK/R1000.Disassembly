@@ -32,6 +32,8 @@
 
 from .base import DfsKernCall
 
+DfsKernCall(0x00, "KC00_GetBootDev(VAR a : Byte; VAR b : Word)")
+
 DfsKernCall(
     0x01,
     "KC01_DumpOn",
@@ -64,8 +66,9 @@ CHS is 512 byte sectors
 
 DfsKernCall(0x03, "KC03_Wait_Disk_IO(a : W; VAR status : Byte)")
 DfsKernCall(0x05, "KC05_Write_Console_String")
-DfsKernCall(0x06, "KC06_Write_Console_Char(a : Word; b : char)")
-DfsKernCall(0x07, "KC07_Read_Console_Char")
+DfsKernCall(0x06, "KC06_Write_Console_Char(a : Word ; b : char)")
+DfsKernCall(0x07, "KC07_Read_Console_Char(a : Word) : char")
+DfsKernCall(0x08, "KC08(a: Word; b: Byte)")
 DfsKernCall(0x09, "KC09_Modem(a : W; VAR b: Byte)")
 DfsKernCall(0x0c, "KC0c_Write_Modem_Char(a, b: Word ; c : char)")
 DfsKernCall(0x0d, "KC0d_Write_Modem_String(Word, Word, Char)")
@@ -73,14 +76,15 @@ DfsKernCall(0x0f, "KC0f_ReInit")
 DfsKernCall(0x10, "KC10_Panic(code : Long)")
 DfsKernCall(0x11, "KC11_Live(void)")
 DfsKernCall(0x13, "KC13_RTC")
-DfsKernCall(0x12, "KC12_Sleep(ticks.L)")
-DfsKernCall(0x15, "KC15_Diag_Bus(X.L, Y.W, &byte.L)")
+DfsKernCall(0x12, "KC12_Sleep(dur: Long)")
+DfsKernCall(0x15, "KC15_DiagBus(a : Word; b : Long) : Byte")
 DfsKernCall(0x16, "KC16_Clock_Margin")
 DfsKernCall(0x17, "KC17_Power_Margin")
-DfsKernCall(0x1c, "KC1c_ProtCopy(src.P, dst.P, len.W)")
-DfsKernCall(0x1d, "KC1d_SpaceRead(src.P, sfc.W, dst.P, dfc.W, len.W)")
+DfsKernCall(0x1c, "KC1c_ProtCopy(src : Pointer; dst : Pointer; len : Word")
+DfsKernCall(0x1d, "KC1d_BusCopy(src : Pointer; sfc : Word; dst : Pointer; dfc : Word; len : Word")
 DfsKernCall(0x1e, "KC1e_Fifo_Tx_Response(ptr : Pointer; chan : Word)")
 DfsKernCall(0x1f, "KC1f_Fifo_Rx_Request(ptr : Pointer; chan : Word; VAR flag : Bool)")
 DfsKernCall(0x20, "KC20_Estop(void)")
+
 
 _x = 0

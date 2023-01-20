@@ -34,11 +34,6 @@ from pyreveng import data
 
 from .base import DfsFsCall
 
-DfsFsCall(0x1020e, "KC07_Read_Console_Char(VAR chr : char)")
-DfsFsCall(0x10224, "KC12_Sleep(dur : Long)")
-DfsFsCall(0x1022a, "KC15_DiagBus(a : Word; b : Long) : Byte")
-DfsFsCall(0x10238, "KC1C_ProtCopy(src : Pointer; dst : Pointer; len : Word")
-DfsFsCall(0x1023a, "KC1D_BusCopy(src : Pointer; sfc : Word; dst : Pointer; dfc : Word; len : Word")
 DfsFsCall(0x10280, "?start_program")
 DfsFsCall(0x10284, "?string_lit2something")
 DfsFsCall(0x1028c, "?muls_d3_d4")        # ref: FS.0 0x107ea
@@ -124,6 +119,7 @@ DfsFsCall(0x103ec, "AskOnConsoleIntRange(prompt: String; low : Long; High : Long
 DfsFsCall(0x103f0, "AskOnConsoleYesNo(prompt : String; default : Bool) : Bool")
 DfsFsCall(0x103f4, "SetConsoleConfig(a : Long)")
 DfsFsCall(0x103f8, "GetConsoleConfig() : Long")
+DfsFsCall(0x10404, "FS_10404(a : Byte)")
 DfsFsCall(0x1043c, "FileReadLine(file : File; VAR a : String; VAR b : Byte)")
 DfsFsCall(0x1044c, "WriteErrorMessage(file : String; txt : String; number : Long) : Bool")
 DfsFsCall(0x10450, "FS_10450(&, &)")
