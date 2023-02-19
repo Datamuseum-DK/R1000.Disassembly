@@ -117,7 +117,7 @@ class DiprocDisass():
             fn=output_file,
             align_blank=True,
             align_xxx=True,
-            ncol=4,
+            ncol=9,
             **kwargs
         )
 
@@ -259,9 +259,7 @@ DIAG.D4:        RESTRG  7.7 --- 7.6 7.5 TSVLD   6.0 8.4 8.5 8.3 PAREG   5.4 5.3 
                 self.cx.m.set_label(adr, "TABLE_%04x" % adr)
 
         self.cx.m.set_block_comment(0x746, '''
-This table is used by `READ_RF_A.TYP` and seens to
-unpermute the bits between the serial scan-chain and
-some "canonical" format.
+TYP&VAL.WDR
 ''')
 
         self.cx.m.set_block_comment(0xe83, '''
@@ -309,7 +307,7 @@ Decode RAMS
 +4.7
 ''')
         for adr, lbl  in (
-            (0x0746, "BITSPEC_TYP_RF"),
+            (0x0746, "BITSPEC_TV_WDR"),
             (0x07c0, None),
             (0x0812, "BITSPEC_TYP_UIR"),
             (0x0864, None),
