@@ -32,17 +32,18 @@
 
 import sys
 
-from pyreveng import code, data, mem, pil, assy
+from pyreveng import code, pil, mem, assy
 
 PseudoCode = code.Decoder("pseudo")
 
 class MatchHit():
 
+    ''' Pop.match returns one of these to describe the hit '''
+
     def __init__(self, stmt, idx, mins):
         self.stmt = stmt
         self.idx = idx
         self.mins = mins
-        self.lo = mins[0].lo
 
     def __iter__(self):
         yield from self.mins
@@ -54,14 +55,16 @@ class MatchHit():
         return self.mins[idx]
 
     def replace(self, cls):
-        pop = cls(self.lo)
+        ''' Peplace the hit with a pseudo-op of the given class '''
+        pop = cls()
         for i in self.mins:
             self.stmt.del_ins(i)
-            pop.add_ins(i)
-        self.stmt.ins.insert(self.idx, pop)
+            pop.append_ins(i)
+        self.stmt.insert_ins(self.idx, pop)
         return pop
 
     def render(self, file=sys.stdout):
+        ''' Render the hit usably '''
         file.write("HIT\n")
         for i in self.mins:
             file.write("   " + str(i) + "\n")
@@ -72,15 +75,16 @@ class Pop():
 
     kind = "Naked"
 
-    def __init__(self, lo):
-        self.lo = lo
-        self.hi = lo
+    def __init__(self):
+        self.lo = -1
+        self.hi = -1
         self.ins = []
         self.txt = ""
         self.come_from = []
         self.go_to = []
         self.stack_delta = 0
         self.stack_adj = False
+        self.stack_level = None
 
     def __iter__(self):
         yield from self.ins
@@ -88,11 +92,15 @@ class Pop():
     def __len__(self):
         return len(self.ins)
 
+    def __lt__(self, other):
+        return self.lo < other.lo
+
     def __getitem__(self, idx):
         return self.ins[idx]
 
     def render(self, pfx=""):
-        hdr = pfx + str(self) + " d%+d" % self.stack_delta
+        ''' Render recursively '''
+        hdr = pfx + str(self) + " d%+d" % self.stack_delta + " [" + str(self.stack_level) + "]"
         for src in self.come_from:
             hdr += "  <-" + hex(src.lo)
         for dst in self.go_to:
@@ -101,22 +109,40 @@ class Pop():
         for i in self.ins:
             yield from i.render(pfx + "    ")
 
-    def add_ins(self, ins):
+    def append_ins(self, ins):
+        ''' Append an instruction '''
         assert isinstance(ins, Pop)
         assert ins.lo >= self.hi
         ins.pop = self
         self.ins.append(ins)
-        self.hi = ins.hi
+        self.lo = self.ins[0].lo
+        self.hi = self.ins[-1].hi
+        self.stack_delta += ins.stack_delta
+
+    def insert_ins(self, idx, ins):
+        ''' Insert an instruction '''
+        assert isinstance(ins, Pop)
+        ins.pop = self
+        self.ins.insert(idx, ins)
+        self.lo = self.ins[0].lo
+        self.hi = self.ins[-1].hi
+        self.stack_delta += ins.stack_delta
 
     def del_ins(self, ins):
+        ''' Delete an instruction '''
         assert isinstance(ins, Pop)
         i = self.ins.index(ins)
+        assert i >= 0
         self.ins.remove(ins)
+        self.lo = self.ins[0].lo
+        self.hi = self.ins[-1].hi
+        self.stack_delta -= ins.stack_delta
 
     def __repr__(self):
         return "<POP %05x-%05x %s>" % (self.lo, self.hi, self.kind)
 
     def match(self, pattern):
+        ''' look for particular pattern '''
         if self.kind != "Naked":
             return
         idx = 0
@@ -139,6 +165,7 @@ class Pop():
             idx += 1
 
     def reg_writes(self, reg):
+        ''' Use PIL to find out how many times a register is written '''
         count = 0
         for ins in self.ins:
             pill = getattr(ins.ins, "pil", None)
@@ -157,8 +184,9 @@ class PopMIns(Pop):
     ''' Machine Instruction '''
 
     def __init__(self, ins):
-        super().__init__(ins.lo)
+        super().__init__()
         self.ins = ins
+        self.lo = ins.lo
         self.hi = ins.hi
         self.txt = ins.render()
         self.pop = None
@@ -169,263 +197,400 @@ class PopMIns(Pop):
             txt += "."
         return txt + " " + self.txt + ">"
 
-    def render(self, pfx):
+    def render(self, pfx=""):
         yield pfx + str(self)
 
+    def data_width(self):
+        ''' Width of instruction data '''
+        return { "B": 1, "W": 2, "L": 4, }[self.ins.mne.split(".")[-1]]
+
+    def stack_width(self):
+        ''' Width of instruction data on stack '''
+        return { "B": 2, "W": 2, "L": 4, }[self.ins.mne.split(".")[-1]]
+
 class PopPrologue(Pop):
-
     ''' Pseudo-Op for function Prologue '''
-
     kind = "Prologue"
 
 class PopEpilogue(Pop):
-
     ''' Pseudo-Op for function Epilogue '''
-
     kind = "Epilogue"
 
-class PopMemCpy(Pop):
+class PopStackPush(Pop):
+    ''' Pseudo-Op for copying things onto stack '''
+    kind = "StackPush"
 
-    ''' Pseudo-Op for memcpy(3) style copy '''
-
-    kind = "MemCpy"
+class PopStackPop(Pop):
+    ''' Pseudo-Op for copying things from stack '''
+    kind = "StackPop"
 
 class PopTextPush(Pop):
-
     ''' Pseudo-Op for pushing string literal on stack '''
-
     kind = "TextPush"
 
+class PopBailout(Pop):
+    ''' Pseudo-Op for bailing out of context'''
+    kind = "Bailout"
+
 class PopLimitCheck(Pop):
-
     ''' Pseudo-Op for limit checks'''
-
     kind = "LimitCheck"
 
 class PopRegCacheLoad(Pop):
-
     ''' Pseudo-Op for loading register caches'''
-
     kind = "RegCacheLoad"
 
 class OmsiFunction():
-    ''' A single function '''
+    ''' A PASCAL function '''
 
     def __init__(self, up, lo):
         self.up = up
         self.lo = lo
-        self.stmts = {lo: Pop(lo)}
+        self.body = Pop()
+        self.calls = set()
+        self.traps = {}
 
     def __iter__(self):
-        for _lo, stmt in sorted(self.stmts.items()):
-            yield from stmt
+        yield from self.body
+
+    def __repr__(self):
+        return "<OMSI function 0x%05x>" % self.lo
 
     def render(self, file=sys.stdout):
         ''' Render to text '''
         file.write("OF %05x\n" % self.lo)
-        for _lo, stmt in sorted(self.stmts.items()):
-            for i in stmt.render(pfx="    "):
-                file.write(i + "\n")
+        for i in self.body.render(pfx="    "):
+            file.write(i + "\n")
 
-    def add_code_ins(self, ins):
+    def dot_file(self, file):
+        ''' Produce a dot(1) input file '''
+        file.write("digraph {\n")
+        for i in sorted(self.body):
+            file.write("P%05x [label=\"%05x" % (i.lo, i.lo))
+            file.write("\\n%d + %d" % (i.stack_level, i.stack_delta))
+            file.write(" = %d\"]\n" % (i.stack_level + i.stack_delta))
+            for j in i.go_to:
+                file.write("P%05x -> P%05x\n" % (i.lo, j.lo))
+        file.write("}\n")
+
+
+    def append_code_ins(self, ins):
         ''' Add another M68K instruction '''
-        self.stmts[self.lo].add_ins(PopMIns(ins))
+        self.body.append_ins(PopMIns(ins))
 
     def analyze(self):
-        ''' Analyze '''
+        ''' Progressively raise the level of abstraction '''
         if not self.find_prologue():
             return
+
+        for ins in self.body:
+            if "TRAP" in ins.txt and ("#15" in ins.txt or "#14" in ins.txt):
+                self.traps[ins.lo] = ins
+
         self.find_epilogue()
-        self.prune_switch()
         self.uncache_registers()
-        self.assign_stack_delta()
-        self.find_memcpy()
+        self.find_stackpush()
+        self.find_stackpop()
         self.find_textpush()
-        self.find_limit_check_1()
-        self.find_limit_check_2()
-        self.find_limit_check_3()
-        self.find_limit_check_4()
+        self.find_bailout()
+
+        prev = ""
+        for ins in self.body:
+            if ins.kind == "Naked" and "DB" in ins.txt and "A7" in prev:
+                print("NB: unspotted stack loop", prev, ins.txt)
+            prev = ins.txt
+
+        self.assign_stack_delta()
+        self.find_limit_checks()
         self.partition()
+        self.set_stack_levels()
 
     def find_prologue(self):
-        for stmt in self.stmts.values():
-            for hit in stmt.match(
-                (
-                    ("LINK.W",),
-                    ("CMPA.L", "(A5),A7",),
-                    ("BHI",),
-                    ("MOVE.W", "#0x2,CCR"),
-                    ("tRAPV",),
-                    ("ADDA.W",),
-                    ("MOVEM.L",),
-                )
-            ):
-                if len(hit) == 7:
-                    pop = hit.replace(PopPrologue)
-                    return True
-        for stmt in self.stmts.values():
-            for hit in stmt.match(
-                (
-                    ("LINK.W",),
-                    ("MOVEM.L",),
-                    ("CMPA.L", "(A5),A7",),
-                    ("tRAPV",),
-                )
-            ):
-                if len(hit) == 4:
-                    pop = hit.replace(PopPrologue)
-                    return True
+        ''' There are two variants of function prologues '''
+        for hit in self.body.match(
+            (
+                ("LINK.W",),
+                ("CMPA.L", "(A5),A7",),
+                ("BHI",),
+                ("MOVE.W", "#0x2,CCR"),
+                ("tRAPV",),
+                ("ADDA.W",),
+                ("MOVEM.L",),
+            )
+        ):
+            if len(hit) == 7:
+                hit.replace(PopPrologue)
+                return True
+
+        for hit in self.body.match(
+            (
+                ("LINK.W",),
+                ("MOVEM.L",),
+                ("CMPA.L", "(A5),A7",),
+                ("tRAPV",),
+            )
+        ):
+            if len(hit) == 4:
+                hit.replace(PopPrologue)
+                return True
+        return False
 
     def find_epilogue(self):
-        for stmt in self.stmts.values():
-            for hit in stmt.match(
-                (
-                    ("MOVEM.L", "(A7)+",),
-                    ("UNLK",),
-                )
-            ):
-                if len(hit) == 2:
-                    pop = hit.replace(PopEpilogue)
-                    return
+        ''' Only one kind of epilogue so far '''
+        for hit in self.body.match(
+            (
+                ("MOVEM.L", "(A7)+",),
+                ("UNLK",),
+            )
+        ):
+            if len(hit) == 2:
+                hit.replace(PopEpilogue)
+                return
 
-    def prune_switch(self):
-        for stmt in self.stmts.values():
-            for hit in stmt.match(
+    def uncache_registers(self):
+        ''' Values used multiple times are cached in vacant registers '''
+        pop = None
+
+        dsts = set()
+        for ins in self.body:
+            flow_out = getattr(ins.ins, "flow_out", [])
+            for flow in flow_out:
+                if flow.typ != "N":
+                    dsts.add(flow.to)
+
+        # Must follow Prologue
+        idx = 1
+
+        while idx < len(self.body):
+            ins = self.body[idx]
+            if ins.lo in dsts:
+                break
+            if "LEA.L" not in ins.txt:
+                break
+            reg = str(ins.ins.oper[-1])
+            writes = self.body.reg_writes(reg)
+            # print("UCR", writes, ins)
+            if writes != 1:
+                break
+            if not pop:
+                pop = PopRegCacheLoad()
+            self.body.del_ins(ins)
+            pop.append_ins(ins)
+        while idx < len(self.body):
+            ins = self.body[idx]
+            if ins.lo in dsts:
+                break
+            if "MOVE" not in ins.txt:
+                break
+            reg = str(ins.ins.oper[-1])
+            if reg[0] != "D":
+                break
+            writes = self.body.reg_writes(reg)
+            if writes != 1:
+                break
+            if not pop:
+                pop = PopRegCacheLoad()
+            self.body.del_ins(ins)
+            pop.append_ins(ins)
+
+        if not pop:
+            return
+
+        self.body.insert_ins(1, pop)
+
+        for ins in pop.ins:
+            reg = str(ins.ins.oper[1])
+            if reg[0] == "A":
+                pat = "(" + reg + ")"
+            else:
+                pat = reg
+            rpl = ins.ins.oper[0]
+            if isinstance(rpl, assy.Arg_verbatim):
+                rpl = str(rpl)
+            elif isinstance(rpl, assy.Arg_dst):
+                rpl = "0x%x" % rpl.dst
+            else:
+                print("RCL unknown arg", ins, type(rpl), rpl)
+                continue
+            for rins in self.body:
+                if not isinstance(rins, PopMIns):
+                    continue
+                if pat in rins.txt:
+                    rins.txt = rins.txt.replace(pat, rpl)
+                    if "JSR" in rins.txt:
+                        self.up.discover(rpl)
+                if reg[0] == 'A' and reg + "," in rins.txt and "MOVEA.L" in rins.txt:
+                    dst = rins.txt.split(",")[-1]
+                    rins.txt = "LEA.L   " + rpl + "," + dst
+
+    def assign_stack_delta(self):
+        ''' Assign stack increment/decrement to each instruction '''
+        for ins in self.body:
+            if "PEA.L" in ins.txt:
+                ins.stack_delta = -4
+            elif "-(A7)" in ins.txt:
+                ins.stack_delta = - ins.stack_width()
+            elif "(A7)+" in ins.txt:
+                ins.stack_delta = ins.stack_width()
+            elif "A7" in ins.txt:
+                if "(A7)" in ins.txt:
+                    pass
+                elif "A7+0x" in ins.txt:
+                    pass
+                elif "MOVE" in ins.txt and "A7," in ins.txt:
+                    pass
+                elif "ADDQ.L" in ins.txt:
+                    ins.stack_adj = True
+                    oper = ins.txt.split()[1].split(",")[0]
+                    assert oper[0] == "#"
+                    ins.stack_delta = int(oper[1:], 16)
+                elif "ADDA.W" in ins.txt:
+                    ins.stack_adj = True
+                    oper = ins.txt.split()[1].split(",")[0]
+                    assert oper[0] == "#"
+                    ins.stack_delta = int(oper[1:], 16)
+                elif "SUBQ.L" in ins.txt:
+                    ins.stack_adj = True
+                    oper = ins.txt.split()[1].split(",")[0]
+                    assert oper[0] == "#"
+                    ins.stack_delta = -int(oper[1:], 16)
+                elif "SUBA.W" in ins.txt:
+                    ins.stack_adj = True
+                    oper = ins.txt.split()[1].split(",")[0]
+                    assert oper[0] == "#"
+                    ins.stack_delta = -int(oper[1:], 16)
+                else:
+                    print("SD A7", ins)
+
+    def find_stackpush(self):
+        ''' Find loops which push things on stack '''
+        for hit in self.body.match(
+            (
+                ("SUBA.W", ",A7"),
+                ("MOVEA.L", "A7,"),
+                ("LEA.L",),
+                ("MOVEQ.L",),
+                ("MOVE.",),
+                ("DBF",),
+            )
+        ):
+            if len(hit) < 6:
+                continue
+            _src = str(hit[2].ins.oper[0])
+            srcreg = str(hit[2].ins.oper[1])
+            cntreg = str(hit[3].ins.oper[1])
+            fmreg = str(hit[4].ins.oper[0])
+            toreg = str(hit[4].ins.oper[1])
+            if hit[5].ins.flow_out[0].to != hit[4].lo:
+                continue
+            if cntreg != str(hit[5].ins.oper[0]):
+                continue
+            if "(" + srcreg + ")+" != fmreg:
+                continue
+            if toreg[0] != "(" or toreg[-2:] != ")+":
+                continue
+            toreg = toreg[1:-2]
+            pop = hit.replace(PopStackPush)
+            cnt = hit[0].txt.split()[1].split(",")[0]
+            if cnt[:3] != "#0x":
+                print("VVVpush", cnt)
+                hit.render()
+                return
+            pop.stack_delta = - int(cnt[3:], 16)
+            pop.stack_delta *= hit[4].data_width()
+
+    def find_stackpop(self):
+        ''' Find loops which push things on stack '''
+        for hit in self.body.match(
+            (
+                ("MOVEQ.L",),
+                ("MOVE.", "(A7)+"),
+                ("DBF",),
+            )
+        ):
+            if len(hit) < 3:
+                continue
+            cntreg = str(hit[0].ins.oper[1])
+            if hit[2].ins.flow_out[0].to != hit[1].lo:
+                continue
+            if cntreg != str(hit[2].ins.oper[0]):
+                continue
+            pop = hit.replace(PopStackPop)
+            cnt = hit[0].txt.split()[1].split(",")[0]
+            if cnt[:3] != "#0x":
+                print("VVVpop", cnt)
+                hit.render()
+                return
+            pop.stack_delta = int(cnt[3:], 16)
+            pop.stack_delta *= hit[1].data_width()
+
+    def find_textpush(self):
+        ''' Find loops which push string literals on stack '''
+        for hit in self.body.match(
+            (
+                ("LEA.L",),
+                ("MOVEQ.L",),
+                ("MOVE.",),
+                ("DBF",),
+            )
+        ):
+            if len(hit) < 4:
+                continue
+            _src = str(hit[0].ins.oper[0])
+            srcreg = str(hit[0].ins.oper[1])
+            cnt = str(hit[1].ins.oper[0])
+            cntreg = str(hit[1].ins.oper[1])
+            fmreg = str(hit[2].ins.oper[0])
+            toreg = str(hit[2].ins.oper[1])
+            if hit[3].ins.flow_out[0].to != hit[2].lo:
+                continue
+            if cntreg != str(hit[3].ins.oper[0]):
+                continue
+            if "-(" + srcreg + ")" != fmreg:
+                continue
+            if toreg != "-(A7)":
+                continue
+            toreg = toreg[1:-2]
+            pop = hit.replace(PopTextPush)
+            pop.stack_delta = - (1 + int(cnt[1:], 16))
+            pop.stack_delta *= hit[2].data_width()
+
+    def find_bailout(self):
+        ''' Find jumps out of context'''
+        for hit in self.body.match(
+            (
+                ("MOVEA.L", "(A5+0x8),A7"),
+                ("MOVE",),
+                ("JMP",),
+            )
+        ):
+            if len(hit) < 3:
+                continue
+            hit.replace(PopBailout)
+
+    def find_limit_checks(self):
+        ''' Find limit checks '''
+
+        conds = ("BLS", "BLT", "BLE",)
+
+        for cond in conds:
+            for hit in self.body.match(
                 (
-                    ("SWITCH", ),
-                    ("CONST", ),
+                    ("CMP",),
+                    (cond,),
                 )
             ):
                 if len(hit) < 2:
                     continue
-                while True:
-                    ins = stmt[hit.idx + 1]
-                    if not isinstance(ins.ins, data.Const):
-                        break
-                    stmt.ins.pop(hit.idx + 1)
 
-    def assign_stack_delta(self):
-        for stmt in self.stmts.values():
-            for ins in stmt:
-                if "PEA.L" in ins.txt:
-                    ins.stack_delta = -4
-                elif "-(A7)" in ins.txt:
-                    opsz = ins.ins.mne.split(".")[-1]
-                    ins.stack_delta = {
-                        "B": -2,
-                        "W": -2,
-                        "L": -4,
-                    }[opsz]
-                elif "(A7)+" in ins.txt:
-                    opsz = ins.ins.mne.split(".")[-1]
-                    ins.stack_delta = {
-                        "B": 2,
-                        "W": 2,
-                        "L": 4,
-                    }[opsz]
-                elif "A7" in ins.txt:
-                    if "(A7)" in ins.txt:
-                        pass
-                    elif "A7+0x" in ins.txt:
-                        pass
-                    elif "MOVE" in ins.txt and "A7," in ins.txt:
-                        pass
-                    elif "ADDQ.L" in ins.txt:
-                        ins.stack_adj = True
-                        oper = ins.txt.split()[1].split(",")[0]
-                        assert oper[0] == "#"
-                        ins.stack_delta = -int(oper[1:], 16)
-                    elif "ADDA.W" in ins.txt:
-                        ins.stack_adj = True
-                        oper = ins.txt.split()[1].split(",")[0]
-                        assert oper[0] == "#"
-                        ins.stack_delta = -int(oper[1:], 16)
-                    elif "SUBQ.L" in ins.txt:
-                        ins.stack_adj = True
-                        oper = ins.txt.split()[1].split(",")[0]
-                        assert oper[0] == "#"
-                        ins.stack_delta = -int(oper[1:], 16)
-                    elif "SUBA.W" in ins.txt:
-                        ins.stack_adj = True
-                        oper = ins.txt.split()[1].split(",")[0]
-                        assert oper[0] == "#"
-                        ins.stack_delta = -int(oper[1:], 16)
-                    else:
-                        print("SD A7", ins)
+                if hit[1].ins.flow_out[0].to in self.traps:
+                    hit.replace(PopLimitCheck)
 
-    def find_memcpy(self):
-        for stmt in list(self.stmts.values()):
-            for hit in stmt.match(
-                (
-                    ("SUBA.W",),
-                    ("MOVEA.L",),
-                    ("LEA.L",),
-                    ("MOVEQ.L",),
-                    ("MOVE.B",),
-                    ("DBF",),
-                )
-            ):
-                if len(hit) < 6:
-                    continue
-                src = str(hit[2].ins.oper[0])
-                srcreg = str(hit[2].ins.oper[1])
-                cnt = hit[3].ins.oper[0]
-                cntreg = str(hit[3].ins.oper[1])
-                fmreg = str(hit[4].ins.oper[0])
-                toreg = str(hit[4].ins.oper[1])
-                if hit[5].ins.flow_out[0].to != hit[4].lo:
-                    continue
-                if cntreg != str(hit[5].ins.oper[0]):
-                    continue
-                if "(" + srcreg + ")+" != fmreg:
-                    continue
-                if toreg[0] != "(" or toreg[-2:] != ")+":
-                    continue
-                toreg = toreg[1:-2]
-                pop = hit.replace(PopMemCpy)
-                pop.stack_delta = pop.ins[0].stack_delta
-
-    def find_textpush(self):
-        for stmt in list(self.stmts.values()):
-            for hit in stmt.match(
-                (
-                    ("LEA.L",),
-                    ("MOVEQ.L",),
-                    ("MOVE.",),
-                    ("DBF",),
-                )
-            ):
-                if len(hit) < 4:
-                    continue
-                src = str(hit[0].ins.oper[0])
-                srcreg = str(hit[0].ins.oper[1])
-                cnt = str(hit[1].ins.oper[0])
-                cntreg = str(hit[1].ins.oper[1])
-                fmreg = str(hit[2].ins.oper[0])
-                toreg = str(hit[2].ins.oper[1])
-                if hit[3].ins.flow_out[0].to != hit[2].lo:
-                    continue
-                if cntreg != str(hit[3].ins.oper[0]):
-                    continue
-                if "-(" + srcreg + ")" != fmreg:
-                    continue
-                if toreg != "-(A7)":
-                    continue
-                toreg = toreg[1:-2]
-                pop = hit.replace(PopTextPush)
-                pop.stack_delta = - (int(cnt[1:], 16))
-                opsz = hit[2].ins.mne.split(".")[-1]
-                if opsz == "W":
-                    pop.stack_delta *= 2
-                elif opsz == "L":
-                    pop.stack_delta *= 4
-
-    def find_limit_check_1(self):
-        for stmt in list(self.stmts.values()):
-            for hit in stmt.match(
+        for cond in conds:
+            for hit in self.body.match(
                 (
                     ("CMP",),
-                    ("BLS",),
+                    (cond,),
                     ("TRAP",),
                 )
             ):
@@ -435,184 +600,170 @@ class OmsiFunction():
                 if hit[1].ins.flow_out[0].to != hit[2].ins.hi:
                     continue
 
-                if "#15" not in hit[2].txt and "#14" not in hit[2].txt:
+                if hit[2].lo not in self.traps:
                     continue
 
                 hit.replace(PopLimitCheck)
 
-    def find_limit_check_2(self):
-        for stmt in list(self.stmts.values()):
-            for hit in stmt.match(
-                (
-                    ("ADDQ.W", "#0x1,"),
-                    ("SUBQ.W", "#0x1,"),
-                    ("cHK.W",),
-                )
-            ):
-                if len(hit) < 3:
-                    continue
-                treg = str(hit[0].ins.oper[-1])
-                if treg != str(hit[1].ins.oper[-1]):
-                    continue
-                if treg != str(hit[2].ins.oper[-1]):
-                    continue
-                hit.replace(PopLimitCheck)
-
-    def find_limit_check_3(self):
-        for stmt in list(self.stmts.values()):
-            for hit in stmt.match(
-                (
-                    ("EXTB.W", ),
-                    ("cHK.W",),
-                )
-            ):
-                if len(hit) < 2:
-                    continue
-                treg = str(hit[0].ins.oper[-1])
-                if treg != str(hit[1].ins.oper[-1]):
-                    continue
-                hit.replace(PopLimitCheck)
-
-    def find_limit_check_4(self):
-        for stmt in list(self.stmts.values()):
-            for hit in stmt.match(
-                (
-                    ("cHK.W",),
-                )
-            ):
-                if len(hit) < 1:
-                    continue
-                hit.replace(PopLimitCheck)
-
-    def uncache_registers(self):
-        pop = None
-        leal = True
-        for stmt in list(self.stmts.values()):
-            idx = 1
-            while idx < len(stmt):
-                ins = stmt[idx]
-                if "LEA.L" not in ins.txt:
-                    break
-                reg = str(ins.ins.oper[-1])
-                writes = stmt.reg_writes(reg)
-                # print("UCR", writes, ins)
-                if writes != 1:
-                    break
-                if not pop:
-                    pop = PopRegCacheLoad(ins.lo)
-                stmt.del_ins(ins)
-                pop.add_ins(ins)
-            while idx < len(stmt):
-                ins = stmt[idx]
-                if "MOVEQ" not in ins.txt:
-                    break
-                reg = str(ins.ins.oper[-1])
-                writes = stmt.reg_writes(reg)
-                if writes != 1:
-                    break
-                if not pop:
-                    pop = PopRegCacheLoad(ins.lo)
-                stmt.del_ins(ins)
-                pop.add_ins(ins)
-            break
-        if not pop:
-            return
-        # We know there is a prologue
-        stmt.ins.insert(1, pop)
-        for ins in pop.ins:
-            src = str(ins.ins.oper[1])
-            dst = ins.ins.oper[0]
-            if isinstance(dst, assy.Arg_verbatim):
-                dst = str(dst)
-            elif isinstance(dst, assy.Arg_dst):
-                dst = "0x%x" % dst.dst
-            else:
-                print("RCL unknown arg", ins, type(dst), dst)
+        for hit in self.body.match(
+            (
+                ("ADDQ.W", "#0x1,"),
+                ("SUBQ.W", "#0x1,"),
+                ("cHK.W",),
+            )
+        ):
+            if len(hit) < 3:
                 continue
-            if src[0] == "A":
-                src = "(" + src + ")"
-            for rins in stmt.ins:
-                if not isinstance(rins, PopMIns):
-                    continue
-                if src not in rins.txt:
-                    continue
-                rins.txt = rins.txt.replace(src, dst)
+            treg = str(hit[0].ins.oper[-1])
+            if treg != str(hit[1].ins.oper[-1]):
+                continue
+            if treg != str(hit[2].ins.oper[-1]):
+                continue
+            hit.replace(PopLimitCheck)
+
+        for hit in self.body.match(
+            (
+                ("EXTB.W", ),
+                ("cHK.W",),
+            )
+        ):
+            if len(hit) < 2:
+                continue
+            treg = str(hit[0].ins.oper[-1])
+            if treg != str(hit[1].ins.oper[-1]):
+                continue
+            hit.replace(PopLimitCheck)
+
+        for hit in self.body.match(
+            (
+                ("cHK.W",),
+            )
+        ):
+            if len(hit) < 1:
+                continue
+            hit.replace(PopLimitCheck)
 
     def partition(self):
+        ''' partition into basic blocks '''
         starts = set()
-        for stmt in list(self.stmts.values()):
-            for ins in stmt:
-                if not starts and isinstance(ins, PopMIns):
-                    starts.add(ins.lo)
-                flow_out = getattr(ins.ins, "flow_out", [])
-                for flow in flow_out:
-                    if flow.typ in ("C", "N"):
-                        continue
+        for ins in self.body:
+            if not starts and isinstance(ins, PopMIns):
+                starts.add(ins.lo)
+            flow_out = getattr(ins.ins, "flow_out", [])
+            for flow in flow_out:
+                if flow.typ not in ("C", "N"):
                     starts.add(flow.to)
         pop = None
-        pops = []
-        for stmt in list(self.stmts.values()):
-            idx = 1
-            while not isinstance(stmt[idx], PopMIns):
+        pops = {}
+        idx = 1
+        while not isinstance(self.body[idx], PopMIns):
+            idx += 1
+        while idx < len(self.body):
+            ins = self.body[idx]
+            if isinstance(ins, PopEpilogue):
+                break
+            if ins.lo in starts:
+                pop = Pop()
+                pops[ins.lo] = pop
+                self.body.insert_ins(idx, pop)
                 idx += 1
-            while idx < len(stmt):
-                ins = stmt[idx]
-                if isinstance(ins, PopEpilogue):
-                    break
-                if ins.lo in starts:
-                    pop = Pop(ins.lo)
-                    pops.append(pop)
-                    stmt.ins.insert(idx, pop)
-                    self.stmts[pop.lo] = pop
-                    idx += 1
-                stmt.del_ins(ins)
-                pop.add_ins(ins)
-        for pop in pops:
+            self.body.del_ins(ins)
+            pop.append_ins(ins)
+
+        for idx, ins in enumerate(self.body[:-1]):
+            if ins.kind != "Naked":
+                nxt = self.body[idx + 1]
+                ins.go_to.append(nxt)
+                nxt.come_from.append(ins)
+
+        for pop in pops.values():
             ins = pop[-1]
             flow_out = getattr(ins.ins, "flow_out", [])
             for flow in flow_out:
                 if flow.typ in ("C",):
                     continue
-                stmt2 = self.stmts.get(flow.to)
+                stmt2 = pops.get(flow.to)
                 if stmt2:
                     pop.go_to.append(stmt2)
                     stmt2.come_from.append(pop)
-                else:
-                    print("S2?.st?", hex(flow.to))
-            
+                elif flow.to in self.traps:
+                    pass
+                elif flow.to != self.body[-1].lo:
+                    print("S2?.st?", ins, flow_out, hex(flow.to), hex(self.body[-1].lo))
+                    print(self.body[-1])
+
+    def set_stack_levels(self):
+        ''' Assign stack level to each basic block '''
+        for ins in self.body:
+            if not ins.come_from:
+                ins.stack_level = 0
+        for ins in self.body:
+            if ins.stack_level is None:
+                continue
+            leave = ins.stack_level + ins.stack_delta
+            for dst in ins.go_to:
+                if dst.stack_level is None:
+                    dst.stack_level = leave
+                elif dst.stack_level != leave:
+                    print("STACK SKEW", ins, leave, "->", dst, dst.stack_level)
 
 class OmsiPascal():
+
+    ''' Identify and analyse PASCAL functions '''
 
     def __init__(self, cx):
         self.cx = cx
         self.functions = {}
+        self.discovered = set()
 
         while True:
+            sofar = len(self.discovered)
             if not self.hunt_functions():
                 break
-            continue
-            targets = []
-            for adr, func in sorted(self.functions.items()):
-                targets += list(func.hunt_reg_calls())
-            targets = set(targets)
-            for adr in sorted(targets):
-                try:
-                    i = cx.m[adr]
-                except mem.MemError:
-                    continue
-                cx.disass(adr)
+            for _lo, func in sorted(self.functions.items()):
+                if False:
+                    try:
+                        func.analyze()
+                    except Exception as err:
+                        print("ERROR", err)
+                else:
+                    func.analyze()
+            if sofar == len(self.discovered):
+                break
 
-        for _lo, func in sorted(self.functions.items()):
-            func.analyze()
+    def discover(self, where):
+        if where in self.discovered:
+            return
+        self.discovered.add(where)
+        adr = int(where, 16)
+        try:
+            self.cx.m[adr]
+        except mem.MemError:
+            return
+        # print("OMSI Discover", where)
+        self.cx.disass(adr)
 
+    def render(self, file=sys.stdout):
         for _lo, func in sorted(self.functions.items()):
-            func.render()
+            func.render(file)
+
+    def dot_file(self, file):
+        for _lo, func in sorted(self.functions.items()):
+            func.dot_file(file)
 
     def hunt_functions(self):
+        ''' Hunt for more yet undiscovered functions '''
         did = False
         cur_func = None
+        is_switch = False
         for i in self.cx.m:
             mne = getattr(i, "mne", None)
+            if not mne and is_switch:
+                continue
+            if not mne:
+                cur_func = None
+                continue
+            is_switch = i.mne == "SWITCH"
             if mne == "LINK.W" and cur_func:
                 cur_func = None
             if mne == "LINK.W" and i.lo not in self.functions:
@@ -623,5 +774,5 @@ class OmsiPascal():
                 cur_func.has_rts = True
                 cur_func = None
             if cur_func:
-                cur_func.add_code_ins(i)
+                cur_func.append_code_ins(i)
         return did
