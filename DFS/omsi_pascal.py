@@ -267,8 +267,12 @@ class OmsiFunction():
         file.write("digraph {\n")
         for i in sorted(self.body):
             file.write("P%05x [label=\"%05x" % (i.lo, i.lo))
-            file.write("\\n%d + %d" % (i.stack_level, i.stack_delta))
-            file.write(" = %d\"]\n" % (i.stack_level + i.stack_delta))
+            try:
+                file.write("\\n%d + %d" % (i.stack_level, i.stack_delta))
+                file.write(" = %d" % (i.stack_level + i.stack_delta))
+            except TypeError:
+                pass
+            file.write("\"]\n")
             for j in i.go_to:
                 file.write("P%05x -> P%05x\n" % (i.lo, j.lo))
         file.write("}\n")
@@ -499,6 +503,39 @@ class OmsiFunction():
             pop.stack_delta = - int(cnt[3:], 16)
             pop.stack_delta *= hit[4].data_width()
 
+        for hit in self.body.match(
+            (
+                ("MOVEA.L",),
+                ("MOVEQ.L",),
+                ("MOVE.", "-(A7)"),
+                ("DBF",),
+            )
+        ):
+            if len(hit) < 4:
+                continue
+            #_src = str(hit[2].ins.oper[0])
+            #srcreg = str(hit[2].ins.oper[1])
+            cntreg = str(hit[1].ins.oper[1])
+            #fmreg = str(hit[4].ins.oper[0])
+            #toreg = str(hit[4].ins.oper[1])
+            if hit[3].ins.flow_out[0].to != hit[2].lo:
+                continue
+            if cntreg != str(hit[3].ins.oper[0]):
+                continue
+            #if "(" + srcreg + ")+" != fmreg:
+            #    continue
+            #if toreg[0] != "(" or toreg[-2:] != ")+":
+            #    continue
+            #toreg = toreg[1:-2]
+            pop = hit.replace(PopStackPush)
+            cnt = hit[1].txt.split()[1].split(",")[0]
+            if cnt[:3] != "#0x":
+                print("VVVpush", cnt)
+                hit.render()
+                return
+            pop.stack_delta = - int(cnt[3:], 16)
+            pop.stack_delta *= hit[2].data_width()
+
     def find_stackpop(self):
         ''' Find loops which push things on stack '''
         for hit in self.body.match(
@@ -571,7 +608,7 @@ class OmsiFunction():
     def find_limit_checks(self):
         ''' Find limit checks '''
 
-        conds = ("BLS", "BLT", "BLE",)
+        conds = ("BLS", "BLT", "BLE", "BGE", "BGT",)
 
         for cond in conds:
             for hit in self.body.match(
@@ -585,6 +622,26 @@ class OmsiFunction():
 
                 if hit[1].ins.flow_out[0].to in self.traps:
                     hit.replace(PopLimitCheck)
+
+        for cond in conds:
+            for hit in self.body.match(
+                (
+                    ("SUB.L",),
+                    (cond,),
+                    ("TRAP",),
+                )
+            ):
+                if len(hit) < 3:
+                    continue
+
+                if hit[1].ins.flow_out[0].to != hit[2].ins.hi:
+                    continue
+
+                if hit[2].lo not in self.traps:
+                    continue
+
+                hit.replace(PopLimitCheck)
+
 
         for cond in conds:
             for hit in self.body.match(
@@ -653,10 +710,11 @@ class OmsiFunction():
             for flow in flow_out:
                 if flow.typ not in ("C", "N"):
                     starts.add(flow.to)
+        # print("QQQ", self, ["%x" % x for x in sorted(starts)])
         pop = None
         pops = {}
         idx = 1
-        while not isinstance(self.body[idx], PopMIns):
+        while self.body[idx].lo not in starts:
             idx += 1
         while idx < len(self.body):
             ins = self.body[idx]
@@ -673,12 +731,23 @@ class OmsiFunction():
         for idx, ins in enumerate(self.body[:-1]):
             if ins.kind != "Naked":
                 nxt = self.body[idx + 1]
-                ins.go_to.append(nxt)
-                nxt.come_from.append(ins)
+                if nxt:
+                    ins.go_to.append(nxt)
+                    nxt.come_from.append(ins)
+                else:
+                    print("MISSING NXT", ins)
 
         for pop in pops.values():
             ins = pop[-1]
-            flow_out = getattr(ins.ins, "flow_out", [])
+            flow_out = getattr(ins.ins, "flow_out", None)
+            if flow_out is None:
+                next = pops.get(ins.hi)
+                if next is not None:
+                    pop.go_to.append(next)
+                    next.come_from.append(pop)
+                elif not isinstance(ins, PopBailout):
+                    print("MISSING NEXT", pop, ins, next)
+                continue
             for flow in flow_out:
                 if flow.typ in ("C",):
                     continue
@@ -688,8 +757,15 @@ class OmsiFunction():
                     stmt2.come_from.append(pop)
                 elif flow.to in self.traps:
                     pass
-                elif flow.to != self.body[-1].lo:
-                    print("S2?.st?", ins, flow_out, hex(flow.to), hex(self.body[-1].lo))
+                elif flow.to == self.body[-1].lo:
+                    stmt2 = self.body[-1]
+                    if stmt2:
+                        pop.go_to.append(stmt2)
+                        stmt2.come_from.append(pop)
+                    else:
+                        print("MISSING EPILOG", pop, ins, flow, stmt2)
+                else:
+                    print("S2?.st?", ins, flow_out, flow.to, self.body[-1].lo)
                     print(self.body[-1])
 
     def set_stack_levels(self):
@@ -721,7 +797,7 @@ class OmsiPascal():
             if not self.hunt_functions():
                 break
             for _lo, func in sorted(self.functions.items()):
-                if False:
+                if True:
                     try:
                         func.analyze()
                     except Exception as err:
