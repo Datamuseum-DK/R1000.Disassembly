@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 #
 # Copyright (c) 2023 Poul-Henning Kamp <phk@phk.freebsd.dk>
 # All rights reserved.
@@ -32,9 +32,139 @@
 
 import sys
 
-from pyreveng import code, pil, mem, assy
+from pyreveng import code, pil, mem, assy, data
 
 PseudoCode = code.Decoder("pseudo")
+
+class StackItem():
+
+    def __init__(self, width, what):
+        self.width = width
+        self.what = what
+
+    def __str__(self):
+        if self.what is None:
+            return "[-%d-]" % self.width
+        return str([self.width, self.what])
+
+class StackItemInt(StackItem):
+    ''' A 16 bit integer '''
+    def __init__(self, val):
+        super().__init__(2, "#" + str(val))
+        self.val = val
+
+    def __str__(self):
+        return "[#%d]" % self.val
+
+class StackItemLong(StackItem):
+    ''' A 32 bit integer '''
+    def __init__(self, val):
+        super().__init__(4, "##" + str(val))
+        self.val = val
+
+    def __str__(self):
+        return "[##%d]" % self.val
+
+class StackItemBackReference(StackItem):
+    ''' A Pointer to something further up the stack '''
+    def __init__(self, offset):
+        super().__init__(4, "^^" + str(offset))
+        self.backref = offset
+
+    def __str__(self):
+        return "[^^%d]" % self.backref
+
+class StackItemString(StackItem):
+    ''' A String on the stack '''
+    def __init__(self, text=None):
+        super().__init__(4, "$…")
+        self.text = text
+
+    def __str__(self):
+        if self.text:
+            return "[$$%s]" % self.text
+        else:
+            return "[$$…]"
+
+class StackItemStringLiteral(StackItem):
+    ''' A pushed String Literal '''
+
+    def __str__(self):
+        return "[" + str(self.width) + ', "' + self.what + '"]'
+
+class Stack():
+    def __init__(self):
+        self.items = []
+
+    def push(self, item):
+        if item.what is None and self.items and self.items[-1].what == item.what:
+            self.items[-1].width += item.width
+        else:
+            self.items.append(item)
+
+    def pop(self, width):
+        while self.items and self.items[-1].width <= width:
+            width -= self.items[-1].width
+            self.items.pop(-1)
+        while width > 0 and self.items:
+            last = self.items[-1]
+            if last.what is not None:
+                last = StackItem(last.width, None)
+                self.items[-1] = last
+            take = min(last.width, width)
+            self.items[-1].width -= take
+            if self.items[-1].width == 0:
+                self.items.pop(-1)
+            width -= take
+        if width:
+            print("EMPTY POP", width)
+
+    def find(self, offset, width):
+        ptr = len(self.items) - 1
+        #print("A", offset, width, ptr, self.render())
+        while offset > 0 and ptr >= 0:
+            sitem = self.items[ptr]
+            if sitem.width <= offset:
+                ptr -= 1
+                offset -= sitem.width
+                continue
+            break
+        #print("B", offset, width, ptr, self.render())
+        sitem = self.items[ptr]
+        if offset and sitem.width > offset:
+            nitem = StackItem(offset, None)
+            self.items.insert(ptr + 1, nitem)
+            sitem.width -= offset
+            offset = 0
+        #print("C", offset, width, ptr, self.render())
+        if sitem.width == width:
+            return ptr, sitem
+        while sitem.width < width:
+            pitem = self.items[ptr - 1]
+            sitem = StackItem(sitem.width + pitem.width, None)
+            ptr -= 1
+            self.items[ptr] = sitem
+            self.items.pop(ptr + 1)
+            #print("D", offset, width, ptr, self.render())
+        if sitem.width == width:
+            return ptr, sitem
+        nitem = StackItem(width, None)
+        sitem.width -= width
+        self.items.insert(ptr + 1, nitem)
+        #print("E", offset, width, ptr, self.render())
+        return ptr + 1, nitem
+
+    def get(self, offset, width):
+        ptr, item = self.find(offset, width)
+        #print("I", ptr, item)
+        return item
+
+    def put(self, offset, item):
+        ptr, _sitem = self.find(offset, item.width)
+        self.items[ptr] = item
+
+    def render(self):
+        return "{" + "|".join(str(x) for x in self.items) + "}"
 
 class MatchHit():
 
@@ -106,8 +236,22 @@ class Pop():
         for dst in self.go_to:
             hdr += "  ->" + hex(dst.lo)
         yield hdr
+        sp = Stack()
+        if self.stack_level and self.stack_level < 0:
+            sp.push(StackItem(-self.stack_level, None))
         for i in self.ins:
-            yield from i.render(pfx + "    ")
+            j = list(i.render(pfx + "    "))
+            if self.kind == "Naked":
+                i.update_stack(sp)
+                if len(j) > 1:
+                    yield from j
+                    j = [""]
+                j = j[0]
+                while len(j.expandtabs()) < 80:
+                    j += "\t"
+                yield j.expandtabs() + sp.render()
+            else:
+                yield from j
 
     def append_ins(self, ins):
         ''' Append an instruction '''
@@ -143,7 +287,7 @@ class Pop():
 
     def match(self, pattern):
         ''' look for particular pattern '''
-        if self.kind != "Naked":
+        if self.kind not in ("Body", "Naked"):
             return
         idx = 0
         while idx < len(self):
@@ -180,8 +324,70 @@ class Pop():
                 count += 1
         return count
 
+    def update_stack(self, stack):
+        return
+
+class PopBody(Pop):
+    kind = "Body"
+
+class FunctionCall():
+    ''' A call to a function '''
+
+    def __init__(self, ins, dst, sp):
+        self.ins = ins
+        self.dst = dst
+        self.sp = sp
+        print("FCALL", hex(dst), hex(ins.lo), ins.txt)
+        if dst == 0x102c4:
+           self.f102c4()
+        elif dst == 0x102d0:
+           self.f102d0()
+        elif dst == 0x102d4:
+           self.f102d4()
+        elif dst == 0x102e8:
+           self.f102e8()
+
+    def f102c4(self):
+        print(
+            "MAKESTRING",
+            hex(self.ins.lo),
+            str(self.sp.get(4, 4)),
+            str(self.sp.get(2, 2)),
+            str(self.sp.get(0, 2)),
+        )
+        self.sp.put(8, StackItemString())
+
+    def f102d0(self):
+        print(
+            "STRINGCAT2",
+            hex(self.ins.lo),
+            str(self.sp.get(4, 4)),
+            str(self.sp.get(0, 4)),
+        )
+        self.sp.put(8, StackItemString())
+
+    def f102d4(self):
+        print(
+            "STRINGCAT3",
+            hex(self.ins.lo),
+            str(self.sp.get(8, 4)),
+            str(self.sp.get(4, 4)),
+            str(self.sp.get(0, 4)),
+        )
+        self.sp.put(12, StackItemString())
+
+    def f102e8(self):
+        print(
+            "LONG2HEXSTR",
+            hex(self.ins.lo),
+            str(self.sp.get(4, 4)),
+            str(self.sp.get(0, 4)),
+        )
+        self.sp.put(8, StackItemString())
+
 class PopMIns(Pop):
     ''' Machine Instruction '''
+    kind = "MIns"
 
     def __init__(self, ins):
         super().__init__()
@@ -208,6 +414,54 @@ class PopMIns(Pop):
         ''' Width of instruction data on stack '''
         return { "B": 2, "W": 2, "L": 4, }[self.ins.mne.split(".")[-1]]
 
+    def update_stack(self, sp):
+        if "ADDQ.L" in self.txt and ",A7" in self.txt:
+            i = self.txt.split()[-1].split(",")[0]
+            assert i[:3] == "#0x"
+            sp.pop(int(i[1:], 16))
+        elif "ADDA.W" in self.txt and ",A7" in self.txt:
+            i = self.txt.split()[-1].split(",")[0]
+            assert i[:3] == "#0x"
+            sp.pop(int(i[1:], 16))
+        elif "SUBQ.L" in self.txt and ",A7" in self.txt:
+            i = self.txt.split()[-1].split(",")[0]
+            assert i[:3] == "#0x"
+            sp.push(StackItem(int(i[1:], 16), None))
+        elif "SUBA.W" in self.txt and ",A7" in self.txt:
+            i = self.txt.split()[-1].split(",")[0]
+            assert i[:3] == "#0x"
+            sp.push(StackItem(int(i[1:], 16), None))
+        elif "PEA.L" in self.txt:
+            arg = self.txt.split()[1]
+            if "(A7+0x" in arg:
+                offset = int(arg[3:-1], 16)
+                sp.push(StackItemBackReference(offset))
+            else:
+                sp.push(StackItem(4, "^" + arg))
+        elif ",-(A7)" in self.txt:
+            width = self.stack_width()
+            if "MOVE" in self.txt:
+                arg = self.txt.split()[1].split(",")[0]
+                if arg[:3] == "#0x" and "MOVE.W" in self.txt:
+                    sp.push(StackItemInt(int(arg[3:], 16)))
+                elif arg[:3] == "#0x" and "MOVE.L" in self.txt:
+                    sp.push(StackItemLong(int(arg[3:], 16)))
+                else:
+                    sp.push(StackItem(width, arg))
+            else:
+                sp.push(StackItem(width, "something"))
+        elif "(A7)+," in self.txt:
+            sp.pop(self.stack_width())
+        elif "JSR" in self.txt:
+            oper = self.ins.oper[0]
+            arg = self.txt.split()[1]
+            if isinstance(oper, assy.Arg_dst):
+                FunctionCall(self, oper.dst, sp)
+            elif arg[:2] == "0x":
+                FunctionCall(self, int(arg, 16), sp)
+            else:
+                print("JSR", self, arg)
+
 class PopPrologue(Pop):
     ''' Pseudo-Op for function Prologue '''
     kind = "Prologue"
@@ -220,6 +474,36 @@ class PopStackPush(Pop):
     ''' Pseudo-Op for copying things onto stack '''
     kind = "StackPush"
 
+    def __init__(self):
+        super().__init__()
+        self.string = ""
+        self.srcadr = None
+        self.srclen = None
+
+    def render(self, pfx=""):
+        txt = pfx + "<STACKPUSH +0x%x> " % self.srclen
+        if self.string:
+            yield txt + " \"%s\"" % self.string.txt
+        else:
+            yield txt + " " + str(type(self.srcadr)) + " " + str(self.srcadr.render())
+        # yield from super().render(pfx)
+
+    def point(self, cx, srcadr, srclen):
+        self.srcadr = srcadr
+        self.srclen = srclen
+        if isinstance(srcadr, assy.Arg_dst):
+            self.ptr = srcadr.dst
+            self.string = data.Txt(cx.m, self.ptr, self.ptr + self.srclen)
+            self.string.compact = False
+
+    def update_stack(self, sp):
+        if self.string:
+           sp.push(StackItemStringLiteral(self.srclen, self.string.txt))
+        else:
+           sp.push(StackItem(self.srclen, '"…"'))
+
+         
+
 class PopStackPop(Pop):
     ''' Pseudo-Op for copying things from stack '''
     kind = "StackPop"
@@ -227,6 +511,39 @@ class PopStackPop(Pop):
 class PopTextPush(Pop):
     ''' Pseudo-Op for pushing string literal on stack '''
     kind = "TextPush"
+
+    def __init__(self):
+        super().__init__()
+        self.string = ""
+        self.srcadr = None
+        self.srclen = None
+
+    def render(self, pfx=""):
+        txt = pfx + "<TEXTPUSH +0x%x> " % self.srclen
+        if self.string:
+            yield txt + " \"%s\"" % self.string.txt
+        else:
+            yield txt + " " + str(type(self.srcadr)) + " " + str(self.srcadr.render())
+        # yield from super().render(pfx)
+
+    def point(self, cx, srcadr, srclen):
+        self.srcadr = srcadr
+        self.srclen = srclen
+        if isinstance(srcadr, assy.Arg_dst):
+            self.ptr = srcadr.dst - self.srclen
+            try:
+                self.string = data.Txt(cx.m, self.ptr, self.ptr + self.srclen)
+                self.string.compact = False
+            except mem.MemError:
+                print("TP fail", hex(self.ptr), hex(self.srclen))
+                pass
+
+    def update_stack(self, sp):
+        if self.string:
+           sp.push(StackItemStringLiteral(self.srclen, self.string.txt))
+        else:
+           sp.push(StackItem(self.srclen, '"…"'))
+
 
 class PopBailout(Pop):
     ''' Pseudo-Op for bailing out of context'''
@@ -246,7 +563,7 @@ class OmsiFunction():
     def __init__(self, up, lo):
         self.up = up
         self.lo = lo
-        self.body = Pop()
+        self.body = PopBody()
         self.calls = set()
         self.traps = {}
 
@@ -480,7 +797,7 @@ class OmsiFunction():
         ):
             if len(hit) < 6:
                 continue
-            _src = str(hit[2].ins.oper[0])
+            src = hit[2].ins.oper[0]
             srcreg = str(hit[2].ins.oper[1])
             cntreg = str(hit[3].ins.oper[1])
             fmreg = str(hit[4].ins.oper[0])
@@ -502,6 +819,7 @@ class OmsiFunction():
                 return
             pop.stack_delta = - int(cnt[3:], 16)
             pop.stack_delta *= hit[4].data_width()
+            pop.point(self.up.cx, src, -pop.stack_delta)
 
         for hit in self.body.match(
             (
@@ -573,7 +891,7 @@ class OmsiFunction():
         ):
             if len(hit) < 4:
                 continue
-            _src = str(hit[0].ins.oper[0])
+            src = hit[0].ins.oper[0]
             srcreg = str(hit[0].ins.oper[1])
             cnt = str(hit[1].ins.oper[0])
             cntreg = str(hit[1].ins.oper[1])
@@ -589,8 +907,9 @@ class OmsiFunction():
                 continue
             toreg = toreg[1:-2]
             pop = hit.replace(PopTextPush)
-            pop.stack_delta = - (1 + int(cnt[1:], 16))
-            pop.stack_delta *= hit[2].data_width()
+            cnt = 1 + int(cnt[1:], 16)
+            pop.stack_delta = -cnt * hit[2].data_width()
+            pop.point(self.up.cx, src, - pop.stack_delta)
 
     def find_bailout(self):
         ''' Find jumps out of context'''
@@ -797,7 +1116,7 @@ class OmsiPascal():
             if not self.hunt_functions():
                 break
             for _lo, func in sorted(self.functions.items()):
-                if True:
+                if False:
                     try:
                         func.analyze()
                     except Exception as err:
