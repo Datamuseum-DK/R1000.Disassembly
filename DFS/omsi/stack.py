@@ -35,6 +35,7 @@ class StackItem():
     def __init__(self, width, what):
         self.width = width
         self.what = what
+        self.stack = None
 
     def __str__(self):
         if self.what is None:
@@ -68,6 +69,19 @@ class StackItemBackReference(StackItem):
     def __str__(self):
         return "[^^%d]" % self.backref
 
+    def resolve(self):
+        idx = self.stack.items.index(self) - 1
+        sitem = self.stack.items[idx]
+        walk = self.backref
+        while walk > 0 and idx >= 0:
+            walk -= sitem.width
+            idx -= 1
+            sitem = self.stack.items[idx]
+        if not walk:
+            return sitem
+        print("BACKREF residual", walk, self.stack.render(), self)
+        return None
+
 class StackItemString(StackItem):
     ''' A String on the stack '''
     def __init__(self, text=None):
@@ -80,6 +94,25 @@ class StackItemString(StackItem):
         else:
             return "[$$…]"
 
+class StackItemBlob(StackItem):
+    ''' A pushed object '''
+
+    def __init__(self, blob=None, width=None):
+        if blob:
+            width = len(blob)
+        super().__init__(width, "$…")
+        self.blob = blob
+
+    def __str__(self):
+        if self.blob:
+            return '[**' + str(self.width) + '**]'
+        return '[**(' + str(self.width) + ')**]'
+
+    def __getitem__(self, idx):
+        if self.blob:
+            return self.blob[idx]
+        return None
+
 class StackItemStringLiteral(StackItem):
     ''' A pushed String Literal '''
 
@@ -91,6 +124,7 @@ class Stack():
         self.items = []
 
     def push(self, item):
+        item.stack = self
         if item.what is None and self.items and self.items[-1].what == item.what:
             self.items[-1].width += item.width
         else:
@@ -104,6 +138,7 @@ class Stack():
             last = self.items[-1]
             if last.what is not None:
                 last = StackItem(last.width, None)
+                last.stack = self
                 self.items[-1] = last
             take = min(last.width, width)
             self.items[-1].width -= take
@@ -127,6 +162,7 @@ class Stack():
         sitem = self.items[ptr]
         if offset and sitem.width > offset:
             nitem = StackItem(offset, None)
+            nitem.stack = self
             self.items.insert(ptr + 1, nitem)
             sitem.width -= offset
             offset = 0
@@ -136,6 +172,7 @@ class Stack():
         while sitem.width < width:
             pitem = self.items[ptr - 1]
             sitem = StackItem(sitem.width + pitem.width, None)
+            sitem.stack = self
             ptr -= 1
             self.items[ptr] = sitem
             self.items.pop(ptr + 1)
@@ -143,6 +180,7 @@ class Stack():
         if sitem.width == width:
             return ptr, sitem
         nitem = StackItem(width, None)
+        nitem.stack = self
         sitem.width -= width
         self.items.insert(ptr + 1, nitem)
         #print("E", offset, width, ptr, self.render())
@@ -150,7 +188,6 @@ class Stack():
 
     def get(self, offset, width):
         ptr, item = self.find(offset, width)
-        #print("I", ptr, item)
         return item
 
     def put(self, offset, item):

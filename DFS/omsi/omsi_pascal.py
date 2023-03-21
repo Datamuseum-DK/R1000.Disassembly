@@ -598,7 +598,7 @@ class OmsiPascal():
             if not self.hunt_functions():
                 break
             for _lo, func in sorted(self.functions.items()):
-                if True:
+                if False:
                     try:
                         func.analyze()
                     except Exception as err:
@@ -622,11 +622,14 @@ class OmsiPascal():
 
     def render(self, file=sys.stdout):
         for _lo, func in sorted(self.functions.items()):
-            try:
+            if False:
+                try:
+                    func.render(file)
+                except Exception as err:
+                    file.write("\n\nEXCEPTION: %s\n\n" % str(err))
+                    print("EXCEPTION in", func, err)
+            else:
                 func.render(file)
-            except Exception as err:
-                file.write("\n\nEXCEPTION: %s\n\n" % str(err))
-                print("EXCEPTION in", func, err)
        
 
     def dot_file(self, file):

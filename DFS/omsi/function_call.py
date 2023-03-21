@@ -44,7 +44,6 @@ class FunctionCall():
         self.ins = ins
         self.dst = dst
         self.sp = sp
-        print("FCALL", hex(dst), hex(ins.lo), ins.txt)
         if dst == 0x102c4:
            self.f102c4()
         elif dst == 0x102d0:
@@ -53,20 +52,40 @@ class FunctionCall():
            self.f102d4()
         elif dst == 0x102e8:
            self.f102e8()
+        elif False:
+           print("FCALL", hex(ins.lo), hex(dst), ins.txt)
 
     def f102c4(self):
         print(
-            "MAKESTRING",
+            "MakeString",
             hex(self.ins.lo),
             str(self.sp.get(4, 4)),
             str(self.sp.get(2, 2)),
             str(self.sp.get(0, 2)),
         )
-        self.sp.put(8, StackItemString())
+        arg0 = self.sp.get(4, 4)
+        arg1 = self.sp.get(2, 2)
+        arg2 = self.sp.get(0, 2)
+        print("   ", type(arg0), arg0, arg1, arg2)
+        if arg0 and isinstance(arg0, StackItemBackReference):
+            arg0 = arg0.resolve()
+        else:
+            self.sp.put(8, StackItemString())
+            return
+        if arg0 and isinstance(arg0, StackItemBlob) and arg0.blob:
+            txt = ""
+            for i in range(arg2.val):
+                try:
+                    txt += "%c" % arg0[i]
+                except IndexError:
+                    txt += "…"
+            self.sp.put(8, StackItemString(txt))
+        else:
+            self.sp.put(8, StackItemString())
 
     def f102d0(self):
         print(
-            "STRINGCAT2",
+            "StringCat2",
             hex(self.ins.lo),
             str(self.sp.get(4, 4)),
             str(self.sp.get(0, 4)),
@@ -75,7 +94,7 @@ class FunctionCall():
 
     def f102d4(self):
         print(
-            "STRINGCAT3",
+            "StringCat3",
             hex(self.ins.lo),
             str(self.sp.get(8, 4)),
             str(self.sp.get(4, 4)),

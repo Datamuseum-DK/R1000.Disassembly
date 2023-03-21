@@ -284,9 +284,15 @@ class PopPrologue(Pop):
     ''' Pseudo-Op for function Prologue '''
     kind = "Prologue"
 
+    def render(self, pfx=""):
+        yield pfx + "<Prologue>"
+
 class PopEpilogue(Pop):
     ''' Pseudo-Op for function Epilogue '''
     kind = "Epilogue"
+
+    def render(self, pfx=""):
+        yield pfx + "<Epilogue>"
 
 class PopStackPush(Pop):
     ''' Pseudo-Op for copying things onto stack '''
@@ -297,6 +303,8 @@ class PopStackPush(Pop):
         self.string = ""
         self.srcadr = None
         self.srclen = None
+        self.asp = None
+        self.ptr = None
 
     def render(self, pfx=""):
         txt = pfx + "<STACKPUSH +0x%x> " % self.srclen
@@ -307,6 +315,7 @@ class PopStackPush(Pop):
         # yield from super().render(pfx)
 
     def point(self, cx, srcadr, srclen):
+        self.asp = cx.m
         self.srcadr = srcadr
         self.srclen = srclen
         if isinstance(srcadr, assy.Arg_dst):
@@ -315,12 +324,13 @@ class PopStackPush(Pop):
             self.string.compact = False
 
     def update_stack(self, sp):
-        if self.string:
-           sp.push(StackItemStringLiteral(self.srclen, self.string.txt))
+        if self.ptr:
+            blob = bytearray()
+            for offset in range(self.srclen):
+                blob.append(self.asp[self.ptr + offset])
+            sp.push(StackItemBlob(blob=blob))
         else:
-           sp.push(StackItem(self.srclen, '"…"'))
-
-         
+            sp.push(StackItemBlob(width=self.srclen))
 
 class PopStackPop(Pop):
     ''' Pseudo-Op for copying things from stack '''
@@ -335,6 +345,8 @@ class PopTextPush(Pop):
         self.string = ""
         self.srcadr = None
         self.srclen = None
+        self.asp = None
+        self.ptr = None
 
     def render(self, pfx=""):
         txt = pfx + "<TEXTPUSH +0x%x> " % self.srclen
@@ -345,6 +357,7 @@ class PopTextPush(Pop):
         # yield from super().render(pfx)
 
     def point(self, cx, srcadr, srclen):
+        self.asp = cx.m
         self.srcadr = srcadr
         self.srclen = srclen
         if isinstance(srcadr, assy.Arg_dst):
@@ -357,11 +370,13 @@ class PopTextPush(Pop):
                 pass
 
     def update_stack(self, sp):
-        if self.string:
-           sp.push(StackItemStringLiteral(self.srclen, self.string.txt))
+        if self.ptr:
+            blob = bytearray()
+            for offset in range(self.srclen):
+                blob.append(self.asp[self.ptr + offset])
+            sp.push(StackItemBlob(blob=blob))
         else:
-           sp.push(StackItem(self.srclen, '"…"'))
-
+            sp.push(StackItemBlob(width=self.srclen))
 
 class PopBailout(Pop):
     ''' Pseudo-Op for bailing out of context'''
@@ -374,3 +389,6 @@ class PopLimitCheck(Pop):
 class PopRegCacheLoad(Pop):
     ''' Pseudo-Op for loading register caches'''
     kind = "RegCacheLoad"
+
+    def render(self, pfx=""):
+        yield pfx + "<RegCacheLoad>"
