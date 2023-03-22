@@ -56,17 +56,9 @@ class FunctionCall():
            print("FCALL", hex(ins.lo), hex(dst), ins.txt)
 
     def f102c4(self):
-        print(
-            "MakeString",
-            hex(self.ins.lo),
-            str(self.sp.get(4, 4)),
-            str(self.sp.get(2, 2)),
-            str(self.sp.get(0, 2)),
-        )
         arg0 = self.sp.get(4, 4)
         arg1 = self.sp.get(2, 2)
         arg2 = self.sp.get(0, 2)
-        print("   ", type(arg0), arg0, arg1, arg2)
         if arg0 and isinstance(arg0, StackItemBackReference):
             arg0 = arg0.resolve()
         else:
@@ -81,6 +73,14 @@ class FunctionCall():
                     txt += "…"
             self.sp.put(8, StackItemString(txt))
         else:
+            print(
+                "MakeString",
+                hex(self.ins.lo),
+                str(self.sp.get(4, 4)),
+                str(self.sp.get(2, 2)),
+                str(self.sp.get(0, 2)),
+                str(arg0),
+            )
             self.sp.put(8, StackItemString())
 
     def f102d0(self):

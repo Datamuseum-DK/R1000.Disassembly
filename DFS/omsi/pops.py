@@ -34,8 +34,8 @@ import sys
 
 from pyreveng import code, pil, mem, assy, data
 
-from .stack import *
-from .function_call import *
+from omsi import stack
+from omsi import function_call
 
 PseudoCode = code.Decoder("pseudo")
 
@@ -77,6 +77,7 @@ class Pop():
     ''' Pseudo-Op base class '''
 
     kind = "Naked"
+    overhead = False
 
     def __init__(self):
         self.lo = -1
@@ -109,22 +110,25 @@ class Pop():
         for dst in self.go_to:
             hdr += "  ->" + hex(dst.lo)
         yield hdr
-        sp = Stack()
+        sptr = stack.Stack()
         if self.stack_level and self.stack_level < 0:
-            sp.push(StackItem(-self.stack_level, None))
+            sptr.push(stack.StackItem(-self.stack_level, None))
         for i in self.ins:
             j = list(i.render(pfx + "    "))
             if self.kind == "Naked":
-                i.update_stack(sp)
+                i.update_stack(sptr)
                 if len(j) > 1:
                     yield from j
                     j = [""]
                 j = j[0]
                 while len(j.expandtabs()) < 80:
                     j += "\t"
-                yield j.expandtabs() + sp.render()
+                yield j.expandtabs() + sptr.render()
             else:
                 yield from j
+
+    def flow_to(self):
+        yield ('N', self.hi)
 
     def append_ins(self, ins):
         ''' Append an instruction '''
@@ -197,10 +201,11 @@ class Pop():
                 count += 1
         return count
 
-    def update_stack(self, stack):
+    def update_stack(self, _sp):
         return
 
 class PopBody(Pop):
+    ''' The body of a function '''
     kind = "Body"
 
 class PopMIns(Pop):
@@ -217,8 +222,6 @@ class PopMIns(Pop):
 
     def __repr__(self):
         txt = "<MI %05x d%+d" % (self.lo, self.stack_delta)
-        if self.stack_adj:
-            txt += "."
         return txt + " " + self.txt + ">"
 
     def render(self, pfx=""):
@@ -232,57 +235,63 @@ class PopMIns(Pop):
         ''' Width of instruction data on stack '''
         return { "B": 2, "W": 2, "L": 4, }[self.ins.mne.split(".")[-1]]
 
+    def flow_to(self):
+        for i in self.ins.flow_out:
+            yield (i.typ, i.to)
+
     def update_stack(self, sp):
-        if "ADDQ.L" in self.txt and ",A7" in self.txt:
-            i = self.txt.split()[-1].split(",")[0]
-            assert i[:3] == "#0x"
-            sp.pop(int(i[1:], 16))
-        elif "ADDA.W" in self.txt and ",A7" in self.txt:
-            i = self.txt.split()[-1].split(",")[0]
-            assert i[:3] == "#0x"
-            sp.pop(int(i[1:], 16))
-        elif "SUBQ.L" in self.txt and ",A7" in self.txt:
-            i = self.txt.split()[-1].split(",")[0]
-            assert i[:3] == "#0x"
-            sp.push(StackItem(int(i[1:], 16), None))
-        elif "SUBA.W" in self.txt and ",A7" in self.txt:
-            i = self.txt.split()[-1].split(",")[0]
-            assert i[:3] == "#0x"
-            sp.push(StackItem(int(i[1:], 16), None))
-        elif "PEA.L" in self.txt:
+        if "PEA.L" in self.txt:
             arg = self.txt.split()[1]
             if "(A7+0x" in arg:
                 offset = int(arg[3:-1], 16)
-                sp.push(StackItemBackReference(offset))
+                sp.push(stack.StackItemBackReference(offset))
             else:
-                sp.push(StackItem(4, "^" + arg))
+                sp.push(stack.StackItem(4, "^" + arg))
         elif ",-(A7)" in self.txt:
             width = self.stack_width()
             if "MOVE" in self.txt:
                 arg = self.txt.split()[1].split(",")[0]
                 if arg[:3] == "#0x" and "MOVE.W" in self.txt:
-                    sp.push(StackItemInt(int(arg[3:], 16)))
+                    sp.push(stack.StackItemInt(int(arg[3:], 16)))
                 elif arg[:3] == "#0x" and "MOVE.L" in self.txt:
-                    sp.push(StackItemLong(int(arg[3:], 16)))
+                    sp.push(stack.StackItemLong(int(arg[3:], 16)))
                 else:
-                    sp.push(StackItem(width, arg))
+                    sp.push(stack.StackItem(width, arg))
             else:
-                sp.push(StackItem(width, "something"))
+                sp.push(stack.StackItem(width, "something"))
         elif "(A7)+," in self.txt:
             sp.pop(self.stack_width())
         elif "JSR" in self.txt:
             oper = self.ins.oper[0]
             arg = self.txt.split()[1]
             if isinstance(oper, assy.Arg_dst):
-                FunctionCall(self, oper.dst, sp)
+                function_call.FunctionCall(self, oper.dst, sp)
             elif arg[:2] == "0x":
-                FunctionCall(self, int(arg, 16), sp)
+                function_call.FunctionCall(self, int(arg, 16), sp)
             else:
                 print("JSR", self, arg)
+
+class PopStackAdj(Pop):
+    ''' Adjustments to stack pointer'''
+    kind="StackAdj"
+    def __init__(self, delta):
+        super().__init__()
+        self.delta = delta
+        self.stack_delta = delta
+
+    def update_stack(self, sp):
+        if self.delta < 0:
+            sp.push(stack.StackItem(-self.delta, None))
+        elif self.delta > 0:
+            sp.pop(self.delta)
+
+    def render(self, pfx=""):
+        yield pfx + "<StackAdj %+d>" % self.delta
 
 class PopPrologue(Pop):
     ''' Pseudo-Op for function Prologue '''
     kind = "Prologue"
+    overhead = True
 
     def render(self, pfx=""):
         yield pfx + "<Prologue>"
@@ -290,13 +299,18 @@ class PopPrologue(Pop):
 class PopEpilogue(Pop):
     ''' Pseudo-Op for function Epilogue '''
     kind = "Epilogue"
+    overhead = True
 
     def render(self, pfx=""):
         yield pfx + "<Epilogue>"
 
+    def flow_to(self):
+        if False:
+            yield None
+
 class PopStackPush(Pop):
     ''' Pseudo-Op for copying things onto stack '''
-    kind = "StackPush"
+    kind = "stack.StackPush"
 
     def __init__(self):
         super().__init__()
@@ -308,11 +322,7 @@ class PopStackPush(Pop):
 
     def render(self, pfx=""):
         txt = pfx + "<STACKPUSH +0x%x> " % self.srclen
-        if self.string:
-            yield txt + " \"%s\"" % self.string.txt
-        else:
-            yield txt + " " + str(type(self.srcadr)) + " " + str(self.srcadr.render())
-        # yield from super().render(pfx)
+        yield txt + " " + str(type(self.srcadr)) + " " + str(self.srcadr.render())
 
     def point(self, cx, srcadr, srclen):
         self.asp = cx.m
@@ -320,17 +330,21 @@ class PopStackPush(Pop):
         self.srclen = srclen
         if isinstance(srcadr, assy.Arg_dst):
             self.ptr = srcadr.dst
-            self.string = data.Txt(cx.m, self.ptr, self.ptr + self.srclen)
-            self.string.compact = False
+            #self.string = data.Txt(cx.m, self.ptr, self.ptr + self.srclen)
+            #self.string.compact = False
 
     def update_stack(self, sp):
         if self.ptr:
             blob = bytearray()
-            for offset in range(self.srclen):
-                blob.append(self.asp[self.ptr + offset])
-            sp.push(StackItemBlob(blob=blob))
-        else:
-            sp.push(StackItemBlob(width=self.srclen))
+            try:
+                for offset in range(self.srclen):
+                    blob.append(self.asp[self.ptr + offset])
+                sp.push(stack.StackItemBlob(blob=blob))
+                return
+            except mem.MemError:
+                print("StackPush mem-fail", hex(self.ptr), hex(self.srclen))
+
+        sp.push(stack.StackItemBlob(width=self.srclen))
 
 class PopStackPop(Pop):
     ''' Pseudo-Op for copying things from stack '''
@@ -367,20 +381,26 @@ class PopTextPush(Pop):
                 self.string.compact = False
             except mem.MemError:
                 print("TP fail", hex(self.ptr), hex(self.srclen))
-                pass
 
     def update_stack(self, sp):
         if self.ptr:
-            blob = bytearray()
-            for offset in range(self.srclen):
-                blob.append(self.asp[self.ptr + offset])
-            sp.push(StackItemBlob(blob=blob))
-        else:
-            sp.push(StackItemBlob(width=self.srclen))
+            try:
+                blob = bytearray()
+                for offset in range(self.srclen):
+                    blob.append(self.asp[self.ptr + offset])
+                sp.push(stack.StackItemBlob(blob=blob))
+                return
+            except mem.MemError:
+                pass
+        sp.push(stack.StackItemBlob(width=self.srclen))
 
 class PopBailout(Pop):
     ''' Pseudo-Op for bailing out of context'''
     kind = "Bailout"
+
+    def flow_to(self):
+        if False:
+            yield None
 
 class PopLimitCheck(Pop):
     ''' Pseudo-Op for limit checks'''
@@ -389,6 +409,7 @@ class PopLimitCheck(Pop):
 class PopRegCacheLoad(Pop):
     ''' Pseudo-Op for loading register caches'''
     kind = "RegCacheLoad"
+    overhead = True
 
     def render(self, pfx=""):
         yield pfx + "<RegCacheLoad>"

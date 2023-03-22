@@ -31,7 +31,7 @@
 '''
 
 class StackItem():
-
+    ''' An item on the stack '''
     def __init__(self, width, what):
         self.width = width
         self.what = what
@@ -122,6 +122,7 @@ class StackItemStringLiteral(StackItem):
 class Stack():
     def __init__(self):
         self.items = []
+        self.mangled = False
 
     def push(self, item):
         item.stack = self
@@ -149,6 +150,8 @@ class Stack():
             print("EMPTY POP", width)
 
     def find(self, offset, width):
+        if self.mangled:
+            return 0, None
         ptr = len(self.items) - 1
         #print("A", offset, width, ptr, self.render())
         while offset > 0 and ptr >= 0:
@@ -159,6 +162,8 @@ class Stack():
                 continue
             break
         #print("B", offset, width, ptr, self.render())
+        if ptr < 0:
+            return 0, None
         sitem = self.items[ptr]
         if offset and sitem.width > offset:
             nitem = StackItem(offset, None)
@@ -191,8 +196,14 @@ class Stack():
         return item
 
     def put(self, offset, item):
-        ptr, _sitem = self.find(offset, item.width)
-        self.items[ptr] = item
+        ptr, sitem = self.find(offset, item.width)
+        if sitem is not None:
+            self.items[ptr] = item
+        elif not self.mangled:
+            print("BAD PUT", offset, item, self.render())
+            self.mangled = True
 
     def render(self):
+        if self.mangled:
+            return "{MANGLED}"
         return "{" + "|".join(str(x) for x in self.items) + "}"
