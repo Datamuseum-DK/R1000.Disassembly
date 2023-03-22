@@ -30,12 +30,7 @@
    =======================
 '''
 
-import sys
-
-from pyreveng import code, pil, mem, assy, data
-
-from .stack import *
-from .pops import *
+from omsi import stack
 
 class FunctionCall():
     ''' A call to a function '''
@@ -45,33 +40,33 @@ class FunctionCall():
         self.dst = dst
         self.sp = sp
         if dst == 0x102c4:
-           self.f102c4()
+            self.f102c4()
         elif dst == 0x102d0:
-           self.f102d0()
+            self.f102d0()
         elif dst == 0x102d4:
-           self.f102d4()
+            self.f102d4()
         elif dst == 0x102e8:
-           self.f102e8()
+            self.f102e8()
         elif False:
-           print("FCALL", hex(ins.lo), hex(dst), ins.txt)
+            print("FCALL", hex(ins.lo), hex(dst), ins.txt)
 
     def f102c4(self):
         arg0 = self.sp.get(4, 4)
         arg1 = self.sp.get(2, 2)
         arg2 = self.sp.get(0, 2)
-        if arg0 and isinstance(arg0, StackItemBackReference):
+        if arg0 and isinstance(arg0, stack.StackItemBackReference):
             arg0 = arg0.resolve()
         else:
-            self.sp.put(8, StackItemString())
+            self.sp.put(8, stack.StackItemString())
             return
-        if arg0 and isinstance(arg0, StackItemBlob) and arg0.blob:
+        if arg0 and isinstance(arg0, stack.StackItemBlob) and arg0.blob:
             txt = ""
             for i in range(arg2.val):
                 try:
                     txt += "%c" % arg0[i]
                 except IndexError:
                     txt += "…"
-            self.sp.put(8, StackItemString(txt))
+            self.sp.put(8, stack.StackItemString(txt))
         else:
             print(
                 "MakeString",
@@ -81,7 +76,7 @@ class FunctionCall():
                 str(self.sp.get(0, 2)),
                 str(arg0),
             )
-            self.sp.put(8, StackItemString())
+            self.sp.put(8, stack.StackItemString())
 
     def f102d0(self):
         print(
@@ -90,7 +85,7 @@ class FunctionCall():
             str(self.sp.get(4, 4)),
             str(self.sp.get(0, 4)),
         )
-        self.sp.put(8, StackItemString())
+        self.sp.put(8, stack.StackItemString())
 
     def f102d4(self):
         print(
@@ -100,7 +95,7 @@ class FunctionCall():
             str(self.sp.get(4, 4)),
             str(self.sp.get(0, 4)),
         )
-        self.sp.put(12, StackItemString())
+        self.sp.put(12, stack.StackItemString())
 
     def f102e8(self):
         print(
@@ -109,4 +104,4 @@ class FunctionCall():
             str(self.sp.get(4, 4)),
             str(self.sp.get(0, 4)),
         )
-        self.sp.put(8, StackItemString())
+        self.sp.put(8, stack.StackItemString())

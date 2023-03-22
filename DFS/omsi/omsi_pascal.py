@@ -103,6 +103,7 @@ class OmsiFunction():
 
         self.assign_stack_delta()
         self.find_limit_checks()
+        self.find_block_moves()
         self.partition()
         self.set_stack_levels()
 
@@ -120,7 +121,7 @@ class OmsiFunction():
             )
         ):
             if len(hit) == 7:
-                hit.replace(pops.PopPrologue)
+                hit.replace(pops.PopPrologue())
                 return True
 
         for hit in self.body.match(
@@ -132,7 +133,7 @@ class OmsiFunction():
             )
         ):
             if len(hit) == 4:
-                hit.replace(pops.PopPrologue)
+                hit.replace(pops.PopPrologue())
                 return True
         return False
 
@@ -145,7 +146,7 @@ class OmsiFunction():
             )
         ):
             if len(hit) == 2:
-                hit.replace(pops.PopEpilogue)
+                hit.replace(pops.PopEpilogue())
                 return
 
     def uncache_registers(self):
@@ -291,7 +292,7 @@ class OmsiFunction():
             if toreg[0] != "(" or toreg[-2:] != ")+":
                 continue
             toreg = toreg[1:-2]
-            pop = hit.replace(pops.PopStackPush)
+            pop = hit.replace(pops.PopStackPush())
             cnt = hit[0].txt.split()[1].split(",")[0]
             if cnt[:3] != "#0x":
                 print("VVVpush", cnt)
@@ -325,7 +326,7 @@ class OmsiFunction():
             #if toreg[0] != "(" or toreg[-2:] != ")+":
             #    continue
             #toreg = toreg[1:-2]
-            pop = hit.replace(pops.PopStackPush)
+            pop = hit.replace(pops.PopStackPush())
             cnt = hit[1].txt.split()[1].split(",")[0]
             if cnt[:3] != "#0x":
                 print("VVVpush", cnt)
@@ -351,7 +352,7 @@ class OmsiFunction():
                 continue
             if cntreg != str(hit[2].ins.oper[0]):
                 continue
-            pop = hit.replace(pops.PopStackPop)
+            pop = hit.replace(pops.PopStackPop())
             cnt = hit[0].txt.split()[1].split(",")[0]
             if cnt[:3] != "#0x":
                 print("VVVpop", cnt)
@@ -387,7 +388,7 @@ class OmsiFunction():
             if toreg != "-(A7)":
                 continue
             toreg = toreg[1:-2]
-            pop = hit.replace(pops.PopTextPush)
+            pop = hit.replace(pops.PopTextPush())
             cnt = 1 + int(cnt[1:], 16)
             pop.stack_delta = -cnt * hit[2].data_width()
             pop.point(self.up.cx, src, - pop.stack_delta)
@@ -403,7 +404,7 @@ class OmsiFunction():
         ):
             if len(hit) < 3:
                 continue
-            hit.replace(pops.PopBailout)
+            hit.replace(pops.PopBailout())
 
     def find_limit_checks(self):
         ''' Find limit checks '''
@@ -421,7 +422,7 @@ class OmsiFunction():
                     continue
 
                 if hit[1].ins.flow_out[0].to in self.traps:
-                    hit.replace(pops.PopLimitCheck)
+                    hit.replace(pops.PopLimitCheck())
 
         for cond in conds:
             for hit in self.body.match(
@@ -440,7 +441,7 @@ class OmsiFunction():
                 if hit[2].lo not in self.traps:
                     continue
 
-                hit.replace(pops.PopLimitCheck)
+                hit.replace(pops.PopLimitCheck())
 
 
         for cond in conds:
@@ -460,7 +461,7 @@ class OmsiFunction():
                 if hit[2].lo not in self.traps:
                     continue
 
-                hit.replace(pops.PopLimitCheck)
+                hit.replace(pops.PopLimitCheck())
 
         for hit in self.body.match(
             (
@@ -476,7 +477,7 @@ class OmsiFunction():
                 continue
             if treg != str(hit[2].ins.oper[-1]):
                 continue
-            hit.replace(pops.PopLimitCheck)
+            hit.replace(pops.PopLimitCheck())
 
         for hit in self.body.match(
             (
@@ -489,7 +490,7 @@ class OmsiFunction():
             treg = str(hit[0].ins.oper[-1])
             if treg != str(hit[1].ins.oper[-1]):
                 continue
-            hit.replace(pops.PopLimitCheck)
+            hit.replace(pops.PopLimitCheck())
 
         for hit in self.body.match(
             (
@@ -498,7 +499,7 @@ class OmsiFunction():
         ):
             if len(hit) < 1:
                 continue
-            hit.replace(pops.PopLimitCheck)
+            hit.replace(pops.PopLimitCheck())
 
     def find_stack_adj(self):
         ''' Find limit checks '''
@@ -521,6 +522,56 @@ class OmsiFunction():
                 self.body.del_ins(ins)
                 pop.append_ins(ins)
                 self.body.insert_ins(idx, pop)
+
+    def find_block_moves(self):
+        ''' Find block move loops '''
+
+        def looks_good(hit):
+            cntreg = hit[-3][1]
+            if hit[-1][0] != cntreg:
+                print("Bad BlockMove cntreg", hit[-1][0], hit[-2][1])
+                hit.render()
+                return False
+            cnt = hit[-3][0]
+            if cnt[:3] != "#0x":
+                print("Bad BlockMove cnt", cnt)
+                hit.render()
+                return False
+            cnt = int(cnt[1:], 16) * hit[-2].data_width()
+            for i in (hit[-2][0], hit[-2][1]):
+                if len(i) != 5 or i[:2] != "(A" or i[-2:] != ")+":
+                    print("Bad BlockMove reg", i)
+                    hit.render()
+                    return False
+            return cnt, hit[-2][0][1:3], hit[-2][1][1:3]
+
+        for hit in self.body.match(
+            (
+                ("MOVEQ.L",),
+                ("MOVE.",),
+                ("DBF",),
+            )
+        ):
+            if len(hit) < 3:
+                continue
+            i = looks_good(hit)
+            if i:
+                cnt, srcreg, dstreg = i
+                hit.replace(pops.PopBlockMove(srcreg, dstreg, cnt))
+
+        for hit in self.body.match(
+            (
+                ("MOVE.W",),
+                ("MOVE.",),
+                ("DBF",),
+            )
+        ):
+            if len(hit) < 3:
+                continue
+            i = looks_good(hit)
+            if i:
+                cnt, srcreg, dstreg = i
+                hit.replace(pops.PopBlockMove(srcreg, dstreg, cnt))
 
     def partition(self):
         ''' partition into basic blocks '''
@@ -558,7 +609,7 @@ class OmsiFunction():
 
         # Tie basic blocks together
         for pop in allpops.values():
-            if pop.overhead:
+            if isinstance(pop, pops.PopEpilogue):
                 continue
             ins = pop[-1]
             for typ, where in ins.flow_to():

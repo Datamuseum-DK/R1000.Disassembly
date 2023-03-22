@@ -24,4 +24,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
+''' Reverse-compiling OMSI Pascal M68K code '''
+
 from .omsi_pascal import OmsiPascal

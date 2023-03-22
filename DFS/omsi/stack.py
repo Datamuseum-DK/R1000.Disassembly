@@ -91,8 +91,7 @@ class StackItemString(StackItem):
     def __str__(self):
         if self.text:
             return "[$$%s]" % self.text
-        else:
-            return "[$$…]"
+        return "[$$…]"
 
 class StackItemBlob(StackItem):
     ''' A pushed object '''
@@ -120,11 +119,15 @@ class StackItemStringLiteral(StackItem):
         return "[" + str(self.width) + ', "' + self.what + '"]'
 
 class Stack():
+    ''' A model of the stack '''
     def __init__(self):
         self.items = []
         self.mangled = False
 
     def push(self, item):
+        ''' Push an item onto the stack '''
+        if self.mangled:
+            return
         item.stack = self
         if item.what is None and self.items and self.items[-1].what == item.what:
             self.items[-1].width += item.width
@@ -132,6 +135,9 @@ class Stack():
             self.items.append(item)
 
     def pop(self, width):
+        ''' Push width worth of items off the stack '''
+        if self.mangled:
+            return
         while self.items and self.items[-1].width <= width:
             width -= self.items[-1].width
             self.items.pop(-1)
@@ -148,8 +154,10 @@ class Stack():
             width -= take
         if width:
             print("EMPTY POP", width)
+            self.mangled = True
 
     def find(self, offset, width):
+        ''' Find item on stack, rearrange if necessary '''
         if self.mangled:
             return 0, None
         ptr = len(self.items) - 1
@@ -192,10 +200,12 @@ class Stack():
         return ptr + 1, nitem
 
     def get(self, offset, width):
-        ptr, item = self.find(offset, width)
+        ''' Get width item at offset '''
+        _ptr, item = self.find(offset, width)
         return item
 
     def put(self, offset, item):
+        ''' Put item at offset '''
         ptr, sitem = self.find(offset, item.width)
         if sitem is not None:
             self.items[ptr] = item
@@ -204,6 +214,7 @@ class Stack():
             self.mangled = True
 
     def render(self):
+        ''' Render stack image '''
         if self.mangled:
             return "{MANGLED}"
         return "{" + "|".join(str(x) for x in self.items) + "}"

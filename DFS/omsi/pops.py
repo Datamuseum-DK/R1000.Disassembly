@@ -57,9 +57,8 @@ class MatchHit():
     def __getitem__(self, idx):
         return self.mins[idx]
 
-    def replace(self, cls):
+    def replace(self, pop):
         ''' Peplace the hit with a pseudo-op of the given class '''
-        pop = cls()
         for i in self.mins:
             self.stmt.del_ins(i)
             pop.append_ins(i)
@@ -121,6 +120,7 @@ class Pop():
                     yield from j
                     j = [""]
                 j = j[0]
+                j += "\t"
                 while len(j.expandtabs()) < 80:
                     j += "\t"
                 yield j.expandtabs() + sptr.render()
@@ -224,6 +224,9 @@ class PopMIns(Pop):
         txt = "<MI %05x d%+d" % (self.lo, self.stack_delta)
         return txt + " " + self.txt + ">"
 
+    def __getitem__(self, idx):
+        return self.txt.split()[1].split(",")[idx]
+
     def render(self, pfx=""):
         yield pfx + str(self)
 
@@ -247,7 +250,7 @@ class PopMIns(Pop):
                 sp.push(stack.StackItemBackReference(offset))
             else:
                 sp.push(stack.StackItem(4, "^" + arg))
-        elif ",-(A7)" in self.txt:
+        elif "-(A7)" in self.txt:
             width = self.stack_width()
             if "MOVE" in self.txt:
                 arg = self.txt.split()[1].split(",")[0]
@@ -257,10 +260,33 @@ class PopMIns(Pop):
                     sp.push(stack.StackItemLong(int(arg[3:], 16)))
                 else:
                     sp.push(stack.StackItem(width, arg))
+            elif "CLR.W" in self.txt:
+                sp.push(stack.StackItemInt(0))
+            elif "CLR.B" in self.txt:
+                sp.push(stack.StackItemInt(0))
+            elif "CLR.W" in self.txt:
+                sp.push(stack.StackItemInt(0))
             else:
                 sp.push(stack.StackItem(width, "something"))
-        elif "(A7)+," in self.txt:
+        elif "(A7)+" in self.txt:
             sp.pop(self.stack_width())
+        elif ",(A7)" in self.txt:
+            width = self.stack_width()
+            if "MOVE" in self.txt:
+                sp.pop(width)
+                arg = self.txt.split()[1].split(",")[0]
+                if arg[:3] == "#0x" and "MOVE.W" in self.txt:
+                    sp.push(stack.StackItemInt(int(arg[3:], 16)))
+                elif arg[:3] == "#0x" and "MOVE.L" in self.txt:
+                    sp.push(stack.StackItemLong(int(arg[3:], 16)))
+                elif "MOVE.B" in self.txt:
+                    sp.push(stack.StackItem(width, None))
+                else:
+                    sp.push(stack.StackItem(width, arg))
+            else:
+                sp.pop(width)
+                sp.push(stack.StackItem(width, None))
+                print("SM", self)
         elif "JSR" in self.txt:
             oper = self.ins.oper[0]
             arg = self.txt.split()[1]
@@ -350,6 +376,9 @@ class PopStackPop(Pop):
     ''' Pseudo-Op for copying things from stack '''
     kind = "StackPop"
 
+    def xrender(self, pfx=""):
+        yield pfx + str(self)
+
 class PopTextPush(Pop):
     ''' Pseudo-Op for pushing string literal on stack '''
     kind = "TextPush"
@@ -380,7 +409,7 @@ class PopTextPush(Pop):
                 self.string = data.Txt(cx.m, self.ptr, self.ptr + self.srclen)
                 self.string.compact = False
             except mem.MemError:
-                print("TP fail", hex(self.ptr), hex(self.srclen))
+                pass
 
     def update_stack(self, sp):
         if self.ptr:
@@ -405,6 +434,22 @@ class PopBailout(Pop):
 class PopLimitCheck(Pop):
     ''' Pseudo-Op for limit checks'''
     kind = "LimitCheck"
+
+class PopBlockMove(Pop):
+    ''' Pseudo-Op for block move loops'''
+    kind = "BlockMove"
+
+    def __init__(self, src, dst, length):
+        super().__init__()
+        self.src = src
+        self.dst = dst
+        self.length = length
+
+    def __repr__(self):
+        return "<BlockMove [%d] %s -> %s>" % (self.length, self.src, self.dst)
+
+    def render(self, pfx=""):
+        yield pfx + str(self)
 
 class PopRegCacheLoad(Pop):
     ''' Pseudo-Op for loading register caches'''
