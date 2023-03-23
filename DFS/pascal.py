@@ -41,10 +41,11 @@ class BadPascalFunction(Exception):
 class PascalType():
     ''' A PASCAL data type '''
 
-    def __init__(self, tdesc, width, dbg = None):
+    def __init__(self, tdesc, width, dbg = None, ptr = False):
         self.tdesc = tdesc
         self.width = width
         self.dbg = dbg
+        self.ptr = ptr
 
     def __repr__(self):
         return "<PTYP " + self.tdesc + "|%d>" % self.width
@@ -56,10 +57,11 @@ PREDEF_TYPES = {
     "Word": PascalType("Word", 2),
     "integer": PascalType("integer", 4),
     "Long": PascalType("Long", 4),
-    "Pointer": PascalType("Pointer", 4),
+    "Pointer": PascalType("Pointer", 4, "Pointer"),
     "Quad": PascalType("Quad", 8),
     "String": PascalType("String", 4, "String"),
     "File": PascalType("File", 4, "Dirent"),
+    "TimeStamp": PascalType("TimeStamp", 4, "TimeStamp", True),
     "B": PascalType("B", 1),
     "W": PascalType("W", 2),
     "L": PascalType("L", 4),
@@ -88,6 +90,8 @@ class PascalStackEntity():
     def put_on_stack(self, offset):
         ''' allocate on stack '''
         self.offset = offset
+        if self.ptyp.ptr:
+            return offset + 4
         if self.var:
             return offset + 4
         return offset + (self.ptyp.width + 1) & ~1
@@ -147,7 +151,7 @@ class PascalDecl():
                 txt += "VAR "
             else:
                 txt += "    "
-            txt += " %s : " % sentry.name
+            txt += "%s : " % sentry.name
             txt += sentry.ptyp.tdesc
             yield txt
 

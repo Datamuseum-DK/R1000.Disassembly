@@ -48,6 +48,7 @@ FILENAME = os.path.join(MYDIR, "FS_0.M200")
 def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, **kwargs):
     ''' Disassemble a single file '''
     cx = m68020.m68020()
+    cx.omsi = None
     try:
         ident, low, high = load_dfs_file.load_dfs_file(cx.m, input_file)
     except load_dfs_file.LoadError as err:
@@ -90,10 +91,11 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, 
             contrib.append(importlib.import_module(i))
         except ModuleNotFoundError as err:
             cx.m.set_block_comment(low, "  no " + i)
-            print("  no", i)
-            print(err)
+            if not "No module named" in str(err):
+                print("  no", i)
+                print(err)
             continue
-        print("  import", i)
+        # print("  import", i)
         cx.m.set_block_comment(low, "  import " + i)
 
     for turnus in range(5):
@@ -125,7 +127,7 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, 
                 print("\t", nd)
                 for lf in nd.leaves:
                     print("\t\t", lf, lf.render())
-                    print("\t\t\t" + lf.pil.render().replace("\n", "\n\t\t\t"))
+                    #print("\t\t\t" + lf.pil.render().replace("\n", "\n\t\t\t"))
     return cx
 
 def main():
@@ -133,12 +135,15 @@ def main():
 
     if len(sys.argv) == 5 and sys.argv[1] == "-AutoArchaeologist":
         print("PyReveng3/R1000.Disassembly", os.path.basename(__file__))
-        disassemble_file(sys.argv[3], sys.argv[4])
+        cx = disassemble_file(sys.argv[3], sys.argv[4])
     elif len(sys.argv) > 1:
         assert "-AutoArchaeologist" not in sys.argv
         for i in sys.argv[1:]:
             j = i.split("/")[-1]
             cx = disassemble_file(i, "/tmp/_" + j, pil=False, svg=False)
+            if cx.omsi:
+                cx.omsi.render(open("/tmp/_" + j + ".omsi", "w"))
+                cx.omsi.dot_file(open("/tmp/_" + j + ".dot", "w"))
             # dotplot.dot_plot(cx)
     else:
         cx = disassemble_file(FILENAME, pil=True, svg=True)

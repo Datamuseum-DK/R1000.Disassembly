@@ -35,6 +35,12 @@ import pyreveng.cpu.m68020 as m68020
 #######################################################################
 
 PASCAL_DESC = '''
+
+#
+# bf d5          CMPA.L  (A5),A7
+# 62 06          BHI     .+6
+# 44 fc 00 02    MOVE.W  #0x2,CCR
+# 4e 76          tRAPV
 STACKCHECK1	-		| BF | D5 | &
 				| 62 | 06 | &
 				| 44 | FC | 00 | 02 | &
@@ -212,6 +218,6 @@ class PascalSwitchIns(m68020.m68020_ins):
 
 def add_pascal_pseudo_ins(cx):
     ''' Augment disassembler with PASCAL pseudo instructions '''
-    cx.add_ins(PASCAL_DESC, PascalIns)
-    cx.add_ins(PASCAL_PUSHTXT_DESC, PascalPushtxtIns)
+    #cx.add_ins(PASCAL_DESC, PascalIns)
+    #cx.add_ins(PASCAL_PUSHTXT_DESC, PascalPushtxtIns)
     cx.add_ins(PASCAL_SWITCH_DESC, PascalSwitchIns)
