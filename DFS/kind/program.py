@@ -35,6 +35,8 @@ import pascal_pseudo_ins
 
 import dfs_syscalls
 
+import omsi
+
 class CmdTable():
     ''' ... '''
 
@@ -132,17 +134,28 @@ def round_1(cx):
     y = data.Const(cx.m, 0x20024, 0x20025)
     cx.m.set_label(y.lo, "exp_init_done")
 
+    y = cx.codeptr(0x20000)
+    cx.m.set_line_comment(y.lo, "STACK.END")
+
     y = cx.codeptr(0x20004)
     cx.m.set_label(y.dst, "START")
-
-    z = cx.codeptr(0x20018)
-    cx.m.set_label(z.dst, "ProgramFailureHandler()")
-    z = cx.codeptr(0x2001c)
-    cx.m.set_label(z.dst, "ExperimentFailureHandler()")
-
     # XXX: should be done through flow-check
     cx.disass(y.dst + 10)
     cx.m.set_label(y.dst + 10, "MAIN")
+
+    y = cx.codeptr(0x20008)
+
+    y = cx.dataptr(0x2000c)
+
+    y = cx.dataptr(0x20010)
+    cx.m.set_line_comment(y.lo, "CODE.END")
+
+    z = cx.codeptr(0x20018)
+    cx.m.set_label(z.dst, "ProgramFailureHandler()")
+
+    z = cx.codeptr(0x2001c)
+    cx.m.set_label(z.dst, "ExperimentFailureHandler()")
+
 
 def round_2(cx):
     ''' Spelunking in what we already found '''
@@ -150,8 +163,4 @@ def round_2(cx):
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
 
-    for item in cx.m:
-        dst = getattr(item, "dstadr", None)
-        if not dst in cx.dfs_cmd_tables:
-            continue
-        CmdTableRef(cx, item)
+    cx.omsi = omsi.OmsiPascal(cx)

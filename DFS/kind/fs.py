@@ -37,6 +37,8 @@ import pyreveng.cpu.m68020 as m68020
 import pascal_pseudo_ins
 import dfs_syscalls
 
+import omsi
+
 #######################################################################
 
 FS_DESC = '''
@@ -66,6 +68,10 @@ def round_0(cx):
     cx.m.set_label(0x10010, "superblock_sector.freelist_lba")
     cx.m.set_label(0x10022, "freelist_sector")
 
+    cx.m.set_label(0x20000, "stack.top")
+    cx.m.set_label(0x2000c, "heap.top")
+    cx.m.set_label(0x20010, "code.top")
+
 def round_1(cx):
     ''' Let the disassembler loose '''
     y = cx.codeptr(0x10004)
@@ -89,6 +95,8 @@ def round_3(cx):
         else:
             continue
         # cx.m.set_label(j, "_" + sc.name)
+
+    cx.omsi = omsi.OmsiPascal(cx)
 
 def round_4(cx):
     cx.dfs_syscalls.round_4(cx)
