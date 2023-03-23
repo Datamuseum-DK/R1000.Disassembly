@@ -82,12 +82,12 @@ class Pop():
         self.lo = -1
         self.hi = -1
         self.ins = []
-        self.txt = ""
         self.come_from = []
         self.go_to = []
         self.stack_delta = 0
         self.stack_adj = False
         self.stack_level = None
+        self.txt = self.kind
 
     def __iter__(self):
         yield from self.ins
@@ -314,6 +314,14 @@ class PopStackAdj(Pop):
     def render(self, pfx=""):
         yield pfx + "<StackAdj %+d>" % self.delta
 
+class PopStackCheck(Pop):
+    ''' Stack level check '''
+    kind = "StackCheck"
+    overhead = True
+
+    def render(self, pfx=""):
+        yield pfx + str(self)
+
 class PopPrologue(Pop):
     ''' Pseudo-Op for function Prologue '''
     kind = "Prologue"
@@ -434,6 +442,9 @@ class PopBailout(Pop):
 class PopLimitCheck(Pop):
     ''' Pseudo-Op for limit checks'''
     kind = "LimitCheck"
+
+    def render(self, pfx=""):
+        yield pfx + str(self)
 
 class PopBlockMove(Pop):
     ''' Pseudo-Op for block move loops'''

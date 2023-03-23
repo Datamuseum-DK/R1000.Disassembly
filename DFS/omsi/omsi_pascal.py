@@ -45,6 +45,7 @@ class OmsiFunction():
         self.body = pops.PopBody()
         self.calls = set()
         self.traps = {}
+        self.analyzed = False
 
     def __iter__(self):
         yield from self.body
@@ -63,14 +64,18 @@ class OmsiFunction():
         file.write("digraph {\n")
         for i in sorted(self.body):
             file.write("P%05x [label=\"%05x" % (i.lo, i.lo))
-            try:
+            if i.stack_level is not None:
                 file.write("\\n%d + %d" % (i.stack_level, i.stack_delta))
-                file.write(" = %d" % (i.stack_level + i.stack_delta))
-            except TypeError:
-                pass
+                stknxt = i.stack_level + i.stack_delta
+                file.write(" = %d" % stknxt)
+            else:
+                stknxt = None
             file.write("\"]\n")
             for j in i.go_to:
-                file.write("P%05x -> P%05x\n" % (i.lo, j.lo))
+                file.write("P%05x -> P%05x" % (i.lo, j.lo))
+                if j.stack_level != stknxt:
+                    file.write(' [color="red"]')
+                file.write("\n")
         file.write("}\n")
 
 
@@ -80,7 +85,11 @@ class OmsiFunction():
 
     def analyze(self):
         ''' Progressively raise the level of abstraction '''
+
+        self.find_stack_check()
+
         if not self.find_prologue():
+            print("NO PROLOGUE", self)
             return
 
         for ins in self.body:
@@ -107,45 +116,55 @@ class OmsiFunction():
         self.partition()
         self.set_stack_levels()
 
-    def find_prologue(self):
-        ''' There are two variants of function prologues '''
+        self.analyzed = True
+
+    def find_stack_check(self):
+        ''' Find stack overrun checks '''
         for hit in self.body.match(
             (
-                ("LINK.W",),
                 ("CMPA.L", "(A5),A7",),
                 ("BHI",),
                 ("MOVE.W", "#0x2,CCR"),
                 ("tRAPV",),
+            )
+        ):
+            if len(hit) != 4:
+                continue
+            flows = [x for x in hit[1].flow_to()]
+            if flows[0][1] != hit[3].hi:
+                print("FT", flows)
+                continue
+            hit.replace(pops.PopStackCheck())
+
+    def find_prologue(self):
+        ''' Compiler generated prologues '''
+        for hit in self.body.match(
+            (
+                ("LINK.W",),
+                ("StackCheck",),
                 ("ADDA.W",),
                 ("MOVEM.L",),
             )
         ):
-            if len(hit) == 7:
-                hit.replace(pops.PopPrologue())
-                return True
+            if len(hit) < 3:
+                continue
+            if hit[2][1] != "A7":
+                continue
+            hit.replace(pops.PopPrologue())
+            return True
 
-        for hit in self.body.match(
-            (
-                ("LINK.W",),
-                ("MOVEM.L",),
-                ("CMPA.L", "(A5),A7",),
-                ("tRAPV",),
-            )
-        ):
-            if len(hit) == 4:
-                hit.replace(pops.PopPrologue())
-                return True
         return False
 
     def find_epilogue(self):
-        ''' Only one kind of epilogue so far '''
+        ''' Find Epilogue '''
         for hit in self.body.match(
             (
                 ("MOVEM.L", "(A7)+",),
                 ("UNLK",),
+                ("RTS",),
             )
         ):
-            if len(hit) == 2:
+            if len(hit) == 3:
                 hit.replace(pops.PopEpilogue())
                 return
 
@@ -409,7 +428,7 @@ class OmsiFunction():
     def find_limit_checks(self):
         ''' Find limit checks '''
 
-        conds = ("BLS", "BLT", "BLE", "BGE", "BGT",)
+        conds = ("BLS", "BLT", "BLE", "BGE", "BGT", "BHI")
 
         for cond in conds:
             for hit in self.body.match(
@@ -501,6 +520,17 @@ class OmsiFunction():
                 continue
             hit.replace(pops.PopLimitCheck())
 
+        for hit in self.body.match(
+            (
+                ("CMPA.L", ),
+                ("BEQ",),
+                ("TRAP", "#13",),
+            )
+        ):
+            if len(hit) < 3:
+                continue
+            hit.replace(pops.PopLimitCheck())
+
     def find_stack_adj(self):
         ''' Find limit checks '''
 
@@ -583,7 +613,8 @@ class OmsiFunction():
             if not starts and isinstance(ins, pops.PopMIns):
                 starts.add(ins.lo)
             for typ, where in ins.flow_to():
-                if typ not in ("C", "N"):
+                if typ not in ("C", "N") and where is not None:
+                    # print("I", ins, typ, where)
                     assert hex(where)
                     starts.add(where)
         starts.add(self.body[-1].lo)
@@ -613,7 +644,7 @@ class OmsiFunction():
                 continue
             ins = pop[-1]
             for typ, where in ins.flow_to():
-                if typ in ("C",):
+                if typ in ("C",) or where is None:
                     continue
                 dst = allpops.get(where)
                 if dst is None:
@@ -653,6 +684,8 @@ class OmsiPascal():
             if not self.hunt_functions():
                 break
             for _lo, func in sorted(self.functions.items()):
+                if func.analyzed:
+                    continue
                 if self.debug:
                     try:
                         func.analyze()
@@ -714,6 +747,7 @@ class OmsiPascal():
                 did = True
             elif mne == "RTS" and cur_func:
                 cur_func.has_rts = True
+                cur_func.append_code_ins(i)
                 cur_func = None
             if cur_func:
                 cur_func.append_code_ins(i)
