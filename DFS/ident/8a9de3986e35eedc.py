@@ -47,11 +47,6 @@ def round_2(cx):
     for a, b in (
         (0x203ce, None),
         (0x20406, None),
-        (0x2130e, "exp_SET_HIT.MEM()"),		# 0002061c
-        (0x213cc, "exp_RESET_MEM.MEM()"),	# 00020834
-        (0x21476, "exp_RUN_CHECK.MEM()"),	# 00020796
-        (0x21608, "exp_FILL_MEMORY.MEM()"),	# 00020d02
-        (0x21882, "exp_CLEAR_HITS.MEM()"),	# 00020622
     ):
         cx.disass(a)
         if b:
@@ -64,5 +59,10 @@ def round_3(cx):
     for a, b in (
         (0x2077a, "START_ALL_BOARDS()"),
         (0x20bd6, "RUN_UNTIL_STOP()"),
+        (0x2130e, "exp_SET_HIT.MEM()"),		# 0002061c
+        (0x213cc, "exp_RESET_MEM.MEM()"),	# 00020834
+        (0x21476, "exp_RUN_CHECK.MEM()"),	# 00020796
+        (0x21608, "exp_FILL_MEMORY.MEM()"),	# 00020d02
+        (0x21882, "exp_CLEAR_HITS.MEM()"),	# 00020622
     ):
         cx.m.set_label(a, b)

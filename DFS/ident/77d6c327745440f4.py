@@ -63,8 +63,9 @@ def round_0(cx):
         data.Txt(cx.m, a, splitnl=True, term=(255,))
 
     a = 0xa24e
+    cx.m.set_label(a, "BREAK_MENU")
     while a < 0xa35d:
-        y = data.Txt(cx.m, a, term=(0x02, 0x03,), splitnl=True, label=False)
+        y = data.Txt(cx.m, a, term=(0x00, 0x02, 0x03,), splitnl=True, label=False)
         a = y.hi
 
     for a in range(0x0000a3c8, 0x0000a3d8, 4):
@@ -158,7 +159,10 @@ class Dispatch_Table():
 
 R1K_OPS = {
     0x02: "DISK",
+    0x03: "TAPE",
+    0x05: "NOP",
     0x06: "VME",
+    0x07: "MEM",
 }
 
 R1K_OPS_DISK = {
@@ -221,12 +225,13 @@ def round_1(cx):
 
     Dispatch_Table(cx, 0xa8a0,  8, "R1K_OP", R1K_OPS, "(A0=mailbox)")
     Dispatch_Table(cx, 0x2448,  3, "R1K_OP_01", {}, "(A0=mailbox)", "JSR")
-    Dispatch_Table(cx, 0xa68c, 33, "R1K_OP_DISK", R1K_OPS_DISK, "(A0=mailbox)")
+    Dispatch_Table(cx, 0xa68c, 33, "R1K_OP_02_DISK", R1K_OPS_DISK, "(A0=mailbox)")
     Dispatch_Table(cx, 0xa19c,  6, "R1K_OP_04", {}, "(A0=mailbox)", "JSR")
     Dispatch_Table(cx, 0xa79c, 10, "R1K_OP_06_VME", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0x8188,  6, "R1K_OP_07", {}, "(A0=mailbox)")
-    Dispatch_Table(cx, 0xa8c0, 32, "R1K_OP_03", {}, "(A0=mailbox)")
+    Dispatch_Table(cx, 0xa8c0, 32, "R1K_OP_03_TAPE", {}, "(A0=mailbox)")
     Dispatch_Table(cx, 0x695e,  5, "R1K_OP_06_VME_01", {}, "(A0=mailbox)")
+    Dispatch_Table(cx, 0x8234,  6, "R1K_OP_07_MEM", {}, "(A0=mailbox)")
 
     for i in range(16):
         adr = 0xa1fc + i * 2
@@ -249,7 +254,6 @@ def round_1(cx):
     Dispatch_Table(cx, 0x7890,  8)
     Dispatch_Table(cx, 0x7e1e,  7)
     Dispatch_Table(cx, 0x7b5c,  4)
-    Dispatch_Table(cx, 0x8234,  6)
     Dispatch_Table(cx, 0xa42c,  21, width=2)
     Dispatch_Table(cx, 0xa710,  33, "SCSI_OP", SCSI_OP)
 
@@ -258,7 +262,7 @@ def round_1(cx):
     Dispatch_Table(cx, 0xa954,  16, None, {})
 
     for a, b in (
-        (0x0d1c, "console_desc { B, B, W, L }"),
+        (0x0d1c, "console_desc { B=wptr, B=rdptr, W=nbuf, L=buffer }"),
         (0x2602, "see 0x2612"),
         (0x2602, "via 0x09c4()"),
         (0x263e, "via 0x118"),
@@ -319,9 +323,15 @@ def round_1(cx):
     for a, b in (
         (0x04eb, "kc12_sleep_callout_flag"),
         (0x0784, "kc12_sleep_callout"),
-        (0x0d1c, "CONSOLE_1_DESC"),
-        (0x0d24, "CONSOLE_2_DESC"),
-        (0x0d2c, "CONSOLE_3_DESC"),
+        (0x0d1c, "CONSOLE_RXFIFO"),
+        (0x0d22, "CONSOLE_RXFIFO.ptr"),
+        (0x0d24, "MODEM_RXFIFO"),
+        (0x0d2a, "MODEM_RXFIFO.ptr"),
+        (0x0d2c, "IMODEM_RXFIFO"),
+        (0x0d32, "IMODEM_RXFIFO.ptr"),
+        (0x0d3c, "CONSOLE_RXBUF"),
+        (0x0e3c, "MODEM_RXBUF"),
+        (0x0f3c, "IMODEM_RXBUF"),
         (0x1429, "XE1201_CTRL_COPY"),
         (0x1434, "MODEM_TXBUF"),
         (0x1438, "MODEM_VEC_1_SEND_BYTE"),
@@ -348,6 +358,8 @@ def round_1(cx):
         (0x2978, "GET_CONSOLE_DESC(D0=port.W)"),
         (0x3112, "START_MODEM(void)"),
         (0x32f4, "INIT_KERNEL_05_UARTS"),
+        (0x3486, "SETUP_IMODEM"),
+        (0x34e4, "SETUP_XMODEM"),
         (0x362c, "DiagBusResponse(D2)"),
         (0x36aa, "DiagBusTimeoutCallback()"),
         (0x374c, "DO_KC_15_DiagBus(D0=cmd,A0=ptr)"),
@@ -402,6 +414,8 @@ def round_1(cx):
         (0x9f0e, "INIT_KERNEL_08"),
         (0x9fde, "INIT_KERNEL_09"),
         (0xe000, "CONSOLE_N_DESC"),
+        (0xe00e, "CONSOLE_XON_CHAR"),
+        (0xe00f, "CONSOLE_XOFF_CHAR"),
     ):
         cx.m.set_label(a, b)
 

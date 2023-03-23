@@ -118,6 +118,32 @@ def round_0(cx):
 
     #data.Txt(cx.m, 0x1481e, 0x14822)
 
+    y = data.Const(cx.m, 0x000116ba, 0x000116ba + 8)
+    cx.m.set_label(y.lo, "rtc_min")
+    y = data.Const(cx.m, 0x000116c2, 0x000116c2 + 8)
+    cx.m.set_label(y.lo, "rtc_max")
+
+    cx.m.set_block_comment(0x000116ee, "    A6-0x05 RTC[7], bcd, [0..99]")
+    cx.m.set_block_comment(0x000116ee, "    A6-0x06 RTC[6], bcd, [0..59]")
+    cx.m.set_block_comment(0x000116ee, "    A6-0x07 RTC[5], bcd, [0..59]")
+    cx.m.set_block_comment(0x000116ee, "    A6-0x08 RTC[4], bcd, [0..23]")
+    cx.m.set_block_comment(0x000116ee, "    A6-0x09 RTC[3], bcd, ([1..7])")
+    cx.m.set_block_comment(0x000116ee, "    A6-0x0a RTC[2], bcd, [1..31]")
+    cx.m.set_block_comment(0x000116ee, "    A6-0x0b RTC[1], bcd, [1..12]")
+    cx.m.set_block_comment(0x000116ee, "    A6-0x0c RTC[0], binary, [0..7f]")
+    cx.m.set_block_comment(0x0001171c, "RTC[0] is binary")
+    cx.m.set_block_comment(0x00011720, "Convert BCD to binary")
+    cx.m.set_block_comment(0x0001173c, "Skip limit check on RTC[3]")
+    cx.m.set_block_comment(0x00011742, "Limit check")
+    cx.m.set_block_comment(0x00011768, "Did limit check fail?")
+    cx.m.set_block_comment(0x00011772, "Convert rtc -> Timestamp")
+    cx.m.set_line_comment(0x00011776, "rtc[4] = hour")
+    cx.m.set_line_comment(0x00011780, "rtc[5] = minute")
+    cx.m.set_line_comment(0x00011790, "rtc[5] = second")
+    cx.m.set_line_comment(0x0001179e, "rtc[1] = month")
+    cx.m.set_line_comment(0x000117ae, "rtc[2] = day")
+    cx.m.set_line_comment(0x000117bc, "rtc[0] = year")
+
 
 def round_1(cx):
     ''' Let the disassembler loose '''
