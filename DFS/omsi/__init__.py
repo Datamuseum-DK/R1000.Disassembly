@@ -26,4 +26,6 @@
 
 ''' Reverse-compiling OMSI Pascal M68K code '''
 
-from .omsi_pascal import OmsiPascal
+#from omsi import omsi_pascal
+
+#OmsiPascal = omsi_pascal.OmsiPascal

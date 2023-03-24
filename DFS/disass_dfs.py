@@ -91,7 +91,7 @@ def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, 
             contrib.append(importlib.import_module(i))
         except ModuleNotFoundError as err:
             cx.m.set_block_comment(low, "  no " + i)
-            if not "No module named" in str(err):
+            if 1 or not "No module named" in str(err):
                 print("  no", i)
                 print(err)
             continue

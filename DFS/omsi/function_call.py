@@ -32,23 +32,34 @@
 
 from omsi import stack
 
+class CalledFunction():
+    ''' A called function '''
+
+    def __init__(self, where, lbl):
+        self.where = where
+        self.lbl = lbl
+        self.called_from = set()
+
+    def add_call(self, callpop):
+        self.called_from.add(callpop)
+
 class FunctionCall():
     ''' A call to a function '''
 
-    def __init__(self, ins, dst, sp):
+    def __init__(self, ins, sp):
         self.ins = ins
-        self.dst = dst
         self.sp = sp
-        if dst == 0x102c4:
+        return
+        if ins.dst == 0x102c4:
             self.f102c4()
-        elif dst == 0x102d0:
+        elif ins.dst == 0x102d0:
             self.f102d0()
-        elif dst == 0x102d4:
+        elif ins.dst == 0x102d4:
             self.f102d4()
-        elif dst == 0x102e8:
+        elif ins.dst == 0x102e8:
             self.f102e8()
         elif False:
-            print("FCALL", hex(ins.lo), hex(dst), ins.txt)
+            print("FCALL", hex(ins.lo), hex(ins.dst), ins, ins.pop, ins.pop.index(ins))
 
     def f102c4(self):
         arg0 = self.sp.get(4, 4)

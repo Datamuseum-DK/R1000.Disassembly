@@ -34,8 +34,8 @@ import sys
 
 from pyreveng import code, pil, mem, assy, data
 
-from omsi import stack
-from omsi import function_call
+import omsi.stack as stack
+import omsi.function_call as function_call
 
 PseudoCode = code.Decoder("pseudo")
 
@@ -100,6 +100,10 @@ class Pop():
 
     def __getitem__(self, idx):
         return self.ins[idx]
+
+    def index(self, pop):
+        assert isinstance(pop, Pop)
+        return self.ins.index(pop)
 
     def render(self, pfx=""):
         ''' Render recursively '''
@@ -227,6 +231,12 @@ class PopMIns(Pop):
     def __getitem__(self, idx):
         return self.txt.split()[1].split(",")[idx]
 
+    def get(self, idx, dfl=None):
+        i = self.txt.split()[1].split(",")
+        if idx < len(i):
+            return i[idx]
+        return dfl
+
     def render(self, pfx=""):
         yield pfx + str(self)
 
@@ -286,16 +296,7 @@ class PopMIns(Pop):
             else:
                 sp.pop(width)
                 sp.push(stack.StackItem(width, None))
-                print("SM", self)
-        elif "JSR" in self.txt:
-            oper = self.ins.oper[0]
-            arg = self.txt.split()[1]
-            if isinstance(oper, assy.Arg_dst):
-                function_call.FunctionCall(self, oper.dst, sp)
-            elif arg[:2] == "0x":
-                function_call.FunctionCall(self, int(arg, 16), sp)
-            else:
-                print("JSR", self, arg)
+                # print("SM", self)
 
 class PopStackAdj(Pop):
     ''' Adjustments to stack pointer'''
@@ -438,6 +439,29 @@ class PopBailout(Pop):
     def flow_to(self):
         if False:
             yield None
+
+class PopCall(Pop):
+    ''' Pseudo-Op for function calls '''
+    kind = "Call"
+
+    def __init__(self, dst, lbl=None):
+        super().__init__()
+        self.dst = dst
+        self.lbl = lbl
+
+    def __repr__(self):
+        return "<Call 0x%05x 0x%05x>" % (self.lo, self.dst)
+
+    def render(self, pfx=""):
+        yield pfx + str(self)
+        if self.lbl:
+            yield pfx + "    " + self.lbl
+
+    def flow_to(self):
+        yield ("N", self.hi)
+
+    def update_stack(self, sp):
+        function_call.FunctionCall(self, sp)
 
 class PopLimitCheck(Pop):
     ''' Pseudo-Op for limit checks'''

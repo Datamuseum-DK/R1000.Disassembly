@@ -37,7 +37,7 @@ import pyreveng.cpu.m68020 as m68020
 import pascal_pseudo_ins
 import dfs_syscalls
 
-import omsi
+import omsi.omsi_pascal
 
 #######################################################################
 
@@ -96,7 +96,7 @@ def round_3(cx):
             continue
         # cx.m.set_label(j, "_" + sc.name)
 
-    cx.omsi = omsi.OmsiPascal(cx)
+    cx.omsi = omsi.omsi_pascal.OmsiPascal(cx)
 
 def round_4(cx):
     cx.dfs_syscalls.round_4(cx)

@@ -35,7 +35,7 @@ import pascal_pseudo_ins
 
 import dfs_syscalls
 
-import omsi
+import omsi.omsi_pascal
 
 class CmdTable():
     ''' ... '''
@@ -163,4 +163,4 @@ def round_2(cx):
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
 
-    cx.omsi = omsi.OmsiPascal(cx)
+    cx.omsi = omsi.omsi_pascal.OmsiPascal(cx)
