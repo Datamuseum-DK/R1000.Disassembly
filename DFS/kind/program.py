@@ -156,6 +156,9 @@ def round_1(cx):
     z = cx.codeptr(0x2001c)
     cx.m.set_label(z.dst, "ExperimentFailureHandler()")
 
+    z = data.Const(cx.m, 0x20108, 0x20109)
+    cx.m.set_label(z.lo, "some_kind_of_flag_for_fs")
+
 
 def round_2(cx):
     ''' Spelunking in what we already found '''

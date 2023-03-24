@@ -105,7 +105,7 @@ class Pop():
         assert isinstance(pop, Pop)
         return self.ins.index(pop)
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         ''' Render recursively '''
         hdr = pfx + str(self) + " d%+d" % self.stack_delta + " [" + str(self.stack_level) + "]"
         for src in self.come_from:
@@ -117,7 +117,7 @@ class Pop():
         if self.stack_level and self.stack_level < 0:
             sptr.push(stack.StackItem(-self.stack_level, None))
         for i in self.ins:
-            j = list(i.render(pfx + "    "))
+            j = list(i.render(pfx + "    ", cx))
             if self.kind == "Naked":
                 i.update_stack(sptr)
                 if len(j) > 1:
@@ -231,13 +231,19 @@ class PopMIns(Pop):
     def __getitem__(self, idx):
         return self.txt.split()[1].split(",")[idx]
 
+    def __len__(self):
+        if not ',' in self.txt:
+            return 0
+        i = self.txt.split()[1].split(",")
+        return len(i)
+
     def get(self, idx, dfl=None):
         i = self.txt.split()[1].split(",")
         if idx < len(i):
             return i[idx]
         return dfl
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         yield pfx + str(self)
 
     def data_width(self):
@@ -312,7 +318,7 @@ class PopStackAdj(Pop):
         elif self.delta > 0:
             sp.pop(self.delta)
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         yield pfx + "<StackAdj %+d>" % self.delta
 
 class PopStackCheck(Pop):
@@ -320,7 +326,7 @@ class PopStackCheck(Pop):
     kind = "StackCheck"
     overhead = True
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         yield pfx + str(self)
 
 class PopPrologue(Pop):
@@ -328,7 +334,7 @@ class PopPrologue(Pop):
     kind = "Prologue"
     overhead = True
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         yield pfx + "<Prologue>"
 
 class PopEpilogue(Pop):
@@ -336,7 +342,7 @@ class PopEpilogue(Pop):
     kind = "Epilogue"
     overhead = True
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         yield pfx + "<Epilogue>"
 
     def flow_to(self):
@@ -355,7 +361,7 @@ class PopStackPush(Pop):
         self.asp = None
         self.ptr = None
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         txt = pfx + "<STACKPUSH +0x%x> " % self.srclen
         yield txt + " " + str(type(self.srcadr)) + " " + str(self.srcadr.render())
 
@@ -400,7 +406,7 @@ class PopTextPush(Pop):
         self.asp = None
         self.ptr = None
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         txt = pfx + "<TEXTPUSH +0x%x> " % self.srclen
         if self.string:
             yield txt + " \"%s\"" % self.string.txt
@@ -452,10 +458,14 @@ class PopCall(Pop):
     def __repr__(self):
         return "<Call 0x%05x 0x%05x>" % (self.lo, self.dst)
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         yield pfx + str(self)
         if self.lbl:
             yield pfx + "    " + self.lbl
+        elif cx:
+            lbls = list(cx.m.get_labels(self.dst))
+            if lbls:
+                yield pfx + "    " + lbls[0]
 
     def flow_to(self):
         yield ("N", self.hi)
@@ -467,7 +477,7 @@ class PopLimitCheck(Pop):
     ''' Pseudo-Op for limit checks'''
     kind = "LimitCheck"
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         yield pfx + str(self)
 
 class PopBlockMove(Pop):
@@ -483,7 +493,7 @@ class PopBlockMove(Pop):
     def __repr__(self):
         return "<BlockMove [%d] %s -> %s>" % (self.length, self.src, self.dst)
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         yield pfx + str(self)
 
 class PopRegCacheLoad(Pop):
@@ -491,5 +501,5 @@ class PopRegCacheLoad(Pop):
     kind = "RegCacheLoad"
     overhead = True
 
-    def render(self, pfx=""):
+    def render(self, pfx="", cx=None):
         yield pfx + "<RegCacheLoad>"

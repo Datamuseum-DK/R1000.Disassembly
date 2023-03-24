@@ -30,6 +30,9 @@
    =======================
 '''
 
+# TODO:
+#   See PROGRAM_0.M200.omsi @ <MI 15666...>
+
 import sys
 
 from pyreveng import mem, assy, code
@@ -41,6 +44,7 @@ class LocalVar():
     ''' Local variable accessed via FP '''
 
     def __init__(self, offset):
+        assert offset is not None
         self.offset = offset
         self.byref = []
         self.access = {}
@@ -83,7 +87,6 @@ class OmsiFunction():
         self.traps = {}
         self.discovered = False
         self.localvars = {}
-        self.localaccess = {}
 
     def __iter__(self):
         yield from self.body
@@ -94,12 +97,12 @@ class OmsiFunction():
     def __lt__(self, other):
         return self.lo < other.lo
 
-    def render(self, file=sys.stdout):
+    def render(self, file=sys.stdout, cx=None):
         ''' Render to text '''
         file.write("OF %05x\n" % self.lo)
-        for off, val in sorted(self.localaccess.items(), reverse=True):
+        for off, val in sorted(self.localvars.items(), reverse=True):
             file.write(" " * 8 + str(val) + "\n")
-        for i in self.body.render(pfx="    "):
+        for i in self.body.render(pfx="    ", cx=cx):
             file.write(i + "\n")
 
     def dot_file(self, file):
@@ -749,16 +752,16 @@ class OmsiFunction():
                     continue
                 src = offset(ins.get(0, ''))
                 dst = offset(ins.get(1, ''))
-                if "PEA" in ins.txt or "LEA" in ins.txt:
-                    lvar = self.localaccess.setdefault(src, LocalVar(src))
+                if src is not None and ("PEA" in ins.txt or "LEA" in ins.txt):
+                    lvar = self.localvars.setdefault(src, LocalVar(src))
                     lvar.add_byref(ins)
                 else:
                     width = ins.data_width()
                     if src:
-                        lvar = self.localaccess.setdefault(src, LocalVar(src))
+                        lvar = self.localvars.setdefault(src, LocalVar(src))
                         lvar.add_read(ins, width)
                     if dst:
-                        lvar = self.localaccess.setdefault(dst, LocalVar(dst))
+                        lvar = self.localvars.setdefault(dst, LocalVar(dst))
                         lvar.add_write(ins, width)
 
 class OmsiPascal():
@@ -836,12 +839,12 @@ class OmsiPascal():
                 file.write(lbl + "\n")
             if self.debug:
                 try:
-                    func.render(file)
+                    func.render(file, self.cx)
                 except Exception as err:
                     file.write("\n\nEXCEPTION: %s\n\n" % str(err))
                     print("EXCEPTION in", func, err)
             else:
-                func.render(file)
+                func.render(file, self.cx)
 
     def dot_file(self, file):
         ''' Emit dot(1) sources '''
