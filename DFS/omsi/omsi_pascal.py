@@ -35,7 +35,7 @@
 
 import sys
 
-from pyreveng import mem, assy, code
+from pyreveng import mem, assy, code, data
 
 from omsi import pops
 from omsi import function_call
@@ -100,7 +100,7 @@ class OmsiFunction():
     def render(self, file=sys.stdout, cx=None):
         ''' Render to text '''
         file.write("OF %05x\n" % self.lo)
-        for off, val in sorted(self.localvars.items(), reverse=True):
+        for _off, val in sorted(self.localvars.items(), reverse=True):
             file.write(" " * 8 + str(val) + "\n")
         for i in self.body.render(pfx="    ", cx=cx):
             file.write(i + "\n")
@@ -177,7 +177,7 @@ class OmsiFunction():
         ):
             if len(hit) != 4:
                 continue
-            flows = [x for x in hit[1].flow_to()]
+            flows = list(hit[1].flow_to())
             if flows[0][1] != hit[3].hi:
                 print("FT", flows)
                 continue
@@ -343,28 +343,28 @@ class OmsiFunction():
             if len(hit) < 6:
                 continue
             src = hit[2].ins.oper[0]
-            srcreg = str(hit[2].ins.oper[1])
-            cntreg = str(hit[3].ins.oper[1])
-            fmreg = str(hit[4].ins.oper[0])
-            toreg = str(hit[4].ins.oper[1])
+            dstreg = hit[1][1]
+            srcreg = hit[2][1]
+            cnt = hit[0][0]
+            cntreg = hit[3][1]
+            fmreg = hit[4][0]
+            toreg = hit[4][1]
             if hit[5].ins.flow_out[0].to != hit[4].lo:
                 continue
-            if cntreg != str(hit[5].ins.oper[0]):
+            if cntreg != str(hit[5][0]):
                 continue
             if "(" + srcreg + ")+" != fmreg:
                 continue
-            if toreg[0] != "(" or toreg[-2:] != ")+":
+            if "(" + dstreg + ")+" != toreg:
                 continue
-            toreg = toreg[1:-2]
-            pop = hit.replace(pops.PopStackPush())
-            cnt = hit[0].txt.split()[1].split(",")[0]
             if cnt[:3] != "#0x":
-                print("VVVpush", cnt)
-                hit.render()
-                exit(2)
-            pop.stack_delta = - int(cnt[3:], 16)
-            pop.stack_delta *= hit[4].data_width()
-            pop.point(self.up.cx, src, -pop.stack_delta)
+                continue
+
+            cnt = int(cnt[1:], 16) * hit[4].data_width()
+            blob = None
+            if isinstance(src, assy.Arg_dst):
+                blob = self.get_blob(src.dst, cnt)
+            hit.replace(pops.PopBlob(blob=blob, width=cnt, src=hit[0][0]))
 
         for hit in self.body.match(
             (
@@ -376,29 +376,31 @@ class OmsiFunction():
         ):
             if len(hit) < 4:
                 continue
-            src = hit[2].ins.oper[0]
-            #srcreg = str(hit[2].ins.oper[1])
-            cntreg = str(hit[1].ins.oper[1])
-            #fmreg = str(hit[4].ins.oper[0])
-            #toreg = str(hit[4].ins.oper[1])
+            src = hit[0].ins.oper[0]
+            srcreg = hit[0][1]
+            cnt = hit[1][0]
+            cntreg = hit[1][1]
+            fmreg = hit[2][0]
             if hit[3].ins.flow_out[0].to != hit[2].lo:
                 continue
-            if cntreg != str(hit[3].ins.oper[0]):
+            if cntreg != hit[3][0]:
                 continue
-            #if "(" + srcreg + ")+" != fmreg:
-            #    continue
-            #if toreg[0] != "(" or toreg[-2:] != ")+":
-            #    continue
-            #toreg = toreg[1:-2]
-            pop = hit.replace(pops.PopStackPush())
-            cnt = hit[1].txt.split()[1].split(",")[0]
             if cnt[:3] != "#0x":
-                print("VVVpush", cnt)
-                hit.render()
-                exit(2)
-            pop.stack_delta = - int(cnt[3:], 16)
-            pop.stack_delta *= hit[2].data_width()
-            pop.point(self.up.cx, src, -pop.stack_delta)
+                continue
+            cnt = (1 + int(cnt[1:], 16)) * hit[2].stack_width()
+            print("WWW", src, srcreg, cnt, cntreg, fmreg)
+            hit.replace(pops.PopBlob(width=cnt, src="(" + hit[0][0] + "-" + hex(cnt) + ")"))
+
+        for hit in self.body.match(
+            (
+                ("MOVE.", "0x", "-(A7)"),
+            )
+        ):
+            if hit[0][0][:2] == "0x":
+                ptr = int(hit[0][0], 16)
+                width = hit[0].stack_width()
+                blob = self.get_blob(ptr, width)
+                hit.replace(pops.PopBlob(blob=blob, width=width, src=ptr))
 
     def find_stackpop(self):
         ''' Find loops which push things on stack '''
@@ -424,6 +426,16 @@ class OmsiFunction():
                 return
             pop.stack_delta = int(cnt[3:], 16)
             pop.stack_delta *= hit[1].data_width()
+
+    def get_blob(self, ptr, width):
+        retval = bytearray()
+        try:
+            for offset in range(width):
+                retval.append(self.up.cx.m[ptr + offset])
+        except mem.MemError:
+            return None
+        data.Txt(self.up.cx.m, ptr, ptr + width, label=False)
+        return retval
 
     def find_textpush(self):
         ''' Find loops which push string literals on stack '''
@@ -452,10 +464,11 @@ class OmsiFunction():
             if toreg != "-(A7)":
                 continue
             toreg = toreg[1:-2]
-            pop = hit.replace(pops.PopTextPush())
-            cnt = 1 + int(cnt[1:], 16)
-            pop.stack_delta = -cnt * hit[2].data_width()
-            pop.point(self.up.cx, src, - pop.stack_delta)
+            cnt = (1 + int(cnt[1:], 16)) * hit[2].data_width()
+            blob = None
+            if isinstance(src, assy.Arg_dst):
+                blob = self.get_blob(src.dst - cnt, cnt)
+            pop = hit.replace(pops.PopBlob(blob=blob, width=cnt, src=hit[0][0]))
 
     def find_bailout(self):
         ''' Find jumps out of context'''

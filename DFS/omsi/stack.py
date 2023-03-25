@@ -96,16 +96,23 @@ class StackItemString(StackItem):
 class StackItemBlob(StackItem):
     ''' A pushed object '''
 
-    def __init__(self, blob=None, width=None):
+    def __init__(self, blob=None, width=None, src=None):
         if blob:
             width = len(blob)
-        super().__init__(width, "$…")
+        super().__init__(width, "**(%d)**" % width)
         self.blob = blob
+        self.src = src
 
     def __str__(self):
-        if self.blob:
-            return '[**' + str(self.width) + '**]'
-        return '[**(' + str(self.width) + ')**]'
+        if not self.blob:
+            return '[«' + str(self.width) + '»]'
+        txt = ''
+        for i in self.blob:
+            if 32 <= i <= 126 and i != 92:
+                txt += "%c" % i
+            else:
+                txt += "\\x%02x" % i
+        return '[«%d"' % self.width + txt + '"»]'
 
     def __getitem__(self, idx):
         if self.blob:
@@ -128,6 +135,7 @@ class Stack():
         ''' Push an item onto the stack '''
         if self.mangled:
             return
+        assert isinstance(item.width, int)
         item.stack = self
         if item.what is None and self.items and self.items[-1].what == item.what:
             self.items[-1].width += item.width

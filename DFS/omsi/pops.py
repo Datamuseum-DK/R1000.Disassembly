@@ -32,10 +32,9 @@
 
 import sys
 
-from pyreveng import code, pil, mem, assy, data
+from pyreveng import code, pil
 
-import omsi.stack as stack
-import omsi.function_call as function_call
+from omsi import stack, function_call
 
 PseudoCode = code.Decoder("pseudo")
 
@@ -232,12 +231,14 @@ class PopMIns(Pop):
         return self.txt.split()[1].split(",")[idx]
 
     def __len__(self):
+        ''' Number of arguments '''
         if not ',' in self.txt:
             return 0
         i = self.txt.split()[1].split(",")
         return len(i)
 
     def get(self, idx, dfl=None):
+        ''' Get argument '''
         i = self.txt.split()[1].split(",")
         if idx < len(i):
             return i[idx]
@@ -349,94 +350,44 @@ class PopEpilogue(Pop):
         if False:
             yield None
 
-class PopStackPush(Pop):
-    ''' Pseudo-Op for copying things onto stack '''
-    kind = "stack.StackPush"
+class PopBlob(Pop):
+    ''' Pseudo-Op for literal bytes '''
+    kind = "Blob"
 
-    def __init__(self):
+    def __init__(self, blob=None, width=None, src=None):
         super().__init__()
-        self.string = ""
-        self.srcadr = None
-        self.srclen = None
-        self.asp = None
-        self.ptr = None
+        if blob:
+            width = len(blob)
+        self.blob = blob
+        self.width = width
+        self.src = src
+        self.stack_delta = - width
+
+    def __repr__(self):
+        txt = "<Blob [%d]" % self.width
+        if self.blob:
+            txt += " @"
+        elif isinstance(self.src, int):
+            txt += " " + hex(self.src)
+        elif self.src:
+            txt += " " + str(self.src)
+        return txt + ">"
 
     def render(self, pfx="", cx=None):
-        txt = pfx + "<STACKPUSH +0x%x> " % self.srclen
-        yield txt + " " + str(type(self.srcadr)) + " " + str(self.srcadr.render())
-
-    def point(self, cx, srcadr, srclen):
-        self.asp = cx.m
-        self.srcadr = srcadr
-        self.srclen = srclen
-        if isinstance(srcadr, assy.Arg_dst):
-            self.ptr = srcadr.dst
-            #self.string = data.Txt(cx.m, self.ptr, self.ptr + self.srclen)
-            #self.string.compact = False
+        yield pfx + str(self)
 
     def update_stack(self, sp):
-        if self.ptr:
-            blob = bytearray()
-            try:
-                for offset in range(self.srclen):
-                    blob.append(self.asp[self.ptr + offset])
-                sp.push(stack.StackItemBlob(blob=blob))
-                return
-            except mem.MemError:
-                print("StackPush mem-fail", hex(self.ptr), hex(self.srclen))
-
-        sp.push(stack.StackItemBlob(width=self.srclen))
+        if self.blob:
+            sp.push(stack.StackItemBlob(blob=self.blob))
+        else:
+            sp.push(stack.StackItemBlob(width=self.width))
 
 class PopStackPop(Pop):
     ''' Pseudo-Op for copying things from stack '''
     kind = "StackPop"
 
-    def xrender(self, pfx=""):
+    def _render(self, pfx=""):
         yield pfx + str(self)
-
-class PopTextPush(Pop):
-    ''' Pseudo-Op for pushing string literal on stack '''
-    kind = "TextPush"
-
-    def __init__(self):
-        super().__init__()
-        self.string = ""
-        self.srcadr = None
-        self.srclen = None
-        self.asp = None
-        self.ptr = None
-
-    def render(self, pfx="", cx=None):
-        txt = pfx + "<TEXTPUSH +0x%x> " % self.srclen
-        if self.string:
-            yield txt + " \"%s\"" % self.string.txt
-        else:
-            yield txt + " " + str(type(self.srcadr)) + " " + str(self.srcadr.render())
-        # yield from super().render(pfx)
-
-    def point(self, cx, srcadr, srclen):
-        self.asp = cx.m
-        self.srcadr = srcadr
-        self.srclen = srclen
-        if isinstance(srcadr, assy.Arg_dst):
-            self.ptr = srcadr.dst - self.srclen
-            try:
-                self.string = data.Txt(cx.m, self.ptr, self.ptr + self.srclen)
-                self.string.compact = False
-            except mem.MemError:
-                pass
-
-    def update_stack(self, sp):
-        if self.ptr:
-            try:
-                blob = bytearray()
-                for offset in range(self.srclen):
-                    blob.append(self.asp[self.ptr + offset])
-                sp.push(stack.StackItemBlob(blob=blob))
-                return
-            except mem.MemError:
-                pass
-        sp.push(stack.StackItemBlob(width=self.srclen))
 
 class PopBailout(Pop):
     ''' Pseudo-Op for bailing out of context'''
