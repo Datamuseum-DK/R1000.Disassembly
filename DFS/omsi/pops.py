@@ -42,8 +42,8 @@ class MatchHit():
 
     ''' Pop.match returns one of these to describe the hit '''
 
-    def __init__(self, stmt, idx, mins):
-        self.stmt = stmt
+    def __init__(self, pop, idx, mins):
+        self.pop = pop
         self.idx = idx
         self.mins = mins
 
@@ -56,17 +56,20 @@ class MatchHit():
     def __getitem__(self, idx):
         return self.mins[idx]
 
+    def getstack(self):
+        return self.pop.getstack(self.idx)
+
     def replace(self, pop):
         ''' Peplace the hit with a pseudo-op of the given class '''
         for i in self.mins:
-            self.stmt.del_ins(i)
+            self.pop.del_ins(i)
             pop.append_ins(i)
-        self.stmt.insert_ins(self.idx, pop)
+        self.pop.insert_ins(self.idx, pop)
         return pop
 
     def render(self, file=sys.stdout):
         ''' Render the hit usably '''
-        file.write("HIT\n")
+        file.write("HIT %s\n" % hex(self.mins[0].lo))
         for i in self.mins:
             file.write("   " + str(i) + "\n")
 
@@ -76,6 +79,7 @@ class Pop():
 
     kind = "Naked"
     overhead = False
+    compact = False
 
     def __init__(self):
         self.lo = -1
@@ -112,6 +116,8 @@ class Pop():
         for dst in self.go_to:
             hdr += "  ->" + hex(dst.lo)
         yield hdr
+        if self.compact:
+            return
         sptr = stack.Stack()
         if self.stack_level and self.stack_level < 0:
             sptr.push(stack.StackItem(-self.stack_level, None))
@@ -129,6 +135,18 @@ class Pop():
                 yield j.expandtabs() + sptr.render()
             else:
                 yield from j
+
+    def getstack(self, idx):
+        ''' Get stackimage seen at idx '''
+        assert self.kind == "Naked"
+        sptr = stack.Stack()
+        if self.stack_level and self.stack_level < 0:
+            sptr.push(stack.StackItem(-self.stack_level, None))
+        for n, i in enumerate(self.ins):
+            if n == idx:
+                 return sptr
+            i.update_stack(sptr)
+               
 
     def flow_to(self):
         yield ('N', self.hi)
@@ -222,6 +240,7 @@ class PopMIns(Pop):
         self.hi = ins.hi
         self.txt = ins.render()
         self.pop = None
+        self.compact = True
 
     def __repr__(self):
         txt = "<MI %05x d%+d" % (self.lo, self.stack_delta)
@@ -244,9 +263,6 @@ class PopMIns(Pop):
             return i[idx]
         return dfl
 
-    def render(self, pfx="", cx=None):
-        yield pfx + str(self)
-
     def data_width(self):
         ''' Width of instruction data '''
         return { "B": 1, "W": 2, "L": 4, }[self.ins.mne.split(".")[-1]]
@@ -264,7 +280,7 @@ class PopMIns(Pop):
             arg = self.txt.split()[1]
             if "(A7+0x" in arg:
                 offset = int(arg[3:-1], 16)
-                sp.push(stack.StackItemBackReference(offset))
+                sp.push(stack.StackItemReference(offset))
             else:
                 sp.push(stack.StackItem(4, "^" + arg))
         elif "-(A7)" in self.txt:
@@ -293,8 +309,10 @@ class PopMIns(Pop):
                 sp.pop(width)
                 arg = self.txt.split()[1].split(",")[0]
                 if arg[:3] == "#0x" and "MOVE.W" in self.txt:
+                    assert False
                     sp.push(stack.StackItemInt(int(arg[3:], 16)))
                 elif arg[:3] == "#0x" and "MOVE.L" in self.txt:
+                    assert False
                     sp.push(stack.StackItemLong(int(arg[3:], 16)))
                 elif "MOVE.B" in self.txt:
                     sp.push(stack.StackItem(width, None))
@@ -305,22 +323,88 @@ class PopMIns(Pop):
                 sp.push(stack.StackItem(width, None))
                 # print("SM", self)
 
+class PopConst(Pop):
+    ''' Constant pushes '''
+    kind = "Const"
+    compact = True
+
+    def __init__(self, width, val, push):
+        super().__init__()
+        if push:
+            self.stack_delta = -width
+        else:
+            self.stack_delta = 0
+        self.width = width
+        self.val = val
+        self.push = push
+
+    def __str__(self):
+        txt = "<Const %d.%d" % (self.val, self.width)
+        if self.push:
+            txt += " push"
+        else:
+            txt += " replace"
+        return txt + ">"
+
+    def update_stack(self, sp):
+        if not self.push:
+            sp.pop(self.width)
+        if self.width == 4:
+            sp.push(stack.StackItemLong(self.val))
+        elif self.width == 2:
+            sp.push(stack.StackItemInt(self.val))
+
+class PopStackPointer(Pop):
+    ''' Stack relative pointer pushes '''
+    kind = "Pointer.sp"
+    compact = True
+
+    def __init__(self, offset):
+        super().__init__()
+        self.offset = offset
+
+    def __str__(self):
+        return "<Pointer.sp %s %d>" % (hex(self.lo), self.offset)
+
+    def update_stack(self, sp):
+        sp.push(stack.StackItemReference(self.offset))
+
+class PopFramePointer(Pop):
+    ''' Frame relative pointer pushes '''
+    kind = "Pointer.fp"
+    compact = True
+
+    def __init__(self, offset, lvar=None):
+        super().__init__()
+        self.stack_delta = -4
+        self.offset = offset
+        self.lvar = lvar
+
+    def __str__(self):
+        if self.lvar:
+            return "<Pointer.fp %s %s>" % (hex(self.lo), str(self.lvar))
+        else:
+            return "<Pointer.fp %s %d>" % (hex(self.lo), self.offset)
+
+    def update_stack(self, sp):
+        sp.push(stack.FrameItemReference(self.offset))
+
 class PopStackAdj(Pop):
     ''' Adjustments to stack pointer'''
-    kind="StackAdj"
+    kind = "StackAdj"
+
     def __init__(self, delta):
         super().__init__()
-        self.delta = delta
         self.stack_delta = delta
 
     def update_stack(self, sp):
-        if self.delta < 0:
-            sp.push(stack.StackItem(-self.delta, None))
-        elif self.delta > 0:
-            sp.pop(self.delta)
+        if self.stack_delta < 0:
+            sp.push(stack.StackItem(-self.stack_delta, None))
+        elif self.stack_delta > 0:
+            sp.pop(self.stack_delta)
 
     def render(self, pfx="", cx=None):
-        yield pfx + "<StackAdj %+d>" % self.delta
+        yield pfx + "<StackAdj %s %+d>" % (hex(self.lo), self.stack_delta)
 
 class PopStackCheck(Pop):
     ''' Stack level check '''
@@ -353,18 +437,21 @@ class PopEpilogue(Pop):
 class PopBlob(Pop):
     ''' Pseudo-Op for literal bytes '''
     kind = "Blob"
+    compact = True
 
-    def __init__(self, blob=None, width=None, src=None):
+    def __init__(self, blob=None, width=None, src=None, push=True):
         super().__init__()
         if blob:
             width = len(blob)
         self.blob = blob
         self.width = width
         self.src = src
-        self.stack_delta = - width
+        self.push = push
+        if push:
+            self.stack_delta = - width
 
     def __repr__(self):
-        txt = "<Blob [%d]" % self.width
+        txt = "<Blob %s [%d]" % (hex(self.lo), self.width)
         if self.blob:
             txt += " @"
         elif isinstance(self.src, int):
@@ -373,10 +460,12 @@ class PopBlob(Pop):
             txt += " " + str(self.src)
         return txt + ">"
 
-    def render(self, pfx="", cx=None):
+    def xrender(self, pfx="", cx=None):
         yield pfx + str(self)
 
     def update_stack(self, sp):
+        if not self.push:
+            sp.pop(self.width)
         if self.blob:
             sp.push(stack.StackItemBlob(blob=self.blob))
         else:
@@ -385,9 +474,6 @@ class PopBlob(Pop):
 class PopStackPop(Pop):
     ''' Pseudo-Op for copying things from stack '''
     kind = "StackPop"
-
-    def _render(self, pfx=""):
-        yield pfx + str(self)
 
 class PopBailout(Pop):
     ''' Pseudo-Op for bailing out of context'''
@@ -427,13 +513,12 @@ class PopCall(Pop):
 class PopLimitCheck(Pop):
     ''' Pseudo-Op for limit checks'''
     kind = "LimitCheck"
-
-    def render(self, pfx="", cx=None):
-        yield pfx + str(self)
+    compact = True
 
 class PopBlockMove(Pop):
     ''' Pseudo-Op for block move loops'''
     kind = "BlockMove"
+    compact = True
 
     def __init__(self, src, dst, length):
         super().__init__()
@@ -444,9 +529,6 @@ class PopBlockMove(Pop):
     def __repr__(self):
         return "<BlockMove [%d] %s -> %s>" % (self.length, self.src, self.dst)
 
-    def render(self, pfx="", cx=None):
-        yield pfx + str(self)
-
 class PopRegCacheLoad(Pop):
     ''' Pseudo-Op for loading register caches'''
     kind = "RegCacheLoad"
@@ -454,3 +536,23 @@ class PopRegCacheLoad(Pop):
 
     def render(self, pfx="", cx=None):
         yield pfx + "<RegCacheLoad>"
+
+class PopStringLit(Pop):
+    ''' Push string literal '''
+    kind = "StringLit"
+
+    def __init__(self, txt=None):
+        super().__init__()
+        self.txt = txt
+        self.stack_delta = 0
+        if self.txt:
+            self.compact = True
+
+    def __str__(self):
+        if self.txt:
+            return "<Lit %s %d>" % (hex(self.lo), len(self.txt))
+        else:
+            return "<Lit %s>" % hex(self.lo)
+
+    def update_stack(self, sp):
+        sp.put(0, stack.StackItemString(self.txt))

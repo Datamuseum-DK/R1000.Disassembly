@@ -32,6 +32,15 @@
 
 from pyreveng import data
 
+DFS_LABELS = {
+    0x20000: "stack.top",
+    0x2000c: "heap.top",
+    0x20010: "code.end",
+    0x20018: "programfailurehandler",
+    0x2001c: "experimentfailurehandler",
+    0x20108: "somekindoffsflag",
+}
+
 def prog_from_fs(cx, mapped):
     ''' Add labels for data FS knows about in programs '''
     cx.m.set_label(0x20024, "exp_init_done")
@@ -47,3 +56,7 @@ def prog_from_fs(cx, mapped):
     cx.m.set_label(0x200f1, "?write_error_ERROR_LOG")
     if mapped:
         data.Const(cx.m, 0x200f1, 0x200f2)
+
+    for adr, lbl in DFS_LABELS.items():
+        cx.m.set_label(adr, lbl)
+

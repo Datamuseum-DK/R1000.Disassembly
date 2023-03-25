@@ -61,7 +61,16 @@ class StackItemLong(StackItem):
     def __str__(self):
         return "[##%d]" % self.val
 
-class StackItemBackReference(StackItem):
+class FrameItemReference(StackItem):
+    ''' A Pointer to something on the frame'''
+    def __init__(self, offset):
+        super().__init__(4, "@@" + str(offset))
+        self.backref = offset
+
+    def __str__(self):
+        return "[@@%d]" % self.backref
+
+class StackItemReference(StackItem):
     ''' A Pointer to something further up the stack '''
     def __init__(self, offset):
         super().__init__(4, "^^" + str(offset))
@@ -108,11 +117,12 @@ class StackItemBlob(StackItem):
         if not self.blob:
             return '[«' + str(self.width) + '»]'
         txt = ''
-        for i in self.blob:
-            if 32 <= i <= 126 and i != 92:
-                txt += "%c" % i
-            else:
-                txt += "\\x%02x" % i
+        if False:
+            for i in self.blob:
+                if 32 <= i <= 126 and i != 92:
+                    txt += "%c" % i
+                else:
+                    txt += "\\x%02x" % i
         return '[«%d"' % self.width + txt + '"»]'
 
     def __getitem__(self, idx):
@@ -227,3 +237,29 @@ class Stack():
         if self.mangled:
             return "{MANGLED}"
         return "{" + "|".join(str(x) for x in self.items) + "}"
+
+    def getbytes(self, offset, width):
+        ''' Get bytes from stack '''
+        idx = len(self.items) - 1
+        while self.items[idx].width <= offset:
+            #print("**", offset, idx, width, self.items[idx], self.items[idx].width)
+            offset -= self.items[idx].width
+            idx -= 1
+        #print("**", offset, idx, self.items[idx])
+        if offset and self.items[idx].width > offset:
+            return None
+        assert offset == 0
+        retval = bytearray()
+        item = self.items[idx]
+        ptr = 0
+        for n in range(width):
+            #print("##", n, width, item, ptr, retval)
+            if ptr >= item.width:
+                idx -= 1
+                item = self.items[idx]
+                ptr = 0
+            if not item.blob:
+                return None
+            retval.append(item.blob[ptr])
+            ptr += 1
+        return retval

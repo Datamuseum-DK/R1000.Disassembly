@@ -114,6 +114,7 @@ def round_0(cx):
     cx.dfs_syscalls = dfs_syscalls.DfsSysCalls()
     cx.dfs_syscalls.round_0(cx)
     cx.flow_check.append(flow_check)
+    dfs_syscalls.prog_from_fs(cx, mapped=True)
 
     cx.dfs_cmd_tables = {}
     for adr in range(0x20000, cx.m.hi - 7):
@@ -148,17 +149,12 @@ def round_1(cx):
     y = cx.dataptr(0x2000c)
 
     y = cx.dataptr(0x20010)
-    cx.m.set_line_comment(y.lo, "CODE.END")
 
     z = cx.codeptr(0x20018)
-    cx.m.set_label(z.dst, "ProgramFailureHandler()")
 
     z = cx.codeptr(0x2001c)
-    cx.m.set_label(z.dst, "ExperimentFailureHandler()")
 
     z = data.Const(cx.m, 0x20108, 0x20109)
-    cx.m.set_label(z.lo, "some_kind_of_flag_for_fs")
-
 
 def round_2(cx):
     ''' Spelunking in what we already found '''

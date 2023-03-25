@@ -82,7 +82,7 @@ class DfsSysCall(rounds.Rounds):
             return
         cx.disass(self.adr)
 
-    def round_4(self, cx):
+    def round_2(self, cx):
         y = list(cx.m.find(self.adr))
         if len(y) != 1:
             return
@@ -93,12 +93,6 @@ class DfsSysCall(rounds.Rounds):
         f = i[0]
         if not isinstance(f.to, int):
             return
-        if cx.m.bu16(f.to) == 0x4e56:
-            try:
-                pascal.PascalFunction(cx, f.to, "_" + self.name)
-                return
-            except pascal.BadPascalFunction:
-                pass
         cx.m.set_label(f.to, "_" + self.name)
         self.set_block_comment(cx, f.to)
 

@@ -100,6 +100,10 @@ class OmsiFunction():
         for i in self.body.render(pfx="    ", cx=cx):
             file.write(i + "\n")
 
+    def match(self, pattern):
+        for pop in self.body:
+            yield from pop.match(pattern)
+
     def dot_file(self, file):
         ''' Produce a dot(1) input file '''
         file.write("digraph {\n")
@@ -145,6 +149,7 @@ class OmsiFunction():
         self.find_bailout()
         self.find_jsr()
         self.find_stack_adj()
+        self.find_constant_push()
 
         prev = ""
         for ins in self.body:
@@ -159,6 +164,10 @@ class OmsiFunction():
         self.set_stack_levels()
 
         self.discovered = True
+
+        self.find_locals()
+        self.find_pointer_push()
+        self.find_string_lit()
 
     def find_stack_check(self):
         ''' Find stack overrun checks '''
@@ -359,7 +368,7 @@ class OmsiFunction():
             blob = None
             if isinstance(src, assy.Arg_dst):
                 blob = self.get_blob(src.dst, cnt)
-            hit.replace(pops.PopBlob(blob=blob, width=cnt, src=hit[0][0]))
+            hit.replace(pops.PopBlob(blob=blob, width=cnt, src=hit[2][0]))
 
         for hit in self.body.match(
             (
@@ -388,14 +397,15 @@ class OmsiFunction():
 
         for hit in self.body.match(
             (
-                ("MOVE.", "0x", "-(A7)"),
+                ("MOVE.", "0x", "(A7)"),
             )
         ):
             if hit[0][0][:2] == "0x":
                 ptr = int(hit[0][0], 16)
                 width = hit[0].stack_width()
                 blob = self.get_blob(ptr, width)
-                hit.replace(pops.PopBlob(blob=blob, width=width, src=ptr))
+                pop = pops.PopBlob(blob=blob, width=width, src=ptr, push=hit[0][1] == "-(A7)")
+                hit.replace(pop)
 
     def find_stackpop(self):
         ''' Find loops which push things on stack '''
@@ -423,6 +433,7 @@ class OmsiFunction():
             pop.stack_delta *= hit[1].data_width()
 
     def get_blob(self, ptr, width):
+        ''' Get a blob out of pyreveng memory '''
         retval = bytearray()
         try:
             for offset in range(width):
@@ -627,6 +638,35 @@ class OmsiFunction():
                 pop.append_ins(ins)
                 self.body.insert_ins(idx, pop)
 
+    def find_constant_push(self):
+        ''' Find constant pushes '''
+
+        for hit in self.body.match(
+            (
+                ("MOVE.", "#0x", "(A7)",),
+            )
+        ):
+            if hit[0][0][:3] != "#0x":
+                continue
+            val = int(hit[0][0][1:], 16)
+            if hit[0][1] == "-(A7)":
+                hit.replace(pops.PopConst(width=hit[0].stack_width(), val=val, push=True))
+            elif hit[0][1] == "(A7)":
+                hit.replace(pops.PopConst(width=hit[0].stack_width(), val=val, push=False))
+            else:
+                print("FCP")
+                hit.render()
+
+        for hit in self.body.match(
+            (
+                ("PEA.L", "0x",),
+            )
+        ):
+            if hit[0][0][:2] != "0x":
+                continue
+            val = int(hit[0][0], 16)
+            hit.replace(pops.PopConst(width=4, val=val, push=True))
+
     def find_block_moves(self):
         ''' Find block move loops '''
 
@@ -742,21 +782,21 @@ class OmsiFunction():
                 elif dst.stack_level != leave:
                     print("STACK SKEW", ins, leave, "->", dst, dst.stack_level)
 
-    ##### Analysis phase #####
-
     def find_locals(self):
         ''' Find local variables and arguments as A6+/-n arguments '''
 
-        def offset(x):
-            if x[:3] != '(A6' or x[4:6] != '0x' or x[-1:] != ')':
+        def offset(arg):
+            if arg[:3] != '(A6' or arg[4:6] != '0x' or arg[-1:] != ')':
                 return None
-            return int(x[3:-1], 16)
+            return int(arg[3:-1], 16)
 
         for pop in self.body:
             if pop.overhead:
                 continue
             for ins in pop:
-                if "(A6+0x" not in ins.txt and "(A6-0x" not in ins.txt:
+                if not isinstance(ins, pops.PopMIns) or "A6" not in ins.txt:
+                    continue
+                if "(A6+0x" not in ins[0] and "(A6-0x" not in ins[0]:
                     continue
                 src = offset(ins.get(0, ''))
                 dst = offset(ins.get(1, ''))
@@ -771,3 +811,52 @@ class OmsiFunction():
                     if dst:
                         lvar = self.localvars.setdefault(dst, LocalVar(dst))
                         lvar.add_write(ins, width)
+
+    def find_pointer_push(self):
+        ''' Find pointer pushes '''
+
+        for hit in self.match(
+            (
+                ("PEA.L",),
+            )
+        ):
+            arg = hit[0][0]
+            if "(A7+" in arg:
+                offset = int(arg[4:-1], 16)
+                hit.replace(pops.PopStackPointer(offset))
+            elif "(A6" in arg:
+                offset = int(arg[3:-1], 16)
+                hit.replace(pops.PopFramePointer(offset, self.localvars.get(offset)))
+
+    def find_string_lit(self):
+        ''' Find string literal pushes '''
+        for hit in self.match(
+            (
+                ("Pointer.sp",),
+                ("Const",),
+                ("Const",),
+                ("Call",),
+                ("StackAdj",),
+            )
+        ):
+            if len(hit) < 4:
+                continue
+            if "StringLit" not in hit[3].lbl:
+                continue
+            if hit.idx == 0:
+                continue
+            if hit[-1].stack_delta != 8:
+                item = pops.PopStackAdj(-(8 - hit[-1].stack_delta))
+                item.lo = hit[-1].lo
+                hit.pop.insert_ins(hit.idx + 5, item)
+                hit[-1].stack_delta = 8
+            sptr = hit.getstack()
+            assert hit[1].val == 1
+            string = sptr.getbytes(hit[0].offset, hit[2].val)
+            if string:
+                hit.replace(pops.PopStringLit(string.decode("ASCII")))
+            else:
+                print("FSL", hit[0].offset, hit[1].val, hit[2].val, sptr.render())
+                print("   stack_bytes", string)
+                hit.render()
+                hit.replace(pops.PopStringLit())

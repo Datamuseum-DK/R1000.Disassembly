@@ -87,13 +87,12 @@ def round_0(cx):
 
     cx.m.set_label(0x13718, "NameI(Char*, &void)")
 
-    cx.m.set_label(0x1aa5e, "_Write_fc0c(word *)")
+    cx.m.set_label(0x1aa5e, "_Write_fc0c(VAR a: Word)")
 
     cx.m.set_label(0x1b0b6, "?popping")
     cx.m.set_label(0x1b0b8, "cur_push_level")
     cx.m.set_label(0x1b0be, "argv")
 
-    cx.m.set_label(0x1b1c6, "console_config")
 
     for i in range(9, 16):
         adr = 0x1a0d8 + 4 * i
@@ -144,6 +143,19 @@ def round_0(cx):
     cx.m.set_line_comment(0x000117ae, "rtc[2] = day")
     cx.m.set_line_comment(0x000117bc, "rtc[0] = year")
 
+    for adr, lbl in (
+        #(0x14dd6, "Panic_0x1d(a : String; b : String)"),
+        (0x154f6, "HandleBackSpace(a : String)"),
+        (0x155c0, "EraseEOL(void)"),
+        (0x16056, "DiskIO(a: Byte; dst: Pointer; c: Word; wait: Byte; VAR status: Byte)"),
+        (0x16184, "Write_ERROR_LOG_true(a: Pointer)"),
+        (0x1b1c6, "console_config"),
+        (0x1b1ca, "console_prt_1"),
+        (0x1b1cc, "console_prt_2"),
+        (0x1b1ce, "console_prt_3"),
+    ):
+        cx.m.set_label(adr, lbl)
+
 
 def round_1(cx):
     ''' Let the disassembler loose '''
@@ -160,6 +172,8 @@ def round_2(cx):
 
 def round_3(cx):
     ''' Discovery, if no specific hints were encountered '''
+
+    return
 
     for adr, proto in (
         (0x118a2, "TwoDigSuffix(A4 : String; val : Long; suffix : char)"),

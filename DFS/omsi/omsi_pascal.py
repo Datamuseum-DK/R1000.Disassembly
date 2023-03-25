@@ -54,7 +54,6 @@ class OmsiPascal():
         self.debug = False
 
         self.discovery_phase()
-        self.analysis_phase()
 
     def discovery_phase(self):
         ''' Find the potential PASCAL functions '''
@@ -74,13 +73,6 @@ class OmsiPascal():
                     func.analyze()
             if sofar == len(self.discovered):
                 break
-
-    def analysis_phase(self):
-        ''' Try to make sense of the functions we found '''
-        for func in sorted(self.functions.values()):
-            if not func.discovered:
-                continue
-            func.find_locals()
 
     def add_call(self, popcall):
         ''' Register a function call '''
