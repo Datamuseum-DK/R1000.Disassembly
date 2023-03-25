@@ -36,6 +36,7 @@ class StackItem():
         self.width = width
         self.what = what
         self.stack = None
+        self.blob = None
 
     def __str__(self):
         if self.what is None:
