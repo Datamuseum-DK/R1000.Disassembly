@@ -39,7 +39,7 @@ class LocalVar():
     ''' Local variable accessed via FP '''
 
     def __init__(self, offset):
-        assert offset is not None
+        assert isinstance(offset, int)
         self.offset = offset
         self.byref = []
         self.access = {}
@@ -177,7 +177,7 @@ class OmsiFunction():
                 ("CMPA.L", "(A5),A7",),
                 ("BHI",),
                 ("MOVE.W", "#0x2,CCR"),
-                ("tRAPV",),
+                ("TRAPV",),
             )
         ):
             if len(hit) != 4:
@@ -220,6 +220,16 @@ class OmsiFunction():
                 hit.replace(pops.PopEpilogue())
                 return
 
+        for hit in self.body.match(
+            (
+                ("UNLK",),
+                ("RTS",),
+            )
+        ):
+            if len(hit) == 2:
+                hit.replace(pops.PopEpilogue())
+                return
+
     def uncache_registers(self):
         ''' Values used multiple times are cached in vacant registers '''
         pop = None
@@ -253,7 +263,7 @@ class OmsiFunction():
             ins = self.body[idx]
             if ins.lo in dsts:
                 break
-            if "MOVE" not in ins.txt:
+            if "MOVE" not in ins.txt or "#0x" not in ins.txt: 
                 break
             reg = str(ins.ins.oper[-1])
             if reg[0] != "D":
@@ -280,6 +290,8 @@ class OmsiFunction():
             rpl = ins.ins.oper[0]
             if isinstance(rpl, assy.Arg_verbatim):
                 rpl = str(rpl)
+            elif ins[0][:3] == "#0x":
+                rpl = ins[0]
             elif isinstance(rpl, assy.Arg_dst):
                 rpl = "0x%x" % rpl.dst
             else:
@@ -312,23 +324,20 @@ class OmsiFunction():
                     pass
                 elif "ADDQ.L" in ins.txt:
                     ins.stack_adj = True
-                    oper = ins.txt.split()[1].split(",")[0]
+                    oper = ins[0]
                     assert oper[0] == "#"
                     ins.stack_delta = int(oper[1:], 16)
-                elif "ADDA.W" in ins.txt:
+                elif "ADDA.W" in ins.txt and ins[0][0] == "#":
                     ins.stack_adj = True
-                    oper = ins.txt.split()[1].split(",")[0]
-                    assert oper[0] == "#"
+                    oper = ins[0]
                     ins.stack_delta = int(oper[1:], 16)
-                elif "SUBQ.L" in ins.txt:
+                elif "SUBQ.L" in ins.txt and ins[0][0] == "#":
                     ins.stack_adj = True
-                    oper = ins.txt.split()[1].split(",")[0]
-                    assert oper[0] == "#"
+                    oper = ins[0]
                     ins.stack_delta = -int(oper[1:], 16)
-                elif "SUBA.W" in ins.txt:
+                elif "SUBA.W" in ins.txt and ins[0][0] == "#":
                     ins.stack_adj = True
-                    oper = ins.txt.split()[1].split(",")[0]
-                    assert oper[0] == "#"
+                    oper = ins[0]
                     ins.stack_delta = -int(oper[1:], 16)
                 else:
                     print("SD A7", ins)
@@ -592,7 +601,7 @@ class OmsiFunction():
             (
                 ("ADDQ.W", "#0x1,"),
                 ("SUBQ.W", "#0x1,"),
-                ("cHK.W",),
+                ("CHK.W",),
             )
         ):
             if len(hit) < 3:
@@ -607,7 +616,7 @@ class OmsiFunction():
         for hit in self.body.match(
             (
                 ("EXTB.W", ),
-                ("cHK.W",),
+                ("CHK.W",),
             )
         ):
             if len(hit) < 2:
@@ -619,13 +628,25 @@ class OmsiFunction():
 
         for hit in self.body.match(
             (
-                ("cHK.W",),
+                ("CHK.W",),
             )
         ):
             if len(hit) < 1:
                 continue
             hit.replace(pops.PopLimitCheck())
 
+        for hit in self.body.match(
+            (
+                ("SUB", "#0x",),
+                ("LimitCheck",),
+                ("ADD", "#0x",),
+            )
+        ):
+            if len(hit) < 3:
+                continue
+            if hit[0][0] != hit[2][0]:
+                continue
+            hit.replace(pops.PopLimitCheck())
 
     def find_stack_adj(self):
         ''' Find limit checks '''
@@ -642,8 +663,9 @@ class OmsiFunction():
             ):
                 if mne not in ins.txt:
                     continue
-                i = ins.txt.split()[-1].split(",")[0]
-                assert i[:3] == "#0x"
+                i = ins[0]
+                if i[:3] != "#0x":
+                    continue
                 pop = pops.PopStackAdj(sign * int(i[1:], 16))
                 self.body.del_ins(ins)
                 pop.append_ins(ins)
@@ -791,23 +813,21 @@ class OmsiFunction():
             if pop.overhead:
                 continue
             for ins in pop:
-                if not isinstance(ins, pops.PopMIns) or "A6" not in ins.txt:
+                if not isinstance(ins, pops.PopMIns) or "(A6" not in ins.txt:
                     continue
-                if "(A6+0x" not in ins[0] and "(A6-0x" not in ins[0]:
-                    continue
-                src = offset(ins.get(0, ''))
-                dst = offset(ins.get(1, ''))
-                if src is not None and ("PEA" in ins.txt or "LEA" in ins.txt):
-                    lvar = self.localvars.setdefault(src, LocalVar(src))
-                    lvar.add_byref(ins)
-                else:
-                    width = ins.data_width()
-                    if src:
+                src = offset(ins[0])
+                if src:
+                    if "PEA" in ins.txt or "LEA" in ins.txt:
                         lvar = self.localvars.setdefault(src, LocalVar(src))
-                        lvar.add_read(ins, width)
+                        lvar.add_byref(ins)
+                    else:
+                        lvar = self.localvars.setdefault(src, LocalVar(src))
+                        lvar.add_read(ins, ins.data_width())
+                if ",(A6" in ins.txt:
+                    dst = offset(ins[1])
                     if dst:
                         lvar = self.localvars.setdefault(dst, LocalVar(dst))
-                        lvar.add_write(ins, width)
+                        lvar.add_write(ins, ins.data_width())
 
     def find_pointer_push(self):
         ''' Find pointer pushes '''

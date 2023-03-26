@@ -112,12 +112,22 @@ class Pop():
 
     def render(self, pfx="", cx=None):
         ''' Render recursively '''
-        hdr = pfx + str(self) + " d%+d" % self.stack_delta + " [" + str(self.stack_level) + "]"
-        for src in self.come_from:
-            hdr += "  <-" + hex(src.lo)
+        hdr = (pfx + str(self)).expandtabs().ljust(60)
+        if self.stack_level is not None:
+            hdr += " Σ" + str(self.stack_level)
+        if self.stack_delta:
+            hdr += " Δ%+d" % self.stack_delta
+        flow = []
         for dst in self.go_to:
-            hdr += "  ->" + hex(dst.lo)
-        yield hdr
+            if dst.lo == self.hi:
+                flow.append("↓")
+        for dst in self.go_to:
+            if dst.lo != self.hi:
+                flow.append("→" + hex(dst.lo))
+        for src in self.come_from:
+            if src.hi != self.lo:
+                flow.append("←" + hex(src.lo))
+        yield hdr.expandtabs().ljust(72) + " ".join(flow)
         if self.compact:
             return
         sptr = stack.Stack()
@@ -127,14 +137,10 @@ class Pop():
             j = list(i.render(pfx + "    ", cx))
             if self.kind == "Naked":
                 i.update_stack(sptr)
+                txt = j[0].expandtabs().ljust(80)
+                yield txt + sptr.render()
                 if len(j) > 1:
-                    yield from j
-                    j = [""]
-                j = j[0]
-                j += "\t"
-                while len(j.expandtabs()) < 80:
-                    j += "\t"
-                yield j.expandtabs() + sptr.render()
+                    yield from j[1:]
             else:
                 yield from j
 
@@ -247,7 +253,7 @@ class PopMIns(Pop):
         self.compact = True
 
     def __repr__(self):
-        txt = "<MI %05x d%+d" % (self.lo, self.stack_delta)
+        txt = "<MI %05x " % self.lo
         return txt + " " + self.txt + ">"
 
     def __getitem__(self, idx):
@@ -413,25 +419,19 @@ class PopStackCheck(Pop):
     ''' Stack level check '''
     kind = "StackCheck"
     overhead = True
-
-    def render(self, pfx="", cx=None):
-        yield pfx + str(self)
+    compact = True
 
 class PopPrologue(Pop):
     ''' Pseudo-Op for function Prologue '''
     kind = "Prologue"
     overhead = True
-
-    def render(self, pfx="", cx=None):
-        yield pfx + "<Prologue>"
+    compact = True
 
 class PopEpilogue(Pop):
     ''' Pseudo-Op for function Epilogue '''
     kind = "Epilogue"
     overhead = True
-
-    def render(self, pfx="", cx=None):
-        yield pfx + "<Epilogue>"
+    compact = True
 
     def flow_to(self):
         if False:
@@ -513,7 +513,7 @@ class PopCall(Pop):
 class PopLimitCheck(Pop):
     ''' Pseudo-Op for limit checks'''
     kind = "LimitCheck"
-    #compact = True
+    compact = True
 
 class PopMallocCheck(Pop):
     ''' Pseudo-Op for malloc'ed pointer '''
@@ -545,9 +545,7 @@ class PopRegCacheLoad(Pop):
     ''' Pseudo-Op for loading register caches'''
     kind = "RegCacheLoad"
     overhead = True
-
-    def render(self, pfx="", cx=None):
-        yield pfx + "<RegCacheLoad>"
+    compact = True
 
 class PopStringLit(Pop):
     ''' Push string literal '''
