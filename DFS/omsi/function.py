@@ -158,6 +158,7 @@ class OmsiFunction():
             prev = ins.txt
 
         self.assign_stack_delta()
+        self.find_malloc_checks()
         self.find_limit_checks()
         self.find_block_moves()
         self.partition()
@@ -510,6 +511,26 @@ class OmsiFunction():
             pop = hit.replace(pops.PopCall(dst, lbls))
             self.up.add_call(pop)
 
+    def find_malloc_checks(self):
+        ''' Find malloc allocation checks '''
+
+        for hit in self.body.match(
+            (
+                ("CMPA.L", ),
+                ("BEQ",),
+                ("TRAP", "#13",),
+            )
+        ):
+            if len(hit) < 3:
+                continue
+            preg = hit[0][1]
+            if hit[0][0] != "(" + preg + "-0x4)":
+                continue
+            flow_to = list(hit[1].flow_to())
+            if flow_to[0][1] != hit[2].hi:
+                continue
+            hit.replace(pops.PopMallocCheck(preg))
+
     def find_limit_checks(self):
         ''' Find limit checks '''
 
@@ -605,16 +626,6 @@ class OmsiFunction():
                 continue
             hit.replace(pops.PopLimitCheck())
 
-        for hit in self.body.match(
-            (
-                ("CMPA.L", ),
-                ("BEQ",),
-                ("TRAP", "#13",),
-            )
-        ):
-            if len(hit) < 3:
-                continue
-            hit.replace(pops.PopLimitCheck())
 
     def find_stack_adj(self):
         ''' Find limit checks '''
@@ -691,21 +702,7 @@ class OmsiFunction():
 
         for hit in self.body.match(
             (
-                ("MOVEQ.L",),
-                ("MOVE.",),
-                ("DBF",),
-            )
-        ):
-            if len(hit) < 3:
-                continue
-            i = looks_good(hit)
-            if i:
-                cnt, srcreg, dstreg = i
-                hit.replace(pops.PopBlockMove(srcreg, dstreg, cnt))
-
-        for hit in self.body.match(
-            (
-                ("MOVE.W",),
+                ("MOVE",),
                 ("MOVE.",),
                 ("DBF",),
             )

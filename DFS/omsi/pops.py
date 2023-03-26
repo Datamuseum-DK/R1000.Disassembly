@@ -57,6 +57,7 @@ class MatchHit():
         return self.mins[idx]
 
     def getstack(self):
+        ''' Get stack image '''
         return self.pop.getstack(self.idx)
 
     def replace(self, pop):
@@ -105,6 +106,7 @@ class Pop():
         return self.ins[idx]
 
     def index(self, pop):
+        ''' Index of element '''
         assert isinstance(pop, Pop)
         return self.ins.index(pop)
 
@@ -144,11 +146,12 @@ class Pop():
             sptr.push(stack.StackItem(-self.stack_level, None))
         for n, i in enumerate(self.ins):
             if n == idx:
-                 return sptr
+                return sptr
             i.update_stack(sptr)
-               
+        return None
 
     def flow_to(self):
+        ''' Where next ? '''
         yield ('N', self.hi)
 
     def append_ins(self, ins):
@@ -223,6 +226,7 @@ class Pop():
         return count
 
     def update_stack(self, _sp):
+        ''' Updated stack image '''
         return
 
 class PopBody(Pop):
@@ -383,8 +387,7 @@ class PopFramePointer(Pop):
     def __str__(self):
         if self.lvar:
             return "<Pointer.fp %s %s>" % (hex(self.lo), str(self.lvar))
-        else:
-            return "<Pointer.fp %s %d>" % (hex(self.lo), self.offset)
+        return "<Pointer.fp %s %d>" % (hex(self.lo), self.offset)
 
     def update_stack(self, sp):
         sp.push(stack.FrameItemReference(self.offset))
@@ -460,9 +463,6 @@ class PopBlob(Pop):
             txt += " " + str(self.src)
         return txt + ">"
 
-    def xrender(self, pfx="", cx=None):
-        yield pfx + str(self)
-
     def update_stack(self, sp):
         if not self.push:
             sp.pop(self.width)
@@ -513,7 +513,19 @@ class PopCall(Pop):
 class PopLimitCheck(Pop):
     ''' Pseudo-Op for limit checks'''
     kind = "LimitCheck"
+    #compact = True
+
+class PopMallocCheck(Pop):
+    ''' Pseudo-Op for malloc'ed pointer '''
+    kind = "MallocCheck"
     compact = True
+
+    def __init__(self, areg):
+        super().__init__()
+        self.areg = areg
+
+    def __repr__(self):
+        return "<MallocCheck %s %s>" % (hex(self.lo), self.areg)
 
 class PopBlockMove(Pop):
     ''' Pseudo-Op for block move loops'''
@@ -551,8 +563,7 @@ class PopStringLit(Pop):
     def __str__(self):
         if self.txt:
             return "<Lit %s %d>" % (hex(self.lo), len(self.txt))
-        else:
-            return "<Lit %s>" % hex(self.lo)
+        return "<Lit %s>" % hex(self.lo)
 
     def update_stack(self, sp):
         sp.put(0, stack.StackItemString(self.txt))
