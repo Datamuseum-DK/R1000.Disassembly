@@ -185,6 +185,10 @@ class OmsiFunction():
         self.find_pointer_push()
         self.find_string_lit()
 
+        self.up.cx.m.set_block_comment(self.lo, "OMSI PASCAL Function")
+        for _off, val in sorted(self.localvars.items(), reverse=True):
+            self.up.cx.m.set_block_comment(self.lo, "   " + str(val))
+
     def find_stack_check(self):
         ''' Find stack overrun checks '''
         for hit in self.body.match(
@@ -468,6 +472,8 @@ class OmsiFunction():
             text = False
             break
         if text:
+            if width & 1:
+                width += 1
             data.Txt(self.up.cx.m, ptr, ptr + width, label=False)
         else:
             data.Const(self.up.cx.m, ptr, ptr + width)
