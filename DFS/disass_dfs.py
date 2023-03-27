@@ -32,6 +32,7 @@
 
 import os
 import sys
+import html
 import importlib
 import hashlib
 import dotplot
@@ -41,113 +42,119 @@ import pyreveng.cpu.m68020 as m68020
 
 import load_dfs_file
 
-MYDIR = os.path.split(__file__)[0]
+class DisassM200File():
+    ''' Disassemble a single M200 file '''
 
-FILENAME = os.path.join(MYDIR, "FS_0.M200")
+    def __init__(self, input_file):
+        self.input_file = input_file
+        self.cx = m68020.m68020()
+        self.cx.omsi = None
 
-def disassemble_file(input_file, output_file="/tmp/_", verbose=True, svg=False, **kwargs):
-    ''' Disassemble a single file '''
-    cx = m68020.m68020()
-    cx.omsi = None
-    try:
-        ident, low, high = load_dfs_file.load_dfs_file(cx.m, input_file)
-    except load_dfs_file.LoadError as err:
-        if verbose:
-            print(input_file, err)
-        return
-
-    tryout = []
-    tryout.append("all")
-
-    kind = {
-        0x00000000: "kernel",
-        0x00010000: "fs",
-        0x00020000: "program",
-        0x00054000: "bootblock",
-        0x00070000: "resha",
-        0x80000000: "ioc",
-        0xe0004000: "enp100",
-    }.get(low)
-    print(input_file, "0x%x" % low, kind, ident)
-
-    tryout.append("kind." + kind)
-
-    tryout.append("ident." + ident)
-
-    if kind == "ioc":
-        # IOC consists of four quite individual parts
-        for a in range(4):
-            tryout.append("kind.ioc_part_%d" % a)
-            b = 0x80000000 + 0x2000 * a
-            # One of the last 8 bytes varies between otherwise identical
-            # sources of the IOC EEPROM
-            i = hashlib.sha256(cx.m.bytearray(b, 0x1ff8)).hexdigest()[:16]
-            tryout.append("ident." + i)
-
-    contrib = []
-    cx.m.set_block_comment(low, "R1000.Disassembly modules:")
-    for i in tryout:
         try:
-            contrib.append(importlib.import_module(i))
-        except ModuleNotFoundError as err:
-            cx.m.set_block_comment(low, "  no " + i)
-            if 1 or not "No module named" in str(err):
-                print("  no", i)
-                print(err)
-            continue
-        # print("  import", i)
-        cx.m.set_block_comment(low, "  import " + i)
+            self.ident, self.low, self.high = load_dfs_file.load_dfs_file(self.cx.m, input_file)
+        except load_dfs_file.LoadError as err:
+            print(".M200 LoadError", input_file, err)
+            return
 
-    for turnus in range(5):
-        i = "round_%d" % turnus
-        for j in contrib:
-            k = getattr(j, i, None)
-            if k:
-                k(cx)
+        self.identify()
 
-    listing.Listing(
-        cx.m,
-        fn=output_file,
-        align_blank=True,
-        align_xxx=True,
-        ncol=8,
-        lo=low,
-        hi=high,
-        **kwargs
-    )
-    if svg:
-        from pyreveng import partition
-        pp = partition.Partition(cx.m)
-        pp.dot_plot(pfx=output_file+".part")
+        for turnus in range(5):
+            i = "round_%d" % turnus
+            for j in self.contrib:
+                k = getattr(j, i, None)
+                if k:
+                    k(self.cx)
 
-    if False:
-        for st in pp.stretches:
-            print(st, len(st.nodes))
-            for nd in st.nodes:
-                print("\t", nd)
-                for lf in nd.leaves:
-                    print("\t\t", lf, lf.render())
-                    #print("\t\t\t" + lf.pil.render().replace("\n", "\n\t\t\t"))
-    return cx
+    def identify(self):
+
+        self.tryout = ["all"]
+
+        self.kind = {
+            0x00000000: "kernel",
+            0x00010000: "fs",
+            0x00020000: "program",
+            0x00054000: "bootblock",
+            0x00070000: "resha",
+            0x80000000: "ioc",
+            0xe0004000: "enp100",
+        }.get(self.low)
+        print("IDENT", self.input_file, "0x%x" % self.low, self.kind, self.ident)
+
+        self.tryout.append("kind." + self.kind)
+
+        self.tryout.append("ident." + self.ident)
+
+        if self.kind == "ioc":
+            # IOC consists of four quite individual parts
+            for a in range(4):
+                self.tryout.append("kind.ioc_part_%d" % a)
+                b = 0x80000000 + 0x2000 * a
+                # One of the last 8 bytes varies between otherwise identical
+                # sources of the IOC EEPROM
+                i = hashlib.sha256(cx.m.bytearray(b, 0x1ff8)).hexdigest()[:16]
+                self.tryout.append("ident." + i)
+
+        self.contrib = []
+        self.cx.m.set_block_comment(self.low, "R1000.Disassembly modules:")
+        for i in self.tryout:
+            try:
+                self.contrib.append(importlib.import_module(i))
+            except ModuleNotFoundError as err:
+                self.cx.m.set_block_comment(self.low, "  no " + i)
+                if 1 or not "No module named" in str(err):
+                    print("  no", i)
+                    print(err)
+                continue
+            # print("  import", i)
+            self.cx.m.set_block_comment(self.low, "  import " + i)
+
+    def listing(self, file, **kwargs):
+        listing.Listing(
+            self.cx.m,
+            fo=file,
+            align_blank=True,
+            align_xxx=True,
+            ncol=8,
+            lo=self.low,
+            hi=self.high,
+            **kwargs
+        )
+
+    def autoarchaelogist_listing(self, filename):
+        pfx = filename.rsplit(".", 2)[0]
+        print("PFX", pfx)
+        ut8file = pfx + ".utf8"
+        with open(ut8file, "w") as file:
+            self.listing(file)
+
+        with open(filename, "w") as file:
+            if self.cx.omsi:
+                self.cx.omsi.aarender(file, pfx)
+
+            file.write("<H4>Raw from R1000.Disassembly/DFS</H4>\n")
+            file.write("<pre>\n")
+            for i in open(ut8file, "r"):
+                file.write(html.escape(i))
+            file.write("</pre>\n")
+            os.remove(ut8file)
 
 def main():
     ''' Standard __main__ function '''
 
     if len(sys.argv) == 5 and sys.argv[1] == "-AutoArchaeologist":
-        print("PyReveng3/R1000.Disassembly", os.path.basename(__file__))
-        cx = disassemble_file(sys.argv[3], sys.argv[4])
+        print("PyReveng3/R1000.Disassembly", os.path.basename(__file__), sys.argv[3], sys.argv[4])
+        djob = DisassM200File(sys.argv[3])
+        djob.autoarchaelogist_listing(sys.argv[4])
+       
     elif len(sys.argv) > 1:
         assert "-AutoArchaeologist" not in sys.argv
         for i in sys.argv[1:]:
             j = i.split("/")[-1]
-            cx = disassemble_file(i, "/tmp/_" + j, pil=False, svg=False)
-            if cx.omsi:
-                cx.omsi.render(open("/tmp/_" + j + ".omsi", "w"))
-                cx.omsi.dot_file(open("/tmp/_" + j + ".dot", "w"))
-            # dotplot.dot_plot(cx)
+            djob = DisassM200File(i)
+            djob.listing(open("/tmp/_" + j, "w"))
+            djob.autoarchaelogist_listing("/tmp/_AA_")
     else:
-        cx = disassemble_file(FILENAME, pil=True, svg=True)
-        dotplot.dot_plot(cx)
+        print("Specify input files")
 
 if __name__ == '__main__':
     main()

@@ -132,9 +132,6 @@ def round_0(cx):
 def round_1(cx):
     ''' Let the disassembler loose '''
 
-    y = data.Const(cx.m, 0x20024, 0x20025)
-    cx.m.set_label(y.lo, "exp_init_done")
-
     y = cx.codeptr(0x20000)
     cx.m.set_line_comment(y.lo, "STACK.END")
 
@@ -151,10 +148,10 @@ def round_1(cx):
     y = cx.dataptr(0x20010)
 
     z = cx.codeptr(0x20018)
+    cx.m.set_label(z.dst, "PROG_FAIL")
 
     z = cx.codeptr(0x2001c)
-
-    z = data.Const(cx.m, 0x20108, 0x20109)
+    cx.m.set_label(z.dst, "EXP_FAIL")
 
 def round_2(cx):
     ''' Spelunking in what we already found '''

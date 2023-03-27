@@ -30,11 +30,9 @@
    =======================
 '''
 
-# TODO:
-#   See PROGRAM_0.M200.omsi @ <MI 15666...>
-#   See FS_0.M200.omsi @ 110bc (no epilogue)
-
 import sys
+import html
+import subprocess
 
 from pyreveng import mem
 
@@ -104,8 +102,6 @@ class OmsiPascal():
         ''' Render what we have found out '''
         for lo, func in sorted(self.functions.items()):
             file.write("-" * 80 + "\n")
-            for lbl in self.cx.m.get_labels(lo):
-                file.write(lbl + "\n")
             if self.debug:
                 try:
                     func.render(file, self.cx)
@@ -114,6 +110,34 @@ class OmsiPascal():
                     print("EXCEPTION in", func, err)
             else:
                 func.render(file, self.cx)
+
+    def aarender(self, file, filepfx):
+        ''' Render HTML for AutoArchaeologist '''
+        for lo, func in sorted(self.functions.items()):
+            if not func.discovered:
+                continue
+
+            fname = filepfx + "_%05x" % func.lo
+            with open(fname + ".dot", "w") as dotfile:
+                func.dot_file(dotfile)
+            subprocess.run(
+                [
+                    "dot",
+                    "-Tsvg",
+                    fname + ".dot",
+                ],
+                stdout=open(fname + ".svg", "wb"),
+            )
+
+            file.write('<H4>0x%05x</H4>\n' % func.lo)
+            file.write('<a href="%s.svg">' % fname)
+            file.write('<img src="%s.svg" width="200" height="200"/>\n' % fname)
+            file.write('</a>\n')
+            file.write('<br/>\n')
+            file.write('<pre>\n')
+            for i in func.render_iter(self.cx):
+                file.write(html.escape(i) + "\n")
+            file.write('</pre>\n')
 
     def dot_file(self, file):
         ''' Emit dot(1) sources '''

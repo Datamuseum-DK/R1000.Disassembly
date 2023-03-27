@@ -386,7 +386,6 @@ class PopFramePointer(Pop):
 
     def __init__(self, offset, lvar=None):
         super().__init__()
-        self.stack_delta = -4
         self.offset = offset
         self.lvar = lvar
 
@@ -401,6 +400,7 @@ class PopFramePointer(Pop):
 class PopStackAdj(Pop):
     ''' Adjustments to stack pointer'''
     kind = "StackAdj"
+    compact = True
 
     def __init__(self, delta):
         super().__init__()
@@ -411,9 +411,6 @@ class PopStackAdj(Pop):
             sp.push(stack.StackItem(-self.stack_delta, None))
         elif self.stack_delta > 0:
             sp.pop(self.stack_delta)
-
-    def render(self, pfx="", cx=None):
-        yield pfx + "<StackAdj %s %+d>" % (hex(self.lo), self.stack_delta)
 
 class PopStackCheck(Pop):
     ''' Stack level check '''

@@ -92,12 +92,18 @@ class OmsiFunction():
     def __lt__(self, other):
         return self.lo < other.lo
 
+    def render_iter(self, cx=None):
+        ''' Render as line iterator '''
+        yield "@ %05x" % self.lo
+        for lbl in cx.m.get_labels(self.lo):
+            yield lbl
+        for _off, val in sorted(self.localvars.items(), reverse=True):
+            yield " " * 8 + str(val)
+        yield from self.body.render(pfx="    ", cx=cx)
+
     def render(self, file=sys.stdout, cx=None):
         ''' Render to text '''
-        file.write("OF %05x\n" % self.lo)
-        for _off, val in sorted(self.localvars.items(), reverse=True):
-            file.write(" " * 8 + str(val) + "\n")
-        for i in self.body.render(pfx="    ", cx=cx):
+        for i in self.render_iter(cx):
             file.write(i + "\n")
 
     def match(self, pattern):
