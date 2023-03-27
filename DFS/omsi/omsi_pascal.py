@@ -31,6 +31,7 @@
 '''
 
 import sys
+import os
 import html
 import subprocess
 
@@ -129,9 +130,10 @@ class OmsiPascal():
                 stdout=open(fname + ".svg", "wb"),
             )
 
-            file.write('<H4>0x%05x</H4>\n' % func.lo)
-            file.write('<a href="%s.svg">' % fname)
-            file.write('<img src="%s.svg" width="200" height="200"/>\n' % fname)
+            svgfile = os.path.basename(fname) + ".svg"
+            file.write('<H4><A id="0x%05x">0x%05x</A></H4>\n' % (func.lo, func.lo))
+            file.write('<a href="%s">' % svgfile)
+            file.write('<img src="%s" width="200" height="200"/>\n' % svgfile)
             file.write('</a>\n')
             file.write('<br/>\n')
             file.write('<pre>\n')

@@ -150,10 +150,10 @@ class Pop():
         sptr = stack.Stack()
         if self.stack_level and self.stack_level < 0:
             sptr.push(stack.StackItem(-self.stack_level, None))
-        for n, i in enumerate(self.ins):
-            if n == idx:
+        for i, j in enumerate(self.ins):
+            if i == idx:
                 return sptr
-            i.update_stack(sptr)
+            j.update_stack(sptr)
         return None
 
     def flow_to(self):
@@ -261,7 +261,7 @@ class PopMIns(Pop):
 
     def __len__(self):
         ''' Number of arguments '''
-        if not ',' in self.txt:
+        if ',' not in self.txt:
             return 0
         i = self.txt.split()[1].split(",")
         return len(i)
@@ -284,6 +284,44 @@ class PopMIns(Pop):
     def flow_to(self):
         for i in self.ins.flow_out:
             yield (i.typ, i.to)
+
+    def set_stack_delta(self):
+        ''' set the stack delta for this instruction '''
+        if "PEA.L" in self.txt:
+            self.stack_delta = -4
+        elif "-(A7)" in self.txt:
+            self.stack_delta = - self.stack_width()
+        elif "(A7)+" in self.txt:
+            self.stack_delta = self.stack_width()
+        elif "A7" in self.txt:
+            if "(A7)" in self.txt:
+                return
+            if "A7+0x" in self.txt:
+                return
+            if "MOVE" in self.txt and "A7," in self.txt:
+                return
+            if "ADDQ.L" in self.txt:
+                oper = self[0]
+                assert oper[0] == "#"
+                self.stack_delta = int(oper[1:], 16)
+            elif "ADDA.W" in self.txt and self[0][0] == "#":
+                oper = self[0]
+                assert oper[0] == "#"
+                self.stack_delta = int(oper[1:], 16)
+            elif "SUBQ.L" in self.txt and self[0][0] == "#":
+                oper = self[0]
+                assert oper[0] == "#"
+                self.stack_delta = -int(oper[1:], 16)
+            elif "SUBA.W" in self.txt and self[0][0] == "#":
+                oper = self[0]
+                assert oper[0] == "#"
+                self.stack_delta = -int(oper[1:], 16)
+            elif self[0] == "(A5+0x8)" and self[1] == "A7":
+                # Part of bailout
+                pass
+            else:
+                print("SD A7", self)
+
 
     def update_stack(self, sp):
         if "PEA.L" in self.txt:
@@ -319,10 +357,8 @@ class PopMIns(Pop):
                 sp.pop(width)
                 arg = self.txt.split()[1].split(",")[0]
                 if arg[:3] == "#0x" and "MOVE.W" in self.txt:
-                    assert False
                     sp.push(stack.StackItemInt(int(arg[3:], 16)))
                 elif arg[:3] == "#0x" and "MOVE.L" in self.txt:
-                    assert False
                     sp.push(stack.StackItemLong(int(arg[3:], 16)))
                 elif "MOVE.B" in self.txt:
                     sp.push(stack.StackItem(width, None))
@@ -340,10 +376,8 @@ class PopConst(Pop):
 
     def __init__(self, width, val, push):
         super().__init__()
-        if push:
-            self.stack_delta = -width
-        else:
-            self.stack_delta = 0
+        if 0 and not push:
+            self.stack_delta = width
         self.width = width
         self.val = val
         self.push = push
@@ -447,8 +481,8 @@ class PopBlob(Pop):
         self.width = width
         self.src = src
         self.push = push
-        if push:
-            self.stack_delta = - width
+        #if not push:
+        #    self.stack_delta = width
 
     def __repr__(self):
         txt = "<Blob %s [%d]" % (hex(self.lo), self.width)
@@ -536,7 +570,15 @@ class PopBlockMove(Pop):
         self.length = length
 
     def __repr__(self):
-        return "<BlockMove [%d] %s -> %s>" % (self.length, self.src, self.dst)
+        return "<BlockMove %d,%s,%s>" % (self.length, self.src, self.dst)
+
+    def update_stack(self, sp):
+        if self.src != "A7" and self.dst != "A7":
+            return
+        if self.length > 0:
+            sp.pop(self.length)
+        else:
+            sp.push(stack.StackItemBlob(width=-self.length))
 
 class PopRegCacheLoad(Pop):
     ''' Pseudo-Op for loading register caches'''

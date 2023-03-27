@@ -152,7 +152,10 @@ def main():
             j = i.split("/")[-1]
             djob = DisassM200File(i)
             djob.listing(open("/tmp/_" + j, "w"))
-            djob.autoarchaelogist_listing("/tmp/_AA_")
+            if djob.cx.omsi:
+                djob.cx.omsi.render(open("/tmp/_" + j + ".omsi", "w"))
+                djob.cx.omsi.dot_file(open("/tmp/_" + j + ".dot", "w"))
+            # djob.autoarchaelogist_listing("/tmp/_AA_")
     else:
         print("Specify input files")
 

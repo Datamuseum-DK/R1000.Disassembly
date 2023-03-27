@@ -82,6 +82,7 @@ class OmsiFunction():
         self.traps = {}
         self.discovered = False
         self.localvars = {}
+        self.stackskew = False
 
     def __iter__(self):
         yield from self.body
@@ -97,6 +98,8 @@ class OmsiFunction():
         yield "@ %05x" % self.lo
         for lbl in cx.m.get_labels(self.lo):
             yield lbl
+        if self.stackskew:
+            yield "    NB: STACK SKEW"
         for _off, val in sorted(self.localvars.items(), reverse=True):
             yield " " * 8 + str(val)
         yield from self.body.render(pfx="    ", cx=cx)
@@ -107,6 +110,7 @@ class OmsiFunction():
             file.write(i + "\n")
 
     def match(self, pattern):
+        ''' pre-partition matcher '''
         for pop in self.body:
             yield from pop.match(pattern)
 
@@ -149,12 +153,18 @@ class OmsiFunction():
 
         self.find_epilogue()
         self.uncache_registers()
+
+        for ins in self.body:
+            if isinstance(ins, pops.PopMIns):
+                ins.set_stack_delta()
+
+        self.find_stack_adj()
+        self.find_block_moves()
         self.find_stackpush()
         self.find_stackpop()
         self.find_textpush()
         self.find_bailout()
         self.find_jsr()
-        self.find_stack_adj()
         self.find_constant_push()
 
         prev = ""
@@ -163,10 +173,8 @@ class OmsiFunction():
                 print("NB: unspotted stack loop", prev, ins.txt)
             prev = ins.txt
 
-        self.assign_stack_delta()
         self.find_malloc_checks()
         self.find_limit_checks()
-        self.find_block_moves()
         self.partition()
         self.set_stack_levels()
 
@@ -269,7 +277,7 @@ class OmsiFunction():
             ins = self.body[idx]
             if ins.lo in dsts:
                 break
-            if "MOVE" not in ins.txt or "#0x" not in ins.txt: 
+            if "MOVE" not in ins.txt or "#0x" not in ins.txt:
                 break
             reg = str(ins.ins.oper[-1])
             if reg[0] != "D":
@@ -312,79 +320,47 @@ class OmsiFunction():
                     dst = rins.txt.split(",")[-1]
                     rins.txt = "LEA.L   " + rpl + "," + dst
 
-    def assign_stack_delta(self):
-        ''' Assign stack increment/decrement to each instruction '''
-        for ins in self.body:
-            if "PEA.L" in ins.txt:
-                ins.stack_delta = -4
-            elif "-(A7)" in ins.txt:
-                ins.stack_delta = - ins.stack_width()
-            elif "(A7)+" in ins.txt:
-                ins.stack_delta = ins.stack_width()
-            elif "A7" in ins.txt:
-                if "(A7)" in ins.txt:
-                    pass
-                elif "A7+0x" in ins.txt:
-                    pass
-                elif "MOVE" in ins.txt and "A7," in ins.txt:
-                    pass
-                elif "ADDQ.L" in ins.txt:
-                    ins.stack_adj = True
-                    oper = ins[0]
-                    assert oper[0] == "#"
-                    ins.stack_delta = int(oper[1:], 16)
-                elif "ADDA.W" in ins.txt and ins[0][0] == "#":
-                    ins.stack_adj = True
-                    oper = ins[0]
-                    ins.stack_delta = int(oper[1:], 16)
-                elif "SUBQ.L" in ins.txt and ins[0][0] == "#":
-                    ins.stack_adj = True
-                    oper = ins[0]
-                    ins.stack_delta = -int(oper[1:], 16)
-                elif "SUBA.W" in ins.txt and ins[0][0] == "#":
-                    ins.stack_adj = True
-                    oper = ins[0]
-                    ins.stack_delta = -int(oper[1:], 16)
-                else:
-                    print("SD A7", ins)
-
     def find_stackpush(self):
         ''' Find loops which push things on stack '''
         for hit in self.body.match(
             (
-                ("SUBA.W", ",A7"),
+                ("StackAdj",),
                 ("MOVEA.L", "A7,"),
                 ("LEA.L",),
-                ("MOVEQ.L",),
-                ("MOVE.",),
-                ("DBF",),
+                ("BlockMove",),
             )
         ):
-            if len(hit) < 6:
+            if len(hit) < 4:
                 continue
-            src = hit[2].ins.oper[0]
-            dstreg = hit[1][1]
-            srcreg = hit[2][1]
-            cnt = hit[0][0]
-            cntreg = hit[3][1]
-            fmreg = hit[4][0]
-            toreg = hit[4][1]
-            if hit[5].ins.flow_out[0].to != hit[4].lo:
+            src = hit[2][0]
+            fmreg = hit[2][1]
+            toreg = hit[1][1]
+            dstreg = hit[3].dst
+            srcreg = hit[3].src
+            cnt2 = -hit[0].stack_delta
+            cnt = hit[3].length
+            if fmreg != srcreg or toreg != dstreg:
                 continue
-            if cntreg != str(hit[5][0]):
-                continue
-            if "(" + srcreg + ")+" != fmreg:
-                continue
-            if "(" + dstreg + ")+" != toreg:
-                continue
-            if cnt[:3] != "#0x":
+            if cnt != cnt2:
+                item = pops.PopStackAdj(0)
+                item.lo = hit[0].lo
+                hit[0].lo += 1
+                item.hi = hit[0].lo
+                item.come_from = hit[0].come_from
+                item.go_to = [hit[0]]
+                hit[0].come_from = [item]
+                hit.pop.insert_ins(hit.idx, item)
+                hit[0].stack_delta = -cnt
+                item.stack_delta = cnt + -cnt2
+                hit.idx += 1
                 continue
 
-            cnt = int(cnt[1:], 16) * hit[4].data_width()
+            assert cnt > 0
             blob = None
             if isinstance(src, assy.Arg_dst):
                 blob = self.get_blob(src.dst, cnt)
-            hit.replace(pops.PopBlob(blob=blob, width=cnt, src=hit[2][0]))
+            pop = pops.PopBlob(blob=blob, width=cnt, src=src)
+            hit.replace(pop)
 
         for hit in self.body.match(
             (
@@ -416,37 +392,30 @@ class OmsiFunction():
                 ("MOVE.", "0x", "(A7)"),
             )
         ):
-            if hit[0][0][:2] == "0x":
-                ptr = int(hit[0][0], 16)
-                width = hit[0].stack_width()
-                blob = self.get_blob(ptr, width)
-                pop = pops.PopBlob(blob=blob, width=width, src=ptr, push=hit[0][1] == "-(A7)")
-                hit.replace(pop)
+            if hit[0][0][:2] != "0x":
+                continue
+            ptr = int(hit[0][0], 16)
+            width = hit[0].stack_width()
+            blob = self.get_blob(ptr, width)
+            if hit[0][1] == "(A7)":
+                pop = pops.PopBlob(blob=blob, width=width, src=ptr, push=False)
+            elif hit[0][1] == "-(A7)":
+                pop = pops.PopBlob(blob=blob, width=width, src=ptr)
+            hit.replace(pop)
 
     def find_stackpop(self):
         ''' Find loops which push things on stack '''
         for hit in self.body.match(
             (
-                ("MOVEQ.L",),
-                ("MOVE.", "(A7)+"),
-                ("DBF",),
+                ("BlockMove",),
             )
         ):
-            if len(hit) < 3:
+            if len(hit) < 1:
                 continue
-            cntreg = str(hit[0].ins.oper[1])
-            if hit[2].ins.flow_out[0].to != hit[1].lo:
-                continue
-            if cntreg != str(hit[2].ins.oper[0]):
+            if hit[0].src != "A7":
                 continue
             pop = hit.replace(pops.PopStackPop())
-            cnt = hit[0].txt.split()[1].split(",")[0]
-            if cnt[:3] != "#0x":
-                print("VVVpop", cnt)
-                hit.render()
-                return
-            pop.stack_delta = int(cnt[3:], 16)
-            pop.stack_delta *= hit[1].data_width()
+            pop.stack_delta = hit[0].length
 
     def get_blob(self, ptr, width):
         ''' Get a blob out of pyreveng memory '''
@@ -464,32 +433,22 @@ class OmsiFunction():
         for hit in self.body.match(
             (
                 ("LEA.L",),
-                ("MOVEQ.L",),
-                ("MOVE.",),
-                ("DBF",),
+                ("BlockMove")
             )
         ):
-            if len(hit) < 4:
+            if len(hit) < 2:
                 continue
-            src = hit[0].ins.oper[0]
-            srcreg = str(hit[0].ins.oper[1])
-            cnt = str(hit[1].ins.oper[0])
-            cntreg = str(hit[1].ins.oper[1])
-            fmreg = str(hit[2].ins.oper[0])
-            toreg = str(hit[2].ins.oper[1])
-            if hit[3].ins.flow_out[0].to != hit[2].lo:
+            if hit[1].dst != "A7":
                 continue
-            if cntreg != str(hit[3].ins.oper[0]):
+            if hit[0][1] != hit[1].src:
                 continue
-            if "-(" + srcreg + ")" != fmreg:
+            if hit[1].length >= 0:
                 continue
-            if toreg != "-(A7)":
-                continue
-            toreg = toreg[1:-2]
-            cnt = (1 + int(cnt[1:], 16)) * hit[2].data_width()
+            cnt = -hit[1].length
             blob = None
-            if isinstance(src, assy.Arg_dst):
-                blob = self.get_blob(src.dst - cnt, cnt)
+            if hit[0][0][:2] == "0x":
+                src = int(hit[0][0], 16) - cnt
+                blob = self.get_blob(src, cnt)
             hit.replace(pops.PopBlob(blob=blob, width=cnt, src=hit[0][0]))
 
     def find_bailout(self):
@@ -661,18 +620,18 @@ class OmsiFunction():
             ins = self.body[idx]
             if not ",A7" in ins.txt:
                 continue
-            for mne, sign in (
-                ("ADDQ.L", 1),
-                ("SUBQ.L", -1),
-                ("ADDA.W", 1),
-                ("SUBA.W", -1),
+            for mne in (
+                "ADDQ.L",
+                "SUBQ.L",
+                "ADDA.W",
+                "SUBA.W",
             ):
                 if mne not in ins.txt:
                     continue
                 i = ins[0]
                 if i[:3] != "#0x":
                     continue
-                pop = pops.PopStackAdj(sign * int(i[1:], 16))
+                pop = pops.PopStackAdj(0)
                 self.body.del_ins(ins)
                 pop.append_ins(ins)
                 self.body.insert_ins(idx, pop)
@@ -720,13 +679,29 @@ class OmsiFunction():
                 print("Bad BlockMove cnt", cnt)
                 hit.render()
                 return False
-            cnt = int(cnt[1:], 16) * hit[-2].data_width()
+            cnt = (1 + int(cnt[1:], 16)) * hit[-2].data_width()
+            regs = []
+            sign = set()
             for i in (hit[-2][0], hit[-2][1]):
-                if len(i) != 5 or i[:2] != "(A" or i[-2:] != ")+":
+                if len(i) != 5:
                     print("Bad BlockMove reg", i)
                     hit.render()
                     return False
-            return cnt, hit[-2][0][1:3], hit[-2][1][1:3]
+                if i[:2] == "(A" and i[-2:] == ")+":
+                    regs.append(i[1:-2])
+                    sign.add(1)
+                elif i[:3] == "-(A" and i[-1:] == ")":
+                    regs.append(i[2:-1])
+                    sign.add(-1)
+                else:
+                    print("Bad BlockMove reg", i)
+                    hit.render()
+                    return False
+            if len(sign) != 1:
+                print("BlockMove opposite directions")
+                hit.render()
+                return False
+            return cnt * list(sign)[0], regs[0], regs[1]
 
         for hit in self.body.match(
             (
@@ -740,7 +715,12 @@ class OmsiFunction():
             i = looks_good(hit)
             if i:
                 cnt, srcreg, dstreg = i
-                hit.replace(pops.PopBlockMove(srcreg, dstreg, cnt))
+                pop = pops.PopBlockMove(srcreg, dstreg, cnt)
+                hit.replace(pop)
+                if dstreg == "A7":
+                    pop.stack_delta = cnt
+                if srcreg == "A7":
+                    pop.stack_delta = cnt
 
     def partition(self):
         ''' partition into basic blocks '''
@@ -806,6 +786,7 @@ class OmsiFunction():
                     dst.stack_level = leave
                 elif dst.stack_level != leave:
                     print("STACK SKEW", ins, leave, "->", dst, dst.stack_level)
+                    self.stackskew = True
 
     def find_locals(self):
         ''' Find local variables and arguments as A6+/-n arguments '''
@@ -869,9 +850,12 @@ class OmsiFunction():
             if hit.idx == 0:
                 continue
             if hit[-1].stack_delta != 8:
-                item = pops.PopStackAdj(-(8 - hit[-1].stack_delta))
+                #item = pops.PopStackAdj(-(8 - hit[-1].stack_delta))
+                item = pops.PopStackAdj(0)
                 item.lo = hit[-1].lo
+                item.hi = hit[-1].hi
                 hit.pop.insert_ins(hit.idx + 5, item)
+                item.stack_delta = -(8 - hit[-1].stack_delta)
                 hit[-1].stack_delta = 8
             sptr = hit.getstack()
             assert hit[1].val == 1
@@ -879,7 +863,7 @@ class OmsiFunction():
             if string:
                 hit.replace(pops.PopStringLit(string.decode("ASCII")))
             else:
-                print("FSL", hit[0].offset, hit[1].val, hit[2].val, sptr.render())
-                print("   stack_bytes", string)
-                hit.render()
+                #print("FSL", hit[0].offset, hit[1].val, hit[2].val, sptr.render())
+                #print("   stack_bytes", string)
+                #hit.render()
                 hit.replace(pops.PopStringLit())
