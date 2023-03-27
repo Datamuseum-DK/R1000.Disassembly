@@ -83,6 +83,7 @@ class OmsiFunction():
         self.discovered = False
         self.localvars = {}
         self.stackskew = False
+        self.ismain = False
 
     def __iter__(self):
         yield from self.body
@@ -110,7 +111,7 @@ class OmsiFunction():
             file.write(i + "\n")
 
     def match(self, pattern):
-        ''' pre-partition matcher '''
+        ''' post-partition matcher '''
         for pop in self.body:
             yield from pop.match(pattern)
 
@@ -219,6 +220,20 @@ class OmsiFunction():
             hit.replace(pops.PopPrologue())
             return True
 
+        if not self.ismain:
+            return False
+
+        for hit in self.body.match(
+            (
+                ("LEA.L", ",A7"),
+                ("JMP",),
+            )
+        ):
+            if len(hit) < 2 or hit[0].lo != self.lo:
+                continue
+            hit.replace(pops.PopPrologue())
+            return True
+
         return False
 
     def find_epilogue(self):
@@ -243,6 +258,25 @@ class OmsiFunction():
             if len(hit) == 2:
                 hit.replace(pops.PopEpilogue())
                 return
+
+        if not self.ismain:
+            return 
+
+        for hit in self.body.match(
+            (
+                ("JSR",),
+            )
+        ):
+            if len(hit) < 1:
+                continue
+            if not isinstance(hit[0].ins.oper[0], assy.Arg_dst):
+                continue
+            if hit[0].ins.oper[0].dst != 0x10284:
+                continue
+            print("EXIT", hit[0][0])
+            hit.render()
+            hit.replace(pops.PopEpilogue())
+            return
 
     def uncache_registers(self):
         ''' Values used multiple times are cached in vacant registers '''
@@ -357,8 +391,8 @@ class OmsiFunction():
 
             assert cnt > 0
             blob = None
-            if isinstance(src, assy.Arg_dst):
-                blob = self.get_blob(src.dst, cnt)
+            if src[:2] == "0x":
+                blob = self.get_blob(int(src, 16), cnt)
             pop = pops.PopBlob(blob=blob, width=cnt, src=src)
             hit.replace(pop)
 
@@ -425,7 +459,18 @@ class OmsiFunction():
                 retval.append(self.up.cx.m[ptr + offset])
         except mem.MemError:
             return None
-        data.Txt(self.up.cx.m, ptr, ptr + width, label=False)
+        text = True
+        for i in retval:
+            if 32 <= i <= 126:
+                continue
+            if i in (10, 13, 27):
+                continue
+            text = False
+            break
+        if text:
+            data.Txt(self.up.cx.m, ptr, ptr + width, label=False)
+        else:
+            data.Const(self.up.cx.m, ptr, ptr + width)
         return retval
 
     def find_textpush(self):
