@@ -79,19 +79,6 @@ class StackItemReference(StackItem):
     def __str__(self):
         return "[^^%d]" % self.backref
 
-    def resolve(self):
-        idx = self.stack.items.index(self) - 1
-        sitem = self.stack.items[idx]
-        walk = self.backref
-        while walk > 0 and idx >= 0:
-            walk -= sitem.width
-            idx -= 1
-            sitem = self.stack.items[idx]
-        if not walk:
-            return sitem
-        print("BACKREF residual", walk, self.stack.render(), self)
-        return None
-
 class StackItemString(StackItem):
     ''' A String on the stack '''
     def __init__(self, text=None):
@@ -174,7 +161,6 @@ class Stack():
         if width:
             print("EMPTY POP", width, self.render())
             self.mangled = True
-       
 
     def find(self, offset, width):
         ''' Find item on stack, rearrange if necessary '''

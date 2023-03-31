@@ -35,24 +35,9 @@ from pyreveng import data
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
 
-    for a in (
-        0x201ec,
-        0x20212,
-        0x20226,
-    ):
-        data.Txt(cx.m, a, a + 1);
-
     cx.m.set_label(0x20298, "board_id_list")
     data.Const(cx.m, 0x20298, 0x2029e)
 
-    for a in (
-        0x201b2,
-        0x201ba,
-        0x201c2,
-        0x201ca,
-        0x201d2,
-    ):
-        data.Txt(cx.m, a, a + 8)
     for a, b in (
         (0x20924, "Load_RegFile_Only()"),
         (0x20b7a, "Load_RegFile_Dispatch()"),

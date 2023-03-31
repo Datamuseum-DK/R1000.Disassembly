@@ -51,8 +51,6 @@ class OmsiPascal():
         self.calls = {}
         self.called_functions = {}
 
-        self.debug = False
-
         self.discovery_phase()
 
     def discovery_phase(self):
@@ -65,13 +63,7 @@ class OmsiPascal():
             for _lo, func in sorted(self.functions.items()):
                 if func.discovered:
                     continue
-                if self.debug:
-                    try:
-                        func.analyze()
-                    except Exception as err:
-                        print("ERROR", err)
-                else:
-                    func.analyze()
+                func.analyze()
             if sofar == len(self.discovered):
                 break
 
@@ -104,14 +96,7 @@ class OmsiPascal():
         ''' Render what we have found out '''
         for _lo, func in sorted(self.functions.items()):
             file.write("-" * 80 + "\n")
-            if self.debug:
-                try:
-                    func.render(file, self.cx)
-                except Exception as err:
-                    file.write("\n\nEXCEPTION: %s\n\n" % str(err))
-                    print("EXCEPTION in", func, err)
-            else:
-                func.render(file, self.cx)
+            func.render(file, self.cx)
 
     def aarender(self, file, filepfx):
         ''' Render HTML for AutoArchaeologist '''

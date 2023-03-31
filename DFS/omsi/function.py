@@ -31,7 +31,7 @@
 '''
 import sys
 
-from pyreveng import mem, assy, code, data
+from pyreveng import mem, code, data
 
 from omsi import pops
 
@@ -264,7 +264,7 @@ class OmsiFunction():
                 return
 
         if not self.ismain:
-            return 
+            return
 
         for hit in self.body.match(
             (
@@ -273,9 +273,7 @@ class OmsiFunction():
         ):
             if len(hit) < 1:
                 continue
-            if not isinstance(hit[0].ins.oper[0], assy.Arg_dst):
-                continue
-            if hit[0].ins.oper[0].dst != 0x10284:
+            if hit[0][0] != 0x10284:
                 continue
             hit.replace(pops.PopEpilogue())
             return
@@ -296,11 +294,13 @@ class OmsiFunction():
 
         while idx < len(self.body):
             ins = self.body[idx]
+            if not isinstance(ins, pops.PopMIns):
+                break
             if ins.lo in dsts:
                 break
-            if "LEA.L" not in ins.txt:
+            if "LEA.L" != ins.mne:
                 break
-            reg = str(ins.ins.oper[-1])
+            reg = ins.oper[-1]
             writes = self.body.reg_writes(reg)
             # print("UCR", writes, ins)
             if writes != 1:
@@ -311,13 +311,15 @@ class OmsiFunction():
             pop.append_ins(ins)
         while idx < len(self.body):
             ins = self.body[idx]
+            if not isinstance(ins, pops.PopMIns):
+                break
             if ins.lo in dsts:
                 break
-            if "MOVE" not in ins.txt:
+            if "MOVE" not in ins.mne:
                 break
-            if "#0x" not in ins.txt and "#-0x" not in ins.txt:
+            if "#0x" not in ins.oper[0] and "#-0x" not in ins.oper[0]:
                 break
-            reg = str(ins.ins.oper[-1])
+            reg = ins.oper[-1]
             if reg[0] != "D":
                 break
             writes = self.body.reg_writes(reg)
@@ -334,29 +336,22 @@ class OmsiFunction():
         self.body.insert_ins(1, pop)
 
         for ins in pop.ins:
-            reg = str(ins.ins.oper[1])
+            reg = ins.oper[1]
             if reg[0] == "A":
                 pat = "(" + reg + ")"
             else:
                 pat = reg
-            rpl = ins.ins.oper[0]
-            if isinstance(rpl, assy.Arg_verbatim):
-                rpl = str(rpl)
-            elif ins[0][:3] == "#0x":
-                rpl = ins[0]
-            elif isinstance(rpl, assy.Arg_dst):
-                rpl = "0x%x" % rpl.dst
-            else:
-                print("RCL unknown arg", ins, type(rpl), rpl)
-                continue
+            rpl = ins[0]
             for rins in self.body:
                 if not isinstance(rins, pops.PopMIns):
                     continue
-                if pat in rins.txt:
-                    rins.txt = rins.txt.replace(pat, rpl)
-                if reg[0] == 'A' and reg + "," in rins.txt and "MOVEA.L" in rins.txt:
-                    dst = rins.txt.split(",")[-1]
-                    rins.txt = "LEA.L   " + rpl + "," + dst
+                for n, i in enumerate(rins.oper):
+                    if pat in i:
+                        rins.oper[n] = i.replace(pat, rpl)
+                if ins.mne == "MOVEA.L" and reg == rins[0]:
+                    rins.mne = "LEA.L"
+                    rins.oper[0] = rpl
+                rins.txt = rins.mne.ljust(8) + ",".join(rins.oper)
 
     def find_stackpush(self):
         ''' Find loops which push things on stack '''
@@ -411,7 +406,7 @@ class OmsiFunction():
         ):
             if len(hit) < 4:
                 continue
-            src = hit[0].ins.oper[0]
+            src = hit[0][0]
             srcreg = hit[0][1]
             cnt = hit[1][0]
             cntreg = hit[1][1]
@@ -423,7 +418,6 @@ class OmsiFunction():
             if cnt[:3] != "#0x":
                 continue
             cnt = (1 + int(cnt[1:], 16)) * hit[2].stack_width()
-            print("WWW", src, srcreg, cnt, cntreg, fmreg)
             hit.replace(pops.PopBlob(width=cnt, src="(" + hit[0][0] + "-" + hex(cnt) + ")"))
 
         for hit in self.body.match(
@@ -505,8 +499,9 @@ class OmsiFunction():
                 continue
             cnt = -hit[1].length
             blob = None
-            if hit[0][0][:2] == "0x":
-                src = int(hit[0][0], 16) - cnt
+            src = hit[0].dst(0)
+            if src:
+                src -= cnt
                 blob = self.get_blob(src, cnt)
             hit.replace(pops.PopBlob(blob=blob, width=cnt, src=hit[0][0]))
 
@@ -531,8 +526,6 @@ class OmsiFunction():
                 dst = flow_0.to
             elif hit[0][0][:2] == "0x":
                 dst = int(hit[0][0], 16)
-            elif isinstance(hit[0].ins.oper[0], assy.Arg_dst):
-                dst = hit[0].ins.oper[0].dst
             else:
                 print("DISAPPEARING CALL", type(hit[0].ins.oper[0]))
                 hit.render()
@@ -630,10 +623,10 @@ class OmsiFunction():
         ):
             if len(hit) < 3:
                 continue
-            treg = str(hit[0].ins.oper[-1])
-            if treg != str(hit[1].ins.oper[-1]):
+            treg = hit[0][1]
+            if treg != hit[1][1]:
                 continue
-            if treg != str(hit[2].ins.oper[-1]):
+            if treg != hit[2][1]:
                 continue
             hit.replace(pops.PopLimitCheck())
 
@@ -645,8 +638,8 @@ class OmsiFunction():
         ):
             if len(hit) < 2:
                 continue
-            treg = str(hit[0].ins.oper[-1])
-            if treg != str(hit[1].ins.oper[-1]):
+            treg = hit[0][-1]
+            if treg != hit[1][-1]:
                 continue
             hit.replace(pops.PopLimitCheck())
 
@@ -677,7 +670,7 @@ class OmsiFunction():
 
         for idx in range(len(self.body)):
             ins = self.body[idx]
-            if not ",A7" in ins.txt:
+            if ins[-1] != "A7" or ins[0][:3] != "#0x":
                 continue
             for mne in (
                 "ADDQ.L",
@@ -685,10 +678,7 @@ class OmsiFunction():
                 "ADDA.W",
                 "SUBA.W",
             ):
-                if mne not in ins.txt:
-                    continue
-                i = ins[0]
-                if i[:3] != "#0x":
+                if mne not in ins.mne:
                     continue
                 pop = pops.PopStackAdj(0)
                 self.body.del_ins(ins)
@@ -710,7 +700,6 @@ class OmsiFunction():
             if hit[0][1] == "-(A7)":
                 hit.replace(pops.PopConst(width=width, val=val))
             elif hit[0][1] == "(A7)":
-                prev = self.body[hit.idx-1]
                 pop = pops.PopConst(width=width, val=val)
                 pop.stack_delta = -width
                 sapop = pops.PopStackAdj(width)
@@ -832,6 +821,8 @@ class OmsiFunction():
             ins = pop[-1]
             for typ, where in ins.flow_to():
                 if where is None:
+                    continue
+                if where in self.traps:
                     continue
                 dst = allpops.get(where)
                 if dst is None:

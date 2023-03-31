@@ -39,7 +39,6 @@ def round_0(cx):
     y = data.Const(cx.m, 0x2059e, 0x2059e+6)
     cx.m.set_label(y.lo, "proto_hw_config")
     data.Txt(cx.m, 0x201a4, 0x201be)
-    data.Txt(cx.m, 0x2055e, 0x20566)
 
 def round_1(cx):
     ''' Let the disassembler loose '''

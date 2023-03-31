@@ -101,11 +101,8 @@ class DisassM200File():
                 self.contrib.append(importlib.import_module(i))
             except ModuleNotFoundError as err:
                 self.cx.m.set_block_comment(self.low, "  no " + i)
-                if 1 or not "No module named" in str(err):
-                    print("  no", i)
-                    print(err)
-                continue
-            # print("  import", i)
+                if not "ident" in i:
+                    raise
             self.cx.m.set_block_comment(self.low, "  import " + i)
 
     def listing(self, file, **kwargs):

@@ -32,7 +32,7 @@
 
 import sys
 
-from pyreveng import code, pil
+from pyreveng import code, pil, assy
 
 from omsi import stack, function_call
 
@@ -248,34 +248,35 @@ class PopMIns(Pop):
         self.ins = ins
         self.lo = ins.lo
         self.hi = ins.hi
-        self.txt = ins.render()
         self.pop = None
         self.compact = True
+        self.splitins()
+
+    def splitins(self):
+        ''' Split an polish instruction from PyReveng3 '''
+        self.mne = self.ins.mne
+        self.oper = []
+        for arg in self.ins.oper:
+            if isinstance(arg, assy.Arg_dst):
+                self.oper.append(arg.pfx + hex(arg.dst))
+            else:
+                self.oper.append(arg.render())
+        self.txt = self.mne.ljust(8) + ",".join(self.oper)
 
     def __repr__(self):
         txt = "<MI %05x " % self.lo
         return txt + " " + self.txt + ">"
 
     def __getitem__(self, idx):
-        return self.txt.split()[1].split(",")[idx]
+        return self.oper[idx]
 
     def __len__(self):
         ''' Number of arguments '''
-        if ',' not in self.txt:
-            return 0
-        i = self.txt.split()[1].split(",")
-        return len(i)
-
-    def get(self, idx, dfl=None):
-        ''' Get argument '''
-        i = self.txt.split()[1].split(",")
-        if idx < len(i):
-            return i[idx]
-        return dfl
+        return len(self.oper)
 
     def data_width(self):
         ''' Width of instruction data '''
-        return { "B": 1, "W": 2, "L": 4, }[self.ins.mne.split(".")[-1]]
+        return { "B": 1, "W": 2, "L": 4, }[self.mne.split(".")[-1]]
 
     def stack_width(self):
         ''' Width of instruction data on stack '''
@@ -284,6 +285,16 @@ class PopMIns(Pop):
     def flow_to(self):
         for i in self.ins.flow_out:
             yield (i.typ, i.to)
+
+    def dst(self, idx):
+        ''' find where operand points '''
+        oper = self.ins.oper[idx]
+        if isinstance(oper, assy.Arg_dst):
+            return oper.dst
+        oper = self[idx]
+        if oper[:2] == "0x":
+            return int(oper, 16)
+        return None
 
     def set_stack_delta(self):
         ''' set the stack delta for this instruction '''
@@ -376,8 +387,6 @@ class PopConst(Pop):
 
     def __init__(self, width, val):
         super().__init__()
-        if 0 and not push:
-            self.stack_delta = width
         self.width = width
         self.val = val
 
@@ -427,7 +436,7 @@ class PopFramePointer(Pop):
 class PopStackAdj(Pop):
     ''' Adjustments to stack pointer'''
     kind = "StackAdj"
-    compact = True
+    #compact = True
 
     def __init__(self, delta):
         super().__init__()
@@ -524,7 +533,11 @@ class PopCall(Pop):
                 yield pfx + "    " + lbls[0]
 
     def flow_to(self):
-        yield ("N", self.hi)
+        if self.dst not in (
+            0x10284, # exit
+            0x10568, # Run_Experiment
+        ):
+            yield ("N", self.hi)
 
     def update_stack(self, sp):
         function_call.FunctionCall(self, sp)
