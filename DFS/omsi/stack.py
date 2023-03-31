@@ -172,8 +172,9 @@ class Stack():
                 self.items.pop(-1)
             width -= take
         if width:
-            print("EMPTY POP", width)
+            print("EMPTY POP", width, self.render())
             self.mangled = True
+       
 
     def find(self, offset, width):
         ''' Find item on stack, rearrange if necessary '''

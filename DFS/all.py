@@ -35,6 +35,8 @@ from pyreveng import data
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
 
+    return
+
     # Look for SCCS-identifiers at the beginning
     for a, b in cx.m.gaps():
         for i in range(a, b - 3):

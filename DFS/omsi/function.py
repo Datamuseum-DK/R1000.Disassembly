@@ -277,8 +277,6 @@ class OmsiFunction():
                 continue
             if hit[0].ins.oper[0].dst != 0x10284:
                 continue
-            print("EXIT", hit[0][0])
-            hit.render()
             hit.replace(pops.PopEpilogue())
             return
 
@@ -315,7 +313,9 @@ class OmsiFunction():
             ins = self.body[idx]
             if ins.lo in dsts:
                 break
-            if "MOVE" not in ins.txt or "#0x" not in ins.txt:
+            if "MOVE" not in ins.txt:
+                break
+            if "#0x" not in ins.txt and "#-0x" not in ins.txt:
                 break
             reg = str(ins.ins.oper[-1])
             if reg[0] != "D":
@@ -377,6 +377,7 @@ class OmsiFunction():
             srcreg = hit[3].src
             cnt2 = -hit[0].stack_delta
             cnt = hit[3].length
+            cnt = (cnt + 1) & ~1
             if fmreg != srcreg or toreg != dstreg:
                 continue
             if cnt != cnt2:
@@ -436,10 +437,17 @@ class OmsiFunction():
             width = hit[0].stack_width()
             blob = self.get_blob(ptr, width)
             if hit[0][1] == "(A7)":
-                pop = pops.PopBlob(blob=blob, width=width, src=ptr, push=False)
+                pop = pops.PopBlob(blob=blob, width=width, src=ptr)
+                pop.stack_delta = -width
+                sapop = pops.PopStackAdj(width)
+                sapop.lo = hit[0].lo
+                sapop.hi = hit[0].lo + 1
+                hit[0].lo += 1
+                hit.replace(pop)
+                hit.pop.insert_ins(hit.idx, sapop)
             elif hit[0][1] == "-(A7)":
                 pop = pops.PopBlob(blob=blob, width=width, src=ptr)
-            hit.replace(pop)
+                hit.replace(pop)
 
     def find_stackpop(self):
         ''' Find loops which push things on stack '''
@@ -698,10 +706,19 @@ class OmsiFunction():
             if hit[0][0][:3] != "#0x":
                 continue
             val = int(hit[0][0][1:], 16)
+            width = hit[0].stack_width()
             if hit[0][1] == "-(A7)":
-                hit.replace(pops.PopConst(width=hit[0].stack_width(), val=val, push=True))
+                hit.replace(pops.PopConst(width=width, val=val))
             elif hit[0][1] == "(A7)":
-                hit.replace(pops.PopConst(width=hit[0].stack_width(), val=val, push=False))
+                prev = self.body[hit.idx-1]
+                pop = pops.PopConst(width=width, val=val)
+                pop.stack_delta = -width
+                sapop = pops.PopStackAdj(width)
+                sapop.lo = hit[0].lo
+                sapop.hi = hit[0].lo + 1
+                hit[0].lo += 1
+                hit.replace(pop)
+                hit.pop.insert_ins(hit.idx, sapop)
             else:
                 print("FCP")
                 hit.render()
@@ -714,7 +731,7 @@ class OmsiFunction():
             if hit[0][0][:2] != "0x":
                 continue
             val = int(hit[0][0], 16)
-            hit.replace(pops.PopConst(width=4, val=val, push=True))
+            hit.replace(pops.PopConst(width=4, val=val))
 
     def find_block_moves(self):
         ''' Find block move loops '''

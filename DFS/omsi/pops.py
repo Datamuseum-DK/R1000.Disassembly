@@ -374,25 +374,18 @@ class PopConst(Pop):
     kind = "Const"
     compact = True
 
-    def __init__(self, width, val, push):
+    def __init__(self, width, val):
         super().__init__()
         if 0 and not push:
             self.stack_delta = width
         self.width = width
         self.val = val
-        self.push = push
 
     def __str__(self):
         txt = "<Const %d.%d" % (self.val, self.width)
-        if self.push:
-            txt += " push"
-        else:
-            txt += " replace"
         return txt + ">"
 
     def update_stack(self, sp):
-        if not self.push:
-            sp.pop(self.width)
         if self.width == 4:
             sp.push(stack.StackItemLong(self.val))
         elif self.width == 2:
@@ -471,18 +464,15 @@ class PopEpilogue(Pop):
 class PopBlob(Pop):
     ''' Pseudo-Op for literal bytes '''
     kind = "Blob"
-    compact = True
+    #compact = True
 
-    def __init__(self, blob=None, width=None, src=None, push=True):
+    def __init__(self, blob=None, width=None, src=None):
         super().__init__()
         if blob:
             width = len(blob)
         self.blob = blob
         self.width = width
         self.src = src
-        self.push = push
-        #if not push:
-        #    self.stack_delta = width
 
     def __repr__(self):
         txt = "<Blob %s [%d]" % (hex(self.lo), self.width)
@@ -495,8 +485,6 @@ class PopBlob(Pop):
         return txt + ">"
 
     def update_stack(self, sp):
-        if not self.push:
-            sp.pop(self.width)
         if self.blob:
             sp.push(stack.StackItemBlob(blob=self.blob))
         else:
