@@ -35,8 +35,10 @@ from pyreveng import mem, code, data
 
 from omsi import pops
 
-class LocalVar():
-    ''' Local variable accessed via FP '''
+class Var():
+    ''' Variable '''
+
+    kind = "VAR"
 
     def __init__(self, offset):
         assert isinstance(offset, int)
@@ -44,8 +46,11 @@ class LocalVar():
         self.byref = []
         self.access = {}
 
+    def __lt__(self, other):
+        return self.offset < other.offset
+
     def __repr__(self):
-        txt = "<LVAR "
+        txt = "<" + self.kind + " "
         if self.offset < 0:
             txt += "-0x%03x" % (-self.offset)
         else:
@@ -61,6 +66,17 @@ class LocalVar():
             txt += ")"
         return txt + ">"
 
+    def render(self, file=sys.stdout):
+        ''' Render variable '''
+        file.write(str(self) + "\n")
+        for ins in sorted(self.byref):
+            file.write("  r " + str(ins) + "\n")
+        for i, j in sorted(self.access.items()):
+            for ins in j[0]:
+                file.write("   r" + str(i) + " " + str(ins) + "\n")
+            for ins in j[1]:
+                file.write("   w" + str(i) + " " + str(ins) + "\n")
+
     def add_byref(self, ins):
         ''' Instructions which take the address '''
         self.byref.append(ins)
@@ -74,6 +90,14 @@ class LocalVar():
         ''' Instructions which write '''
         i = self.access.setdefault(width, [[], []])
         i[1].append(ins)
+
+class LocalVar(Var):
+    ''' Local variable accessed via FP '''
+    kind = "LVAR"
+
+class GlobalVar(Var):
+    ''' Global variable accessed via FP '''
+    kind = "GVAR"
 
 class OmsiFunction():
     ''' A PASCAL function '''
@@ -186,6 +210,7 @@ class OmsiFunction():
         self.discovered = True
 
         self.find_locals()
+        self.find_globals()
         self.find_pointer_push()
         self.find_string_lit()
 
@@ -605,7 +630,7 @@ class OmsiFunction():
                 if len(hit) == 3 and hit[2].lo not in self.traps:
                     continue
 
-                dir = len(hit) == 2
+                inv = len(hit) == 2
 
                 val = int(hit[0][0][1:], 16)
                 if val & (1<<31):
@@ -613,13 +638,13 @@ class OmsiFunction():
 
                 low = None
                 high = None
-                if cond == "BLT" and dir:
+                if cond == "BLT" and inv:
                     low = val
-                elif cond == "BLT" and not dir:
+                elif cond == "BLT" and not inv:
                     high = val
-                elif cond == "BLE" and not dir:
+                elif cond == "BLE" and not inv:
                     high = val
-                elif cond == "BLS" and not dir:
+                elif cond == "BLS" and not inv:
                     low = 0
                     high = hit[0][0]
                 else:
@@ -890,6 +915,31 @@ class OmsiFunction():
                     if dst:
                         lvar = self.localvars.setdefault(dst, LocalVar(dst))
                         lvar.add_write(ins, ins.data_width())
+
+    def find_globals(self):
+        ''' Find global variables '''
+
+        for pop in self.body:
+            if pop.overhead:
+                continue
+            for ins in pop:
+                if not isinstance(ins, pops.PopMIns) or "0x" not in ins.txt:
+                    continue
+                try:
+                    width = ins.data_width()
+                except KeyError:
+                    continue
+                for n, oper in enumerate(ins.oper):
+                    if oper[:2] != "0x":
+                        continue
+                    val = int(oper, 16)
+                    gvar = self.up.gvars.setdefault(val, GlobalVar(val))
+                    if "PEA" in ins.mne or "LEA" in ins.mne:
+                        gvar.add_byref(ins)
+                    elif not n:
+                        gvar.add_read(ins, width)
+                    else:
+                        gvar.add_write(ins, width)
 
     def find_pointer_push(self):
         ''' Find pointer pushes '''

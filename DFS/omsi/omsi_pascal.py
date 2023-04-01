@@ -50,6 +50,8 @@ class OmsiPascal():
         self.discovered = set()
         self.calls = {}
         self.called_functions = {}
+        self.gvars = {}
+        print("MMM", hex(cx.m.lo), hex(cx.m.hi), cx.m)
 
         self.discovery_phase()
 
@@ -94,6 +96,9 @@ class OmsiPascal():
 
     def render(self, file=sys.stdout):
         ''' Render what we have found out '''
+        file.write("-" * 80 + "\n")
+        for gvar in sorted(self.gvars.values()):
+            gvar.render(file)
         for _lo, func in sorted(self.functions.items()):
             file.write("-" * 80 + "\n")
             func.render(file, self.cx)
