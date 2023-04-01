@@ -68,9 +68,9 @@ class MatchHit():
         self.pop.insert_ins(self.idx, pop)
         return pop
 
-    def render(self, file=sys.stdout):
+    def render(self, hdr="", file=sys.stdout):
         ''' Render the hit usably '''
-        file.write("HIT %s\n" % hex(self.mins[0].lo))
+        file.write("HIT(%s) %s\n" % (hdr, hex(self.mins[0].lo)))
         for i in self.mins:
             file.write("   " + str(i) + "\n")
 
@@ -436,7 +436,7 @@ class PopFramePointer(Pop):
 class PopStackAdj(Pop):
     ''' Adjustments to stack pointer'''
     kind = "StackAdj"
-    #compact = True
+    compact = True
 
     def __init__(self, delta):
         super().__init__()
@@ -473,7 +473,7 @@ class PopEpilogue(Pop):
 class PopBlob(Pop):
     ''' Pseudo-Op for literal bytes '''
     kind = "Blob"
-    #compact = True
+    compact = True
 
     def __init__(self, blob=None, width=None, src=None):
         super().__init__()
@@ -545,7 +545,35 @@ class PopCall(Pop):
 class PopLimitCheck(Pop):
     ''' Pseudo-Op for limit checks'''
     kind = "LimitCheck"
-    compact = True
+    #compact = True
+
+    def __init__(self, what = None, low = None, high = None):
+        super().__init__()
+        self.what = what
+        if low and isinstance(low, str):
+            print("LL", [low])
+            assert low[:3] == "#0x"
+            self.low = int(low[1:], 16)
+        else:
+            self.low = low
+        if high and isinstance(high, str):
+            assert high[:3] == "#0x", high
+            self.high = int(high[1:], 16)
+        else:
+            self.high = high
+        if self.low is not None and self.high is not None:
+            self.compact = True
+
+    def __str__(self):
+        txt = "<POP " + hex(self.lo) + " LimitCheck"
+        if self.low is not None:
+            txt += " " + hex(self.low) + " ≤"
+        if self.what is not None:
+            txt += " " + str(self.what)
+        if self.high is not None:
+            txt += " ≤ " + hex(self.high)
+        return txt + ">"
+   
 
 class PopMallocCheck(Pop):
     ''' Pseudo-Op for malloc'ed pointer '''

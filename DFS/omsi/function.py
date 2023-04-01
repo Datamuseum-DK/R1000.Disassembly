@@ -45,7 +45,11 @@ class LocalVar():
         self.access = {}
 
     def __repr__(self):
-        txt = "<LVAR %4d" % self.offset
+        txt = "<LVAR "
+        if self.offset < 0:
+            txt += "-0x%03x" % (-self.offset)
+        else:
+            txt += " 0x%03x" % self.offset
         if self.byref:
             txt += " @"
         for width, val in sorted(self.access.items()):
@@ -348,7 +352,7 @@ class OmsiFunction():
                 for n, i in enumerate(rins.oper):
                     if pat in i:
                         rins.oper[n] = i.replace(pat, rpl)
-                if ins.mne == "MOVEA.L" and reg == rins[0]:
+                if rins.mne == "MOVEA.L" and reg == rins[0]:
                     rins.mne = "LEA.L"
                     rins.oper[0] = rpl
                 rins.txt = rins.mne.ljust(8) + ",".join(rins.oper)
@@ -565,19 +569,6 @@ class OmsiFunction():
         for cond in conds:
             for hit in self.body.match(
                 (
-                    ("CMP",),
-                    (cond,),
-                )
-            ):
-                if len(hit) < 2:
-                    continue
-
-                if hit[1].ins.flow_out[0].to in self.traps:
-                    hit.replace(pops.PopLimitCheck())
-
-        for cond in conds:
-            for hit in self.body.match(
-                (
                     ("SUB.L",),
                     (cond,),
                     ("TRAP",),
@@ -592,8 +583,8 @@ class OmsiFunction():
                 if hit[2].lo not in self.traps:
                     continue
 
+                hit.render("FLC0")
                 hit.replace(pops.PopLimitCheck())
-
 
         for cond in conds:
             for hit in self.body.match(
@@ -603,16 +594,39 @@ class OmsiFunction():
                     ("TRAP",),
                 )
             ):
-                if len(hit) < 3:
+                if len(hit) < 2:
+                    continue
+                if hit[0][0][:3] != "#0x":
+                    continue
+                if len(hit) == 2 and hit[1].ins.flow_out[0].to not in self.traps:
+                    continue
+                if len(hit) == 3 and hit[1].ins.flow_out[0].to != hit[2].hi:
+                    continue
+                if len(hit) == 3 and hit[2].lo not in self.traps:
                     continue
 
-                if hit[1].ins.flow_out[0].to != hit[2].ins.hi:
-                    continue
+                dir = len(hit) == 2
 
-                if hit[2].lo not in self.traps:
-                    continue
+                val = int(hit[0][0][1:], 16)
+                if val & (1<<31):
+                    val -= (1<<32)
 
-                hit.replace(pops.PopLimitCheck())
+                low = None
+                high = None
+                if cond == "BLT" and dir:
+                    low = val
+                elif cond == "BLT" and not dir:
+                    high = val
+                elif cond == "BLE" and not dir:
+                    high = val
+                elif cond == "BLS" and not dir:
+                    low = 0
+                    high = hit[0][0]
+                else:
+                    print("XXX", hit[0][0], val, hex(val))
+                    hit.render("FLC1")
+                pop = pops.PopLimitCheck(hit[0][1], low, high)
+                hit.replace(pop)
 
         for hit in self.body.match(
             (
@@ -628,20 +642,8 @@ class OmsiFunction():
                 continue
             if treg != hit[2][1]:
                 continue
-            hit.replace(pops.PopLimitCheck())
-
-        for hit in self.body.match(
-            (
-                ("EXTB.W", ),
-                ("CHK.W",),
-            )
-        ):
-            if len(hit) < 2:
-                continue
-            treg = hit[0][-1]
-            if treg != hit[1][-1]:
-                continue
-            hit.replace(pops.PopLimitCheck())
+            pop = pops.PopLimitCheck(hit[0][1], 0, hit[2][0])
+            hit.replace(pop)
 
         for hit in self.body.match(
             (
@@ -650,7 +652,8 @@ class OmsiFunction():
         ):
             if len(hit) < 1:
                 continue
-            hit.replace(pops.PopLimitCheck())
+            pop = pops.PopLimitCheck(hit[0][1], 0, hit[0][0])
+            hit.replace(pop)
 
         for hit in self.body.match(
             (
@@ -661,9 +664,22 @@ class OmsiFunction():
         ):
             if len(hit) < 3:
                 continue
+            if hit[0][1] != hit[1].what:
+                continue
             if hit[0][0] != hit[2][0]:
                 continue
-            hit.replace(pops.PopLimitCheck())
+            if hit[0][1] != hit[2][1]:
+                continue
+            if hit[0][0][:3] != "#0x":
+                continue
+            offset = int(hit[0][0][1:], 16)
+            limit = hit[1].high
+            low = offset
+            if low & (1<<31):
+                low -= (1<<32)
+            high = (offset + limit) & ((1<<32)-1)
+            pop = pops.PopLimitCheck(hit[1].what, low, high)
+            hit.replace(pop)
 
     def find_stack_adj(self):
         ''' Find limit checks '''

@@ -91,7 +91,7 @@ class DisassM200File():
                 b = 0x80000000 + 0x2000 * a
                 # One of the last 8 bytes varies between otherwise identical
                 # sources of the IOC EEPROM
-                i = hashlib.sha256(cx.m.bytearray(b, 0x1ff8)).hexdigest()[:16]
+                i = hashlib.sha256(self.cx.m.bytearray(b, 0x1ff8)).hexdigest()[:16]
                 self.tryout.append("ident." + i)
 
         self.contrib = []
@@ -99,11 +99,9 @@ class DisassM200File():
         for i in self.tryout:
             try:
                 self.contrib.append(importlib.import_module(i))
+                self.cx.m.set_block_comment(self.low, "  import " + i)
             except ModuleNotFoundError as err:
                 self.cx.m.set_block_comment(self.low, "  no " + i)
-                if not "ident" in i:
-                    raise
-            self.cx.m.set_block_comment(self.low, "  import " + i)
 
     def listing(self, file, **kwargs):
         listing.Listing(
