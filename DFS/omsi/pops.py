@@ -391,7 +391,7 @@ class PopConst(Pop):
         self.val = val
 
     def __str__(self):
-        txt = "<Const %d.%d" % (self.val, self.width)
+        txt = "<Const 0x%05x 0x%x.%d" % (self.lo, self.val, self.width)
         return txt + ">"
 
     def update_stack(self, sp):
