@@ -122,7 +122,7 @@ DfsFsCall(0x103ec, "AskOnConsoleIntRange(prompt: String; low : Long; High : Long
 DfsFsCall(0x103f0, "AskOnConsoleYesNo(prompt : String; default : Bool) : Bool")
 DfsFsCall(0x103f4, "SetConsoleConfig(a : Long)")
 DfsFsCall(0x103f8, "GetConsoleConfig() : Long")
-DfsFsCall(0x103fc, "SetConsolePrinter(a, b: Word; c: Byte)")
+DfsFsCall(0x103fc, "SetConsolePrinter(a: Byte; b: Word; c: Word)")
 DfsFsCall(0x10404, "SetSomeKindOfFlag(a : Byte)")
 DfsFsCall(0x10424, "TapeErrorMsg(a : Byte) : String")
 DfsFsCall(0x1043c, "FileReadLine(file : File; VAR a : String; VAR b : Byte)")
