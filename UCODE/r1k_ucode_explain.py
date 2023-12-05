@@ -834,7 +834,7 @@ class Explain():
             0xc: "LOAD_MAR_QUEUE",
             0xd: "LOAD_MAR_TYPE",
             0xe: "LOAD_MAR_CONTROL",
-            0xf: "LOAD_MAR_RESERVED",
+            0xf: "LOAD_MAR_RESERVED",	# For phys mem access
         }.get(val)
 
     def typ_csa_cntl(self, val):
@@ -970,7 +970,9 @@ class Explain():
     #######################################################################
 
     def ioc_random(self, val):
-        ''' R1000_SCHEMATIC_IOC.PDF p5 '''
+        ''' R1000_SCHEMATIC_IOC.PDF p5
+            Checks out against PB010…PB013.
+        '''
         return {
             0x00: "noop",
             0x01: "load transfer address",

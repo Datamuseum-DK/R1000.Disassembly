@@ -440,7 +440,7 @@ class Ucode():
         self.val_rand = (a & 0x20) >> 5
         self.val_m_a_src = (a & 0x10) >> 4
         self.val_c_source = (a & 0x08) >> 3
-        assert not a & 0x07
+        # assert not a & 0x07
 
         a = uword[1] ^ 0xe0
         self.val_b_adr |= (a & 0x80) >> 2
@@ -448,7 +448,7 @@ class Ucode():
         self.val_rand |= (a & 0x20) >> 4
         self.val_m_a_src |= (a & 0x10) >> 3
         self.val_alu_func = (a & 0x08) >> 3
-        assert not a & 0x07
+        # assert not a & 0x07
 
         a = uword[2] ^ 0xe0
         self.val_a_adr = (a & 0x80) >> 7
@@ -456,7 +456,7 @@ class Ucode():
         self.val_rand |= (a & 0x20) >> 3
         self.val_c_adr = (a & 0x10) >> 4
         self.val_alu_func |= (a & 0x08) >> 2
-        assert not a & 0x07
+        # assert not a & 0x07
 
         a = uword[3] ^ 0xe0
         self.val_a_adr |= (a & 0x80) >> 6
@@ -464,7 +464,7 @@ class Ucode():
         self.val_rand |= (a & 0x20) >> 2
         self.val_c_adr |= (a & 0x10) >> 3
         self.val_alu_func |= (a & 0x08) >> 1
-        assert not a & 0x07
+        # assert not a & 0x07
 
         a = uword[4] ^ 0xc0
         self.val_a_adr |= (a & 0x80) >> 5
@@ -472,7 +472,7 @@ class Ucode():
         self.val_parity = (a & 0x20) >> 5
         self.val_c_adr |= (a & 0x10) >> 2
         self.val_alu_func |= (a & 0x08)
-        assert not a & 0x07
+        # assert not a & 0x07
 
         a = uword[5] ^ 0xe0
         self.val_a_adr |= (a & 0x80) >> 4
@@ -480,7 +480,7 @@ class Ucode():
         self.val_c_mux_sel = (a & 0x20) >> 5
         self.val_c_adr |= (a & 0x10) >> 1
         self.val_alu_func |= (a & 0x08) << 1
-        assert not a & 0x07
+        # assert not a & 0x07
 
         a = uword[6] ^ 0xe0
         self.val_a_adr |= (a & 0x80) >> 3
@@ -488,7 +488,7 @@ class Ucode():
         self.val_c_mux_sel |= (a & 0x20) >> 4
         self.val_c_adr |= (a & 0x10)
         self.val_m_b_src = (a & 0x08) >> 3
-        assert not a & 0x07
+        # assert not a & 0x07
 
         a = uword[7] ^ 0xc0
         self.val_a_adr |= (a & 0x80) >> 2
@@ -496,7 +496,7 @@ class Ucode():
         self.val_frame |= (a & 0x20) >> 5
         self.val_c_adr |= (a & 0x10) << 1
         self.val_m_b_src |= (a & 0x08) >> 2
-        assert not a & 0x07
+        # assert not a & 0x07
 
     def load_ioc_uword(self, uword):
         ''' Machine Generated file, see r1k_ucode_codegen.p'''
@@ -511,7 +511,7 @@ class Ucode():
         self.ioc_random |= (a & 0x04)
         self.ioc_random |= (a & 0x02)
         self.ioc_random |= (a & 0x01)
-        assert not a & 0x40
+        # assert not a & 0x40
 
         a = uword[1]
         self.ioc_adrbs = (a & 0x80) >> 6

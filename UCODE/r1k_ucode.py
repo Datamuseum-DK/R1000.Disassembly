@@ -54,11 +54,11 @@ class Uins(decoded.Ucode):
 class Ucode():
     ''' Decoded, ready to play with microcode '''
 
-    def __init__(self, iterable=None):
+    def __init__(self, *args, **kwargs):
 
         self.uins = [Uins(i) for i in range(1<<14)]
 
-        ucode = m200_file.R1kM200UcodeFile(iterable)
+        ucode = m200_file.R1kM200UcodeFile(*args, **kwargs)
 
         for mult, ucodes in (
             (1, ucode.dispatch_ram_low()),

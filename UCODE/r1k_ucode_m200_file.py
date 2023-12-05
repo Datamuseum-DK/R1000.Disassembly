@@ -8,11 +8,8 @@ class R1kM200UcodeFile():
 
     ''' A Rational 1000 .M200_UCODE file '''
 
-    def __init__(self, source=None):
-        if source is None:
-            self.ucode = open("M207_54.M200_UCODE", "rb").read()
-        else:
-            self.ucode = bytes(source)
+    def __init__(self, source="FPTEST.M200_UCODE"):
+        self.ucode = open(source, "rb").read()
 
     def __len__(self):
         return (len(self.ucode) - 0xa400) // 32

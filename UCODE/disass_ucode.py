@@ -71,7 +71,7 @@ class R1kUcode(assy.Instree_disass):
 def r1k_microcode(fn=None):
     ''' Disassemble an ucode file '''
     cx = R1kUcode()
-    cx.ucode = r1k_ucode.Ucode()
+    cx.ucode = r1k_ucode.Ucode(source=fn)
     for u in reversed(cx.ucode):
         if not u.explainer.isdefault(u):
             break
@@ -119,10 +119,10 @@ if __name__ == '__main__':
 
     import glob
 
-    if len(sys.argv) == 5 and sys.argv[1] == "-AutoArchaeologist":
-        cx = r1k_experiment(sys.argv[3], sys.argv[2])
-        listing.Listing(cx.m, fn=sys.argv[4], ncol=1)
-        exit(0)
+    #if len(sys.argv) == 5 and sys.argv[1] == "-AutoArchaeologist":
+    #    cx = r1k_experiment(sys.argv[3], sys.argv[2])
+    #    listing.Listing(cx.m, fn=sys.argv[4], ncol=1)
+    #    exit(0)
 
-    cx = r1k_microcode()
+    cx = r1k_microcode(sys.argv[1])
     listing.Listing(cx.m, fn="/tmp/_ucode", ncol=1, charset=False)

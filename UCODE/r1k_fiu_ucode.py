@@ -44,7 +44,10 @@ def fiu_ucode(octets):
 
     yield "len_fill_reg_ctl", ["VI[25..31],TI[36..40]", "Lit,Lit", "TI[41:46],TI[36:40]","-,-"][octets[2] >> 6] #FS
     yield "op_select", ["Extract", "Insert Last", "Insert First", "Insert"][(octets[2] >> 4) & 3] #FS
+
+    # 20230305: Schematics look like ["fill", "fill", ...]
     yield "vmux_sel", ["MDR", "fill", "VI", "FIU"][(octets[2] >> 2) & 3] #FS
+
     yield "fill_mode_src", (octets[2] >> 1) & 1
     yield "oreg_src", ["FADR.SRC", "LIT"][octets[2] & 1] # schematics
 
