@@ -300,6 +300,9 @@ class Explain():
             0xf: "Unconditional Case Call",
         }.get(val)
 
+    def seq_branch_adr(self, val):
+        ''' XXX: How do we get hold of pyreveng3 labels ? '''
+        return "%04x" % val
 
     #----------------------------------------------------------------------
     #
@@ -725,7 +728,7 @@ class Explain():
             return "LOOP_COUNTER"
         if val < 0x20:
             return "TOP - %d" % (0x20 - val)
-        return "FRAME:REG0x%x" % (val - 0x20)
+        return "FRAME:REG:0x%x" % (val - 0x20)
 
     def typval_b_adr(self, val):
         ''' R1000_SCHEMATIC_TYP p5,  R1000_SCHEMATIC_VAL p2 '''
@@ -741,27 +744,28 @@ class Explain():
 
     def typval_c_adr(self, val):
         ''' R1000_SCHEMATIC_TYP p5,  R1000_SCHEMATIC_VAL p2 '''
-        if val >= 0x30:
-            return "GP 0x%x" % (0x3f - val)
-        if val < 0x20:
-            return "FRAME:REG??" # XXX: "inversion of C field of uword
-        if val == 0x2f:
+        ival = val ^ 0x3f
+        if ival < 0x10:
+            return "GP 0x%x" % ival
+        if ival == 0x10:
             return "TOP"
-        if val == 0x2e:
+        if ival == 0x11:
             return "TOP + 1"
-        if val == 0x2d:
-            return "SPARE_0x2d"
-        if val == 0x2c:
+        if ival == 0x12:
+            return "SPARE_0x12"
+        if val == 0x13:
             return "LOOP_REG"
-        if val == 0x2b:
+        if ival == 0x14:
             return "BOT - 1"
-        if val == 0x2a:
+        if ival == 0x15:
             return "BOT"
-        if val == 0x29:
-            return "WRITE_DISABLE (default)"
-        if val == 0x28:
+        if ival == 0x16:
+            return "WRITE_DISABLE"
+        if ival == 0x17:
             return "LOOP_COUNTER"
-        return "TOP - %d" % (val - 0x1f)
+        if ival <= 0x20:
+            return "TOP - 0x%x" % (0x20 - ival)
+        return "FRAME:REG:0x%x" % (ival - 0x20)
 
     def typval_alu_func(self, val):
         return {
@@ -797,6 +801,13 @@ class Explain():
             0x1d: "A_AND_NOT_B",
             0x1e: "A_AND_B",
             0x1f: "ZEROS",
+        }.get(val)
+
+    def typ_c_source(self, val):
+        ''' R1000_SCHEMATIC_TYP p5 '''
+        return {
+            0: "FIU_BUS",
+            1: "MUX",
         }.get(val)
 
     def typ_a_adr(self, val):
@@ -885,7 +896,7 @@ class Explain():
             0x9: "PASS_A_HIGH",
             0xa: "PASS_B_HIGH",
             0xb: "ARRY IN = Q BIT FROM VAL",
-            0xc: "WIRET_OUTHER_FRAME",
+            0xc: "WRITE_OUTER_FRAME",
             0xd: "SET_PASS_PRIVACY_BIT",
             0xe: "CHECK_CLASS_SYSTEM_B",
             0xf: "INC_DEC_128",
@@ -978,8 +989,8 @@ class Explain():
             0x01: "load transfer address",
             0x02: "spare 2",
             0x03: "spare 3",
-            0x04: "write request queue tail",
-            0x05: "read response queue queue head",
+            0x04: "write request fifo",
+            0x05: "read response fifo",
             0x06: "load slice timer",
             0x07: "load delay timer",
             0x08: "read and clear rtc",
