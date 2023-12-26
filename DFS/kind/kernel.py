@@ -135,9 +135,6 @@ def round_0(cx):
     cx.m.set_line_comment(y.lo, "Version number")
 
     
-    y = data.Const(cx.m, 0x77a, 0x77c, "0x%04x", cx.m.bu16, 2)
-    cx.m.set_label(y.lo, "live0_boot1")
-
     cx.dataptr(0x416)
 
 def round_1(cx):

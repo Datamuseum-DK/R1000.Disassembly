@@ -32,6 +32,8 @@
 
 from pyreveng import assy, data
 
+from kind import kernel_subr as ks
+
 def round_0(cx):
     ''' Things to do before the disassembler is let loose '''
 
@@ -46,9 +48,7 @@ def round_0(cx):
     ):
         data.Txt(cx.m, a, splitnl=True)
 
-    for a in range(0x0000a9a4, 0x0000a9e0, 4):
-        cx.m.set_label(a, "REG_SAVE_%X" % cx.m[a])
-        data.Const(cx.m, a, a + 4)
+    ks.reg_save(cx, 0xa9a4)
 
     for a in (
         0xa560,
@@ -72,6 +72,8 @@ def round_0(cx):
         y = cx.dataptr(a)
         data.Txt(cx.m, y.dst, term=(0x01,))
 
+    data.Txt(cx.m, 0x4ec)
+
     y = data.Const(cx.m, 0x8de, 0x8de + 8, "%04x", cx.m.bu16, 2)
     cx.m.set_label(y.lo, "CYL_PER_DRV[4]")
 
@@ -93,71 +95,21 @@ def round_0(cx):
     y = data.Const(cx.m, 0x90e, 0x90e + 8, "%04x", cx.m.bu16, 2)
     cx.m.set_label(y.lo, "BYTE_PER_PSEC[4]")
 
-    def drive_desc(a):
-        z = data.Const(cx.m, a, a + 0x14)
-        cx.dataptr(a + 0x14)
-        z = data.Const(cx.m, a + 0x18)
-        cx.m.set_line_comment(z.lo, "Drive number")
-        z = data.Const(cx.m, a + 0x2b, a + 0x2b + 4)
-        cx.m.set_line_comment(z.lo, ".lba")
-        z = data.Const(cx.m, a + 0x19, a + 0x1f)
-        z = data.Const(cx.m, a + 0x20, a + 0x2b)
-        z = data.Const(cx.m, a + 0x2f)
-        z = data.Const(cx.m, a + 0x30, a + 0x3f)
-        z = data.Const(cx.m, a + 0x40, a + 0x4f)
-        z = data.Const(cx.m, a + 0x50, a + 0x5c)
+    y = data.Const(cx.m, 0xa456, 0xa456 + 0x10, "%02x")
+    y = data.Const(cx.m, 0xa466, 0xa466 + 0x4, "%02x")
 
-    cx.m.set_label(0x92e, "DRIVE_TABLE")
-    for d in range(4):
-        y = cx.dataptr(0x92e + 4*d)
-        cx.m.set_label(0x954 + d * 0x5c, "DRIVE_DESC[%d]" % d)
-        drive_desc(0x954 + d * 0x5c)
+    if False:
+        cx.m.set_label(0x92e, "DRIVE_TABLE")
+        for d in range(4):
+            y = cx.dataptr(0x92e + 4*d)
+            cx.m.set_label(0x954 + d * 0x5c, "DRIVE_DESC[%d]" % d)
+            ks.drive_desc(cx, 0x954 + d * 0x5c)
+    ks.drive_table(cx, 0x92e, 0x954)
 
     cx.m.set_label(0x944, "SCSI_D_DESC")
 
-class Dispatch_Table():
-
-    def __init__(self, cx, lo, length, pfx = None, funcs = {}, sfx="", kind=None, width=4):
-        if pfx is None:
-            pfx = "AT_%x" % lo
-        self.cx = cx
-        self.lo = lo
-        self.length = length
-        self.pfx = pfx
-        self.funcs = funcs
-        self.sfx = sfx
-        self.kind = kind
-        self.width = width
-
-        self.proc()
-
-    def proc(self):
-        self.cx.m.set_label(self.lo, self.pfx.lower() + "_dispatch")
-        for n in range(self.length):
-            adr = self.lo + self.width * n
-            what = self.funcs.get(n)
-            lbl = self.pfx + "_%02x" % n
-            if what:
-                lbl += "_" + what
-            lbl += self.sfx
-            if self.kind is None:
-                if self.width == 4:
-                    dst = self.cx.m.bu32(adr)
-                else:
-                    dst = self.cx.m.bu16(adr)
-                y = data.Codeptr(self.cx.m, adr, adr + self.width, dst)
-                if dst == 0:
-                    continue
-                self.cx.disass(dst)
-                self.cx.m.set_first_label(dst, lbl)
-            else:
-                y = self.cx.disass(adr)
-                if y.dstadr:
-                    self.cx.m.set_first_label(y.dstadr, lbl)
-                else:
-                    self.cx.m.set_first_label(adr, lbl)
-
 R1K_OPS = {
+    0x01: "PORT",
     0x02: "DISK",
     0x03: "TAPE",
     0x05: "NOP",
@@ -218,48 +170,50 @@ SCSI_OP = {
 def round_1(cx):
     ''' Let the disassembler loose '''
 
-    Dispatch_Table(cx, 0x3b82, 4, "MODEM_VEC1_DUART", kind="JSR")
-    Dispatch_Table(cx, 0x42e6, 6, kind="JSR", width=2)
+    ks.Dispatch_Table(cx, 0x42e6, 6, kind="JSR", width=2)
 
-    Dispatch_Table(cx, 0xa494, 8, "KC15_BoardCmds")
+    ks.Dispatch_Table(cx, 0xa494, 8, "KC15_BoardCmds")
 
-    Dispatch_Table(cx, 0xa8a0,  8, "R1K_OP", R1K_OPS, "(A0=mailbox)")
-    Dispatch_Table(cx, 0x2448,  3, "R1K_OP_01", {}, "(A0=mailbox)", "JSR")
-    Dispatch_Table(cx, 0xa68c, 33, "R1K_OP_02_DISK", R1K_OPS_DISK, "(A0=mailbox)")
-    Dispatch_Table(cx, 0xa19c,  6, "R1K_OP_04", {}, "(A0=mailbox)", "JSR")
-    Dispatch_Table(cx, 0xa79c, 10, "R1K_OP_06_VME", {}, "(A0=mailbox)")
-    Dispatch_Table(cx, 0x8188,  6, "R1K_OP_07", {}, "(A0=mailbox)")
-    Dispatch_Table(cx, 0xa8c0, 32, "R1K_OP_03_TAPE", {}, "(A0=mailbox)")
-    Dispatch_Table(cx, 0x695e,  5, "R1K_OP_06_VME_01", {}, "(A0=mailbox)")
-    Dispatch_Table(cx, 0x8234,  6, "R1K_OP_07_MEM", {}, "(A0=mailbox)")
+    ks.Dispatch_Table(cx, 0xa8a0,  8, "R1K_OP", R1K_OPS, "(A0=mailbox)")
+    ks.Dispatch_Table(cx, 0x2448,  3, "R1K_OP_01", {}, "(A0=mailbox)", "JSR")
+    ks.Dispatch_Table(cx, 0xa68c, 33, "R1K_OP_02_DISK", R1K_OPS_DISK, "(A0=mailbox)")
+    ks.Dispatch_Table(cx, 0xa19c,  6, "R1K_OP_04", {}, "(A0=mailbox)", "JSR")
+    ks.Dispatch_Table(cx, 0xa79c, 10, "R1K_OP_06_VME", {}, "(A0=mailbox)")
+    ks.Dispatch_Table(cx, 0x8188,  6, "R1K_OP_07", {}, "(A0=mailbox)")
+    ks.Dispatch_Table(cx, 0xa8c0, 32, "R1K_OP_03_TAPE", {}, "(A0=mailbox)")
+    ks.Dispatch_Table(cx, 0x695e,  5, "R1K_OP_06_VME_01", {}, "(A0=mailbox)")
+    ks.Dispatch_Table(cx, 0x8234,  6, "R1K_OP_07_MEM", {}, "(A0=mailbox)")
 
-    for i in range(16):
-        adr = 0xa1fc + i * 2
-        val = cx.m.bu16(adr)
-        data.Dataptr(cx.m, adr, adr + 2, dst = val)
-        if val:
-            Dispatch_Table(cx, val, 21, width=2, pfx="0xa1fc[0x%x]" % i)
+    if False:
+        for i in range(16):
+            adr = 0xa1fc + i * 2
+            val = cx.m.bu16(adr)
+            data.Dataptr(cx.m, adr, adr + 2, dst = val)
+            if val:
+                ks.Dispatch_Table(cx, val, 21, width=2, pfx="0xa1fc[0x%x]" % i)
 
-    Dispatch_Table(cx, 0xa3b7, 7, width=2)
+    ks.menu_dispatch(cx, 0xa1fc)
 
-    Dispatch_Table(cx, 0xa5b1, 18, "MODEM_FSM_1", MODEM_FSM_1)
-    Dispatch_Table(cx, 0xa5f9, 18, "MODEM_FSM_2", MODEM_FSM_2)
-    Dispatch_Table(cx, 0xa641, 18, "MODEM_FSM_3", MODEM_FSM_3)
-    Dispatch_Table(cx, 0xa4e0, 14, "MODEM_TIMEOUT")
+    ks.Dispatch_Table(cx, 0xa3b7, 7, width=2)
+
+    ks.Dispatch_Table(cx, 0xa5b1, 18, "MODEM_FSM_1", MODEM_FSM_1)
+    ks.Dispatch_Table(cx, 0xa5f9, 18, "MODEM_FSM_2", MODEM_FSM_2)
+    ks.Dispatch_Table(cx, 0xa641, 18, "MODEM_FSM_3", MODEM_FSM_3)
+    ks.Dispatch_Table(cx, 0xa4e0, 14, "MODEM_TIMEOUT")
     cx.m.set_label(0x1454, "modem_timeout")
     cx.m.set_label(0x1460, "modem_fsm_next")
     cx.m.set_label(0x40e2, "MODEM_FSM_ADVANCE(D0=tmo, D1=nxt)")
 
-    Dispatch_Table(cx, 0x6720,  5)
-    Dispatch_Table(cx, 0x7890,  8)
-    Dispatch_Table(cx, 0x7e1e,  7)
-    Dispatch_Table(cx, 0x7b5c,  4)
-    Dispatch_Table(cx, 0xa42c,  21, width=2)
-    Dispatch_Table(cx, 0xa710,  33, "SCSI_OP", SCSI_OP)
+    ks.Dispatch_Table(cx, 0x6720,  5)
+    ks.Dispatch_Table(cx, 0x7890,  8)
+    ks.Dispatch_Table(cx, 0x7e1e,  7)
+    ks.Dispatch_Table(cx, 0x7b5c,  4)
+    ks.Dispatch_Table(cx, 0xa42c,  21, width=2)
+    ks.Dispatch_Table(cx, 0xa710,  33, "SCSI_OP", SCSI_OP)
 
     cx.codeptr(0xa7c4)
 
-    Dispatch_Table(cx, 0xa954,  16, None, {})
+    ks.Dispatch_Table(cx, 0xa954,  16, None, {})
 
     for a, b in (
         (0x0d1c, "console_desc { B=wptr, B=rdptr, W=nbuf, L=buffer }"),
@@ -324,42 +278,16 @@ def round_1(cx):
         (0x04eb, "kc12_sleep_callout_flag"),
         (0x0784, "kc12_sleep_callout"),
 
-        (0x0d1c, "CONSOLE_RXFIFO.0"),
-        (0x0d1d, "CONSOLE_RXFIFO.1"),
-        (0x0d1e, "CONSOLE_RXFIFO.cnt"),
-        (0x0d20, "CONSOLE_RXFIFO.ptr_l"),
-        (0x0d22, "CONSOLE_RXFIFO.ptr_w"),
-        (0x0d3c, "CONSOLE_RXBUF"),
-
-        (0x0d24, "MODEM_RXFIFO.0"),
-        (0x0d25, "MODEM_RXFIFO.1"),
-        (0x0d26, "MODEM_RXFIFO.cnt"),
-        (0x0d28, "MODEM_RXFIFO.ptr_l"),
-        (0x0d2a, "MODEM_RXFIFO.ptr_w"),
-        (0x0e3c, "MODEM_RXBUF"),
-
-        (0x0d2c, "IMODEM_RXFIFO.0"),
-        (0x0d2d, "IMODEM_RXFIFO.1"),
-        (0x0d2e, "IMODEM_RXFIFO.cnt"),
-        (0x0d30, "IMODEM_RXFIFO.ptr_l"),
-        (0x0d32, "IMODEM_RXFIFO.ptr_w"),
-        (0x0f3c, "IMODEM_RXBUF"),
-
-        (0x0d34, "PORT3_RXFIFO.0"),
-        (0x0d35, "PORT3_RXFIFO.1"),
-        (0x0d36, "PORT3_RXFIFO.cnt"),
-        (0x0d38, "PORT3_RXFIFO.ptr_l"),
-        (0x0d3a, "PORT3_RXFIFO.ptr_w"),
-        (0x103c, "PORT3_RXBUF"),
+        (0x1190, "port_event_mailbox"),
+        (0x119c, "port_event_buffer"),
+        (0x11a0, "port_event_ptr"),
+        (0x11a4, "port_event_space"),
+        (0x11d7, "io_duart_mode1_copy"),
+        (0x11d8, "io_duart_mode2_copy"),
+        (0x11d9, "io_duart_modem_status_copy"),
 
         (0x1429, "XE1201_CTRL_COPY"),
         (0x1434, "MODEM_TXBUF"),
-        (0x1438, "MODEM_VEC_1_SEND_BYTE"),
-        (0x143c, "MODEM_VEC_2_ENABLE_TX"),
-        (0x1440, "MODEM_VEC_3_DISABLE_TX"),
-        (0x1444, "MODEM_VEC_4_RAISE_DTR"),
-        (0x1448, "MODEM_VEC_5_LOWER_DTR"),
-        (0x144c, "MODEM_VEC_6"),
         (0x1481, "MODEM_EXPECT"),
         (0x1485, "MODEM_STATE"),
         (0x14dd, "diagbus_rxsum"),
@@ -375,9 +303,12 @@ def round_1(cx):
         (0x22f4, "_KC07_READ_CONSOLECHAR(D0<=port, D0=>char)"),
         (0x2374, "TEXT_TO_CONSOLE(A2=ptr,D1=len, D3)"),
         (0x2410, "kc08_meat(D3=W, D0=B)"),
+
+        (0x26e0, "TRANSFER_FIFO(A2=port_fifo)"),
+
         (0x2978, "GET_PORT_DESC(D0=port.W)"),
         (0x3112, "START_MODEM(void)"),
-        (0x32f4, "INIT_KERNEL_05_UARTS"),
+        (0x32f4, "INIT_KERNEL_05_UARTS()"),
         (0x3486, "SETUP_IMODEM"),
         (0x34e4, "SETUP_XMODEM"),
         (0x362c, "DiagBusResponse(D2)"),
@@ -385,22 +316,10 @@ def round_1(cx):
         (0x374c, "DO_KC_15_DiagBus(D0=cmd,A0=ptr)"),
         (0x3970, "INT_MODEM_RESET"),
         (0x3ae2, "IMODEM_3AE2"),
-        (0x3b4a, "MODEM_VEC_1_XE1201_SEND_BYTE"),
-        (0x3b58, "MODEM_VEC_1_DUART_SEND_BYTE"),
         (0x3e96, "MODEM_IS_X"),
-        (0x3ed2, "MODEM_VEC_2_XE1201_ENABLE_TX"),
-        (0x3ee0, "MODEM_VEC_2_DUART_ENABLE_TX"),
-        (0x3eee, "MODEM_VEC_3_XE1201_DISABLE_TX"),
-        (0x3efc, "MODEM_VEC_3_DUART_DISABLE_TX"),
-        (0x3f08, "MODEM_VEC_4_XE1201_RAISE_DTR"),
-        (0x3f16, "MODEM_VEC_4_DUART_RAISE_DTR"),
-        (0x3f24, "MODEM_VEC_5_XE1201_LOWER_DTR"),
-        (0x3f32, "MODEM_VEC_5_DUART_LOWER_DTR"),
-        (0x4208, "MODEM_VEC_6_XE1201"),
-        (0x4214, "MODEM_VEC_6_DUART"),
         (0x4492, "IMODEM_STATUS_1300"),
         (0x449e, "IMODEM_STATUS_2300"),
-        (0x4b20, "CHS512_TO_LBA1024(A0=CHAN)"),
+        (0x4b20, "ConvertGeometry(A0=CHAN)"),
         (0x4cdc, "SCSI_OPERATION(A0=mailbox)"),
         (0x520c, "SCSI_D_REQ_SENSE(scsi_id=D2)"),
         (0x5b98, "INIT_KERNEL_06_DISKS"),
@@ -416,7 +335,7 @@ def round_1(cx):
         (0x6072, "SCSI_D_WRITE_10_SOMETHING(scsi_id=D0,src=D4,blockno=D6)"),
         (0x66a8, "INIT_KERNEL_10_VME"),
         (0x8398, "BOUNCE_TO_FS"),
-        (0x8420, "Assert_612_still_booting"),
+        (0x8420, "Assert_612_still_booting()"),
         (0x8480, "KC12_Sleep_CallBack"),
         (0x8acc, "INIT_KERNEL_04"),
         (0x8ae8, "ReturnMailbox_0()"),
@@ -464,11 +383,18 @@ def round_1(cx):
     ):
         cx.m.set_line_comment(a, b)
 
-    cx.m.set_label(0xa878, "Month_Table")
-    for a in range(0xa878, 0x0a8a0, 2):
-        data.Const(cx.m, a, a + 2)
+    ks.port_fifos(cx, 0xd1c)
+    ks.fsm_vectors(cx, 0x1438)
+    ks.fsm_funcs(cx, "XE1201", (0x3b4a, 0x3ed2, 0x3eee, 0x3f08, 0x3f24, 0x4208,))
+    ks.fsm_funcs(cx, "DUART", (0x3b58, 0x3ee0, 0x3efc, 0x3f16, 0x3f32, 0x4214,))
+    ks.Dispatch_Table(cx, 0x3b82, 4, "duart_vec1", kind="JSR")
+
+    ks.month_table(cx, 0xa878)
 
     cx.m.set_block_comment(0x3970, "Reset INT_MODEM by writing 3 zeros to cmd reg")
+
+    y = data.Const(cx.m, 0x77a, 0x77c, "0x%04x", cx.m.bu16, 2)
+    cx.m.set_label(y.lo, "live0_boot1")
 
     cx.codeptr(0x51c)
     cx.m.set_label(0x51c, "IO_TIMEOUT_TMP")
