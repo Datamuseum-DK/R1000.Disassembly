@@ -184,8 +184,8 @@ DEVICE_SYMBOLS = {
     0xffffa00f: "IO_DUART_CLR_OPC_STOP_COUNTER",
 
     # INT MODEM  (BVDEC0p18/13)
-    0xffffb002: "IO_INT_MODEM_DATA",
-    0xffffb003: "IO_INT_MODEM_CONTROL",
+    0xffffb002: "IO_MOSART_DATA",
+    0xffffb003: "IO_MOSART_CONTROL",
 
     # BVDEC1 @p18
     0xfffff000: "IO_CLR_RUN_LED_p16",
