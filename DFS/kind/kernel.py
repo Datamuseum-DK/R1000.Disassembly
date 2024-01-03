@@ -142,6 +142,7 @@ def round_1(cx):
     for vec, lbl in ioc_hardware.INTERRUPT_VECTORS.items():
         d = cx.m.bu32(vec * 4)
         cx.m.set_label(d, "VECTOR_" + lbl)
+        cx.m.set_label(vec * 4, "vector_" + lbl.lower())
     cx.vectors(0x400)
     vector_line_a(cx)
 
