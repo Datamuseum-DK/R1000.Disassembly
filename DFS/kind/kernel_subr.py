@@ -110,7 +110,7 @@ FSM_VEC = [
     "VEC_3_DISABLE_TX",
     "VEC_4_RAISE_DTR",
     "VEC_5_LOWER_DTR",
-    "VEC_6",
+    "VEC_6_ENABLE_RX",
 ]
 
 def fsm_vectors(cx, base):
