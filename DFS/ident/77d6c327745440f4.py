@@ -217,10 +217,9 @@ def round_1(cx):
 
     for a, b in (
         (0x0d1c, "console_desc { B=wptr, B=rdptr, W=nbuf, L=buffer }"),
-        (0x2602, "see 0x2612"),
-        (0x2602, "via 0x09c4()"),
+        (0x2602, "see 0x2612, 0x35ce"),
         (0x263e, "via 0x118"),
-        (0x2694, "via 0x128"),
+        (0x2694, "MODEM.DSCG via 0x128 via 0x3508"),
         (0x2e04, "See 00002bb6"),
         (0x2f02, "via 0x147d"),
         (0x3180, "via 0x09c4()"),
@@ -237,12 +236,12 @@ def round_1(cx):
         (0x3f16, "via 0x1444"),
         (0x3f24, "via 0x1448"),
         (0x3f32, "via 0x1448"),
-        (0x4104, "via 0x09c4()"),
+        (0x4104, "see 0x40f0"),
         (0x4120, "via 0x11c"),
         (0x4208, "via 0x144c"),
         (0x4214, "via 0x144c"),
-        (0x4226, "via 0x09c4()"),
-        (0x440e, "via 0x09c4()"),
+        (0x4226, "see 0x41ca()"),
+        (0x440e, "see 0x4474()"),
         (0x4544, "via 0x147d"),
         (0x4548, "via 0x147d"),
         (0x46a0, "MANUAL"),
@@ -278,16 +277,19 @@ def round_1(cx):
         (0x04eb, "kc12_sleep_callout_flag"),
         (0x0784, "kc12_sleep_callout"),
 
-        (0x1190, "port_event_mailbox"),
+        (0x1190, "fsm_timeout_0_pointer"),
         (0x119c, "port_event_buffer"),
         (0x11a0, "port_event_ptr"),
         (0x11a4, "port_event_space"),
+        (0x11ae, "fsm_timeout_entry_0"),
         (0x11d7, "io_duart_mode1_copy"),
         (0x11d8, "io_duart_mode2_copy"),
         (0x11d9, "io_duart_modem_status_copy"),
 
         (0x1429, "XE1201_CTRL_COPY"),
         (0x1434, "MODEM_TXBUF"),
+        (0x1464, "fsm_timeout_entry_1"),
+        (0x1470, "fsm_timeout_entry_2"),
         (0x1481, "MODEM_EXPECT"),
         (0x1485, "MODEM_STATE"),
         (0x14dd, "diagbus_rxsum"),
@@ -299,14 +301,18 @@ def round_1(cx):
         (0x163c, "Timeout_chain"),
         (0x2204, "D0=MODEM_GET_CHAR(D0)"),
         (0x2244, "TEXT_TO_MODEM(A2=ptr, D1=len, D2, D3)"),
-        (0x2288, "_KC09_MODEM(D0.W)"),
-        (0x22f4, "_KC07_READ_CONSOLECHAR(D0<=port, D0=>char)"),
-        (0x2374, "TEXT_TO_CONSOLE(A2=ptr,D1=len, D3)"),
+        (0x2288, "_KC09_PortStatus(port=D0.W, D0=>status)"),
+        (0x22f4, "_KC07_PortGetChar(D0<=port, D0=>char)"),
+        (0x2374, "PortPutText(A2=ptr,D1=len, D3=Port)"),
+        (0x23e0, "kc08_doit(D3=port)"),
         (0x2410, "kc08_meat(D3=W, D0=B)"),
 
+        (0x2602, "FSM_TIMEOUT_0()"),
         (0x26e0, "TRANSFER_FIFO(A2=port_fifo)"),
 
         (0x2978, "GET_PORT_DESC(D0=port.W)"),
+        (0x2a46, "kc08_port1()"),
+        (0x2edc, "kc08_port2()"),
         (0x3112, "START_MODEM(void)"),
         (0x32f4, "INIT_KERNEL_05_UARTS()"),
         (0x3486, "SETUP_IMODEM"),
@@ -314,11 +320,15 @@ def round_1(cx):
         (0x362c, "DiagBusResponse(D2)"),
         (0x36aa, "DiagBusTimeoutCallback()"),
         (0x374c, "DO_KC_15_DiagBus(D0=cmd,A0=ptr)"),
-        (0x3970, "INT_MODEM_RESET"),
+        (0x3970, "MOSART_RESET"),
         (0x3ae2, "IMODEM_3AE2"),
+        (0x3b36, "kc08_port3()"),
         (0x3e96, "MODEM_IS_X"),
+        (0x4226, "FSM_TIMEOUT_1()"),
+        (0x440e, "FSM_TIMEOUT_2()"),
         (0x4492, "IMODEM_STATUS_1300"),
         (0x449e, "IMODEM_STATUS_2300"),
+        (0x49ba, "MODEM.DSHG_vector_alt"),
         (0x4b20, "ConvertGeometry(A0=CHAN)"),
         (0x4cdc, "SCSI_OPERATION(A0=mailbox)"),
         (0x520c, "SCSI_D_REQ_SENSE(scsi_id=D2)"),
@@ -338,6 +348,8 @@ def round_1(cx):
         (0x8420, "Assert_612_still_booting()"),
         (0x8480, "KC12_Sleep_CallBack"),
         (0x8acc, "INIT_KERNEL_04"),
+        (0x8ad4, "JMP_CCR=1(A0)"),
+        (0x8adc, "JMP_CCR=0(A0)"),
         (0x8ae8, "ReturnMailbox_0()"),
         (0x8af0, "ReturnMailbox_1()"),
         (0x8bec, "Stuff_Response_Fifo(A1)"),
@@ -362,6 +374,17 @@ def round_1(cx):
         cx.m.set_label(a, b)
 
     for a, b in (
+        (0x2ef0, "CMD = Nop, Enable Tx"),
+        (0x31d4, "CMD = Nop, Disable Tx"),
+        (0x3454, "Baud Set 2, DELTA IP 3 INT"),
+        (0x345a, "+IN. PORT CHANGE INT"),
+        (0x34e4, "CMD = Reset MR pointer"),
+        (0x34ea, "CMD = Reset receiver"),
+        (0x34f0, "CMD = Reset transmitter"),
+        (0x34f6, "RxRTS Control + No Parity + 8 bits"),
+        (0x34fc, "CTS Enable Tx + 1 stop bit"),
+        (0x3502, "9600 bps"),
+        (0x3536, "CMD = Nop, Disable Tx, Enable Rx"),
         (0x4b2a, "chan.drive"),
         (0x4b2e, "chan.cyl"),
         (0x4b32, "must be <= n_cyl"),
@@ -385,13 +408,13 @@ def round_1(cx):
 
     ks.port_fifos(cx, 0xd1c)
     ks.fsm_vectors(cx, 0x1438)
-    ks.fsm_funcs(cx, "XE1201", (0x3b4a, 0x3ed2, 0x3eee, 0x3f08, 0x3f24, 0x4208,))
-    ks.fsm_funcs(cx, "DUART", (0x3b58, 0x3ee0, 0x3efc, 0x3f16, 0x3f32, 0x4214,))
-    ks.Dispatch_Table(cx, 0x3b82, 4, "duart_vec1", kind="JSR")
+    ks.fsm_funcs(cx, "MOSART", (0x3b4a, 0x3ed2, 0x3eee, 0x3f08, 0x3f24, 0x4208,))
+    ks.fsm_funcs(cx, "MODEM", (0x3b58, 0x3ee0, 0x3efc, 0x3f16, 0x3f32, 0x4214,))
+    ks.Dispatch_Table(cx, 0x3b82, 4, "mosart_vec1", kind="JSR")
 
     ks.month_table(cx, 0xa878)
 
-    cx.m.set_block_comment(0x3970, "Reset INT_MODEM by writing 3 zeros to cmd reg")
+    cx.m.set_block_comment(0x3970, "Reset MOSART by writing 3 zeros to cmd reg")
 
     y = data.Const(cx.m, 0x77a, 0x77c, "0x%04x", cx.m.bu16, 2)
     cx.m.set_label(y.lo, "live0_boot1")
