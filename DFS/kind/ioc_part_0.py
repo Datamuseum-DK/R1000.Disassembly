@@ -100,6 +100,12 @@ def round_1(cx):
     for a, b in (
         (0x80000020, "IOC_20_XXX"),
         (0x80000088, "_TEST_FAILED"),
+        (0x80001524, None),
+        (0x80001566, None),
+        (0x800015a8, None),
+        (0x80001628, None),
+        (0x800016c2, None),
+        #(0x800015fe, ""),
     ):
         cx.disass(a)
         cx.m.set_line_comment(a, "Manual")
