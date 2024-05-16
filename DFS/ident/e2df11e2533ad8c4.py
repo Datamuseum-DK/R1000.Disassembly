@@ -101,6 +101,8 @@ def round_1(cx):
     cx.disass(0x80003a2c)
 
     for a, b in (
+        (0x800024a8, "out_hex_digits(n=D1,val=D2)"),
+        (0x800024b6, "report_boot_reason_code()"),
         (0x800025ce, "ask_which_boot_device"),
         (0x80002634, "boot_L"),
         (0x80002642, "boot_tape"),
