@@ -105,7 +105,6 @@ def round_1(cx):
         (0x800015a8, None),
         (0x80001628, None),
         (0x800016c2, None),
-        #(0x800015fe, ""),
     ):
         cx.disass(a)
         cx.m.set_line_comment(a, "Manual")

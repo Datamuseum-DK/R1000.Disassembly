@@ -78,16 +78,23 @@ class DisassM200File():
             0x80000000: "ioc",
             0xe0004000: "enp100",
         }.get(self.low)
+
+        if self.kind == "ioc":
+            if self.cx.m[0x80000007] == 0x24:
+                self.kind += "_400"
+            elif self.cx.m[0x80000007] == 0x0c:
+                self.kind += "_200"
+
         print("IDENT", self.input_file, "0x%x" % self.low, self.kind, self.ident)
 
         self.tryout.append("kind." + self.kind)
 
         self.tryout.append("ident." + self.ident)
 
-        if self.kind == "ioc":
+        if self.kind[:3] == "ioc":
             # IOC consists of four quite individual parts
             for a in range(4):
-                self.tryout.append("kind.ioc_part_%d" % a)
+                self.tryout.append("kind.%s_part_%d" % (self.kind, a))
                 b = 0x80000000 + 0x2000 * a
                 # One of the last 8 bytes varies between otherwise identical
                 # sources of the IOC EEPROM
