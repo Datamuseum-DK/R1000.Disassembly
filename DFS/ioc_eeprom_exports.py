@@ -33,6 +33,7 @@
 from pyreveng import data, code, mem
 
 IOC_RAM_EXPORTS = {
+    0x0000fc01: "BOOT_REASON_CODE",
     0x0000fc07: "MACHINE_TYPE",
     0x0000fc64: "CLIENT_IP_ADDRESS",
     0x0000fc68: "SERVER_IP_ADDRESS",
