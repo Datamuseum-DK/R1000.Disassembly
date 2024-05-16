@@ -65,7 +65,7 @@ CHS is 512 byte sectors
     )
 
 DfsKernCall(0x03, "KC03_Wait_Disk_IO(a : W; VAR status : Byte)")
-DfsKernCall(0x05, "KC05_Write_Console_String(port : Word ; str : String)")
+DfsKernCall(0x05, "KC05_PortWriteString(port : Word ; str : String)")
 DfsKernCall(0x06, "KC06_PortPutChar(port : Word ; b : char)")
 DfsKernCall(0x07, "KC07_PortGetChar(port : Word ; VAR ret : Word)")
 DfsKernCall(0x08, "KC08_PortSomething(port: Word; b: Byte)")
