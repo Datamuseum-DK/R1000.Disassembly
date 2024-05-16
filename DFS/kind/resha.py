@@ -79,14 +79,15 @@ def round_0(cx):
             y = data.Txt(cx.m, i, splitnl=True)
             i = y.hi
 
+    for a in range(0x76a4c, 0x76a54, 4):
+        y = cx.dataptr(a)
+        data.Txt(cx.m, y.dst)
     for a in range(0x765e4, 0x76650, 6):
         y = cx.dataptr(a + 2)
         data.Txt(cx.m, y.dst)
 
     for a in (
         0x7200a,
-        0x769ce,
-        0x769ec,
         0x76a0a,
         0x76a28,
     ):
