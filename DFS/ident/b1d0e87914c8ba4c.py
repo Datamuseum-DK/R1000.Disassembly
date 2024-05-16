@@ -50,24 +50,78 @@ def round_0(cx):
         data.Const(cx.m, a, a+2)
         cx.m.set_line_comment(a, "NB: odd address jump")
 
-    cx.m.set_block_comment(0x80000222, 'CONSOLE_UART Test Mode registers')
-    cx.m.set_block_comment(0x8000025c, 'CONSOLE_UART Local Loopback')
+    for a, b in (
+        (0x80000222, "Self-Test: CONSOLE_UART Test Mode registers"),
+        (0x8000025c, "Self-Test: CONSOLE_UART Local Loopback"),
+        (0x800002c4, "Self-Test: CONSOLE_UART"),
+        (0x800003a4, "Self-Test: 512 KB memory ..."),
+        (0x800003de, "Self-Test"),
+        (0x80000408, "Self-Test"),
+        (0x80000434, "Self-Test"),
+        (0x8000045e, "Self-Test"),
+        (0x800004f8, "Self-Test"),
+        (0x80000568, "Self-Test: Memory parity ... (GOOD PARITY)"),
+        (0x80000596, "Self-Test: CLEAR_BERR"),
+        (0x800005b2, "Self-Test: Parity generators"),
+        (0x80000604, "Self-Test: Byte parities"),
+        (0x800006b0, "Self-Test"),
+        (0x80000702, "Self-Test"),
+        (0x800007f4, "Self-Test: I/O bus control ..."),
+        (0x80000886, "Self-Test: I/O bus map ..."),
+        (0x800008d0, "Self-Test"),
+        (0x80000924, "Self-Test"),
+        (0x800009da, "Self-Test: I/O bus map parity ..."),
+        (0x800009fc, "Self-Test"),
+        (0x80000a40, "Self-Test"),
+        (0x80000a74, "Self-Test: I/O bus transactions ..."),
+        (0x80000ab6, "Self-Test"),
+        (0x80000b22, "Self-Test"),
+        (0x80000ba2, "Self-Test: PIT ..."),
+        (0x80000c1a, "Self-Test: Modem DUART channel ..."),
+        (0x80000c98, "Self-Test"),
+        (0x80000d4e, "Self-Test: Diagnostic DUART channel ..."),
+        (0x80000dfc, "Self-Test: Clock / Calendar ..."),
+        (0x80000e32, "Self-Test"),
+        (0x80000e54, "Self-Test"),
+        (0x80000fa0, "Self-Test: RESHA EEProm Interface ..."),
+        (0x800011c0, "Self-Test: Local interrupts ..."),
+        (0x800011d6, "Self-Test: Local interrupts 0x50"),
+        (0x800011fc, "Self-Test: Local interrupts 0x42 RX_BREAK"),
+        (0x8000127a, "Self-Test: Local interrupts 0x51"),
+        (0x80001298, "Self-Test: Local interrupts 0x46"),
+        (0x800012c6, "Self-Test: Local interrupts 0x45 - CONSOLE_RXRDY"),
+        (0x80001324, "Self-Test: Local interrupts 0x44"),
+        (0x80001352, "Self-Test: Local interrupts 0x52"),
+        (0x80001374, "Self-Test: Local interrupts 0x4f"),
+        (0x800013a2, "Self-Test: Local interrupts 0x4d"),
+        (0x800013d0, "Self-Test: Local interrupts 0x4e"),
+        (0x80001402, "Self-Test: Local interrupts 0x4b"),
+        (0x80001430, "Self-Test: Local interrupts 0x4a"),
+        (0x8000146a, "Self-Test: Local interrupts 0x49"),
+        (0x800014a2, "Self-Test: Local interrupts 0x48"),
+        (0x80001502, "Self-Test: Illegal reference protection ..."),
+        (0x8000154a, "Self-Test"),
+        (0x8000158c, "Self-Test"),
+        (0x800015f2, "Self-Test: I/O bus parity ..."),
+        (0x8000169c, "Self-Test: I/O bus spurious interrupts ..."),
+        (0x80001700, "Self-Test: Temperature sensors ..."),
+        (0x80001774, "Self-Test: IOC diagnostic processor ..."),
+        (0x8000181c, "Self-Test: Power margining ..."),
+        (0x80001880, "Self-Test: Clock margining ..."),
+        (0x8000189e, "Self-Test"),
+        (0x800018d6, "Self-Test"),
+        (0x8000191e, "Self-Test"),
+        #? (0x80001934, "Self-Test"),
+    ):
+        cx.m.set_block_comment(a, b)
+
     cx.m.set_line_comment(0x80000266, '16x N81')
     cx.m.set_line_comment(0x8000026c, '1X,BKDET,async 9600')
     cx.m.set_line_comment(0x80000272, 'Local Loopback -RTS RxEN +DTR TxEN')
-    cx.m.set_block_comment(0x800002c4, 'CONSOLE_UART')
     cx.m.set_block_comment(0x80000314, 'IOC SELFTEST')
-    cx.m.set_block_comment(0x80000b90, 'SelfTest: PIT')
     cx.m.set_line_comment(0x80000ba8, 'BRG=1, Counter, IP2 = PITCLK')
     cx.m.set_line_comment(0x80000ba8, 'PITCLK IOCp76 = 100ns * 256 = 25.6us')
-    cx.m.set_block_comment(0x80000bf8, 'SelfTest: Modem DUART channel')
-    cx.m.set_block_comment(0x80000d26, 'SelfTest: Diagnostic DUART channel')
-    cx.m.set_block_comment(0x80000ddc, 'SelfTest: Clock / Calendar SELFTEST')
     cx.m.set_block_comment(0x80000eca, 'SelfTest: Checking for RESHA board')
-    cx.m.set_block_comment(0x80000f7a, 'SelfTest: RESHA EEProm Interface')
-    cx.m.set_block_comment(0x800011a0, 'SelfTest: Local interrupts')
-    cx.m.set_block_comment(0x800011dc, 'SelfTest: Local interrupts 0x50')
-    cx.m.set_block_comment(0x80001202, 'SelfTest: Local interrupts 0x42 RX_BREAK')
     cx.m.set_line_comment(0x80001202, 'Local Loopbac')
     cx.m.set_line_comment(0x80001208, 'Local Loopback +TX-break')
     cx.m.set_line_comment(0x80001226, 'Local Loopback -TX-break')
@@ -76,30 +130,11 @@ def round_0(cx):
     cx.m.set_line_comment(0x80001240, 'Wait for txshift empty')
     cx.m.set_line_comment(0x80001248, 'Wait for txshift empty')
     cx.m.set_line_comment(0x80001250, 'Wait for txhold empty')
-    cx.m.set_block_comment(0x80001280, 'SelfTest: Local interrupts 0x51')
-    cx.m.set_block_comment(0x8000129e, 'SelfTest: Local interrupts 0x46')
-    cx.m.set_block_comment(0x800012cc, 'SelfTest: Local interrupts 0x45 - CONSOLE_RXRDY')
     cx.m.set_line_comment(0x800012d2, 'Wait for txhold empty')
     cx.m.set_line_comment(0x800012de, 'Wait for rxhold full')
     cx.m.set_line_comment(0x800012f2, 'Wait for txshift empty')
     cx.m.set_line_comment(0x800012fa, 'Wait for txshift empty')
     cx.m.set_line_comment(0x80001302, 'Wait for txshift empty')
-    cx.m.set_block_comment(0x8000132a, 'SelfTest: Local interrupts 0x44')
-    cx.m.set_block_comment(0x8000135c, 'SelfTest: Local interrupts 0x52')
-    cx.m.set_block_comment(0x8000137a, 'SelfTest: Local interrupts 0x4f')
-    cx.m.set_block_comment(0x800013a8, 'SelfTest: Local interrupts 0x4d')
-    cx.m.set_block_comment(0x800013d6, 'SelfTest: Local interrupts 0x4e')
-    cx.m.set_block_comment(0x80001408, 'SelfTest: Local interrupts 0x4b')
-    cx.m.set_block_comment(0x80001436, 'SelfTest: Local interrupts 0x4a')
-    cx.m.set_block_comment(0x80001470, 'SelfTest: Local interrupts 0x49')
-    cx.m.set_block_comment(0x800014a8, 'SelfTest: Local interrupts 0x48')
-    cx.m.set_block_comment(0x800014d6, 'SelfTest: Illegal reference protection')
-    cx.m.set_block_comment(0x800015d4, 'SelfTest: I/O bus parity')
-    cx.m.set_block_comment(0x80001672, 'SelfTest: I/O bus spurious interrupts')
-    cx.m.set_block_comment(0x800016e4, 'SelfTest: Temperature sensors')
-    cx.m.set_block_comment(0x8000174c, 'SelfTest: IOC diagnostic processor')
-    cx.m.set_block_comment(0x800017fe, 'SelfTest: Power margining')
-    cx.m.set_block_comment(0x80001862, 'SelfTest: Clock margining')
 
 def round_1(cx):
     ''' Let the disassembler loose '''
