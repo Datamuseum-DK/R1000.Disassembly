@@ -36,6 +36,7 @@ import pyreveng.cpu.m68020 as m68020
 import ioc_hardware
 import ioc_eeprom_exports
 import dfs_syscalls
+import kernel_crash
 
 #######################################################################
 
@@ -48,7 +49,7 @@ class KernelIns(m68020.m68020_ins):
 
     def assy_tvect(self):
         ''' vector number/message '''
-        self.lang.m.set_label(self.lo, "PANIC_0x%x" % self['w'])
+        self.lang.m.set_label(self.lo, kernel_crash.panic(self['w']))
         return assy.Arg_imm(self['w'])
 
 #######################################################################

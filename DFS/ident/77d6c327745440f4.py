@@ -39,7 +39,6 @@ def round_0(cx):
 
     cx.m.set_label(0x55a, "req_fifo_ready_flag")
     data.Const(cx.m, 0x55a, 0x55b)
-    cx.m.set_label(0x28d8, "PANIC_0x824")
     for a in (
         0x0000800c,
         0x0000a46a,
@@ -98,15 +97,18 @@ def round_0(cx):
     y = data.Const(cx.m, 0xa456, 0xa456 + 0x10, "%02x")
     y = data.Const(cx.m, 0xa466, 0xa466 + 0x4, "%02x")
 
-    if False:
-        cx.m.set_label(0x92e, "DRIVE_TABLE")
-        for d in range(4):
-            y = cx.dataptr(0x92e + 4*d)
-            cx.m.set_label(0x954 + d * 0x5c, "DRIVE_DESC[%d]" % d)
-            ks.drive_desc(cx, 0x954 + d * 0x5c)
     ks.drive_table(cx, 0x92e, 0x954)
 
-    cx.m.set_label(0x944, "SCSI_D_DESC")
+    z = cx.dataptr(0x92a)
+    cx.m.set_label(z.lo, "SCSI_D.ctl_tab{SCSI_CTL_TAB}")
+    y = data.Const(cx.m, 0x940, 0x941, "%02x")
+    cx.m.set_label(y.lo, "SCSI_D.status")
+    y = data.Const(cx.m, 0x941, 0x942, "%02x")
+    cx.m.set_label(y.lo, "SCSI_D.target_status")
+    cx.m.set_label(0x944, "SCSI_CTL_TAB")
+    y = data.Const(cx.m, 0x944, 0x944 + 0x8, "%02x")
+    z = cx.dataptr(0x94c)
+    cx.m.set_label(z.lo, "SCSI_CTL_TAB.current_drive{DRIVE_DESC}")
 
 R1K_OPS = {
     0x01: "PORT",
@@ -222,8 +224,7 @@ def round_1(cx):
         (0x2694, "MODEM.DSCG via 0x128 via 0x3508"),
         (0x2e04, "See 00002bb6"),
         (0x2f02, "via 0x147d"),
-        (0x3180, "via 0x09c4()"),
-        (0x31c4, "via 0x12c"),
+        (0x3180, ""),
         (0x36aa, "via 0x09c4()"),
         (0x3b3e, "via 0x130"),
         (0x3b4a, "via 0x1438"),
@@ -242,6 +243,7 @@ def round_1(cx):
         (0x4214, "via 0x144c"),
         (0x4226, "see 0x41ca()"),
         (0x440e, "see 0x4474()"),
+        (0x453e, "MANUAL"),
         (0x4544, "via 0x147d"),
         (0x4548, "via 0x147d"),
         (0x46a0, "MANUAL"),
@@ -285,6 +287,7 @@ def round_1(cx):
         (0x11d7, "io_duart_mode1_copy"),
         (0x11d8, "io_duart_mode2_copy"),
         (0x11d9, "io_duart_modem_status_copy"),
+        (0x11dc, "io_duart_timeout_entry"),
 
         (0x1429, "XE1201_CTRL_COPY"),
         (0x1434, "MODEM_TXBUF"),
@@ -314,6 +317,7 @@ def round_1(cx):
         (0x2a46, "kc08_port1()"),
         (0x2edc, "kc08_port2()"),
         (0x3112, "START_MODEM(void)"),
+        (0x3180, "DUART_TIMEOUT()"),
         (0x32f4, "INIT_KERNEL_05_UARTS()"),
         (0x3486, "SETUP_IMODEM"),
         (0x34e4, "SETUP_XMODEM"),
@@ -329,9 +333,12 @@ def round_1(cx):
         (0x4492, "IMODEM_STATUS_1300"),
         (0x449e, "IMODEM_STATUS_2300"),
         (0x49ba, "MODEM.DSHG_vector_alt"),
+        (0x4ad0, "check_scsi_status?()"),
         (0x4b20, "ConvertGeometry(A0=CHAN)"),
         (0x4cdc, "SCSI_OPERATION(A0=mailbox)"),
+        (0x4db4, "Seek_To_Cylinder(A0=mailbox,CANYIELD)"),
         (0x520c, "SCSI_D_REQ_SENSE(scsi_id=D2)"),
+        (0x53c0, "setup_io_map?()"),
         (0x5b98, "INIT_KERNEL_06_DISKS"),
         (0x5d14, "DELAY_LOOP(D1)"),
         (0x5d28, "PROBE_DISK_GEOMETRY(D2)"),
@@ -345,14 +352,17 @@ def round_1(cx):
         (0x6072, "SCSI_D_WRITE_10_SOMETHING(scsi_id=D0,src=D4,blockno=D6)"),
         (0x66a8, "INIT_KERNEL_10_VME"),
         (0x8398, "BOUNCE_TO_FS"),
+        (0x83fe, "wait_disk_io(A0=real_mailbox)"),
         (0x8420, "Assert_612_still_booting()"),
         (0x8480, "KC12_Sleep_CallBack"),
         (0x8acc, "INIT_KERNEL_04"),
-        (0x8ad4, "JMP_CCR=1(A0)"),
+        (0x8ad4, "JMP_CCR=1(A0)/Resume((a0))"),
         (0x8adc, "JMP_CCR=0(A0)"),
         (0x8ae8, "ReturnMailbox_0()"),
+        (0x8ae4, "Yield((cont_adr=>(a0))"),
         (0x8af0, "ReturnMailbox_1()"),
         (0x8bec, "Stuff_Response_Fifo(A1)"),
+        (0x8da2, "disk_io(A0=real_mailbox, A1=src_mailbox)"),
         (0x8df0, "GET_SECTOR_BUFFER([A0+0x13].B => A1)"),
         (0x8e12, "CONFIG_IO_MAP()"),
         (0x8eb4, "INIT_KERNEL_03_FIFO"),
@@ -385,6 +395,7 @@ def round_1(cx):
         (0x34fc, "CTS Enable Tx + 1 stop bit"),
         (0x3502, "9600 bps"),
         (0x3536, "CMD = Nop, Disable Tx, Enable Rx"),
+        (0x4afc, "SCSI_CTL_TAB.current_drive{DRIVE_DESC}"),
         (0x4b2a, "chan.drive"),
         (0x4b2e, "chan.cyl"),
         (0x4b32, "must be <= n_cyl"),
@@ -396,6 +407,11 @@ def round_1(cx):
         (0x4b68, "must be <= n_sect.512"),
         (0x4b72, "sect.512 -> sect.1024"),
         (0x4b78, "drive_desc.lba"),
+        (0x4d7e, "diskdesc.current_cylinder"),
+        (0x4dc0, "diskdesc.busy_with"),
+        (0x4d86, "mailbox.cylinder"),
+        (0x4dda, "SCSI_SEEK_6"),
+        (0x5a48, "SCSI_CTL_TAB.current_drive{DRIVE_DESC}"),
         (0x1a120, "A1 = return address"),
         (0x1a12a, "length of exp name"),
         (0x1a130, "A1 now after string"),
