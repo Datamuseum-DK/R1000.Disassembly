@@ -131,17 +131,22 @@ def reg_save(cx, adr):
 
 def drive_desc(cx, a):
     z = data.Const(cx.m, a, a + 0x14)
-    cx.dataptr(a + 0x14)
+    z = cx.dataptr(a + 0x14)
+    cx.m.set_line_comment(z.lo, "ptr to SCSI_D_TAB")
     z = data.Const(cx.m, a + 0x18)
     cx.m.set_line_comment(z.lo, "Drive number")
     z = data.Const(cx.m, a + 0x2b, a + 0x2b + 4)
     cx.m.set_line_comment(z.lo, ".lba")
-    z = data.Const(cx.m, a + 0x19, a + 0x1f)
+    z = data.Const(cx.m, a + 0x19, a + 0x1e)
+    z = data.Const(cx.m, a + 0x1e, a + 0x1f)
+    cx.m.set_line_comment(z.lo, ".busy_with")
     z = data.Const(cx.m, a + 0x20, a + 0x2b)
     z = data.Const(cx.m, a + 0x2f)
     z = data.Const(cx.m, a + 0x30, a + 0x3f)
     z = data.Const(cx.m, a + 0x40, a + 0x4f)
-    z = data.Const(cx.m, a + 0x50, a + 0x5c)
+    z = data.Const(cx.m, a + 0x50, a + 0x58)
+    z = data.Const(cx.m, a + 0x58, a + 0x5c)
+    cx.m.set_line_comment(z.lo, ".current_cylinder")
 
 
 def drive_table(cx, tbl, descs, ndrive=4):
