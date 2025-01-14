@@ -33,6 +33,7 @@
 class Explain():
 
     def __init__(self):
+        self.uins = None
         for merge_cond in range(8):
             a = self.COND.get(0x00 | merge_cond)
             b = self.COND.get(0x18 | merge_cond)
@@ -105,6 +106,7 @@ class Explain():
     }
 
     def decode(self, uins):
+        self.uins = uins
         n = 0
         if self.isdefault(uins):
             yield "<default>", "", None
@@ -120,11 +122,14 @@ class Explain():
                 continue
             n += 1
             fmt = "%0" + "%dx" % ((fmt + 3) // 4)
+            if fld == "seq_branch_adr":
+                uins.dstadr = v
             i = getattr(self, fld, None)
             if not i:
                 yield fld, fmt % v, None
             else:
                 yield fld, fmt % v, i(v)
+        self.uins = None
         assert n
 
     def decode_text(self, uins):
@@ -135,6 +140,11 @@ class Explain():
                 yield name.ljust(20) + " " + hexval.rjust(4) + " " + str(expl)
 
     def defaults_text(self):
+        class dummy():
+            ''' ... '''
+        self.uins = dummy()
+        for fld, val in self.defaults.items():
+            setattr(self.uins, fld, val)
         for fld, val in self.defaults.items():
             if "parity" in fld:
                 continue
@@ -144,6 +154,7 @@ class Explain():
                 yield fld.ljust(20) + " " + (fmt % val).rjust(6)
             else:
                 yield fld.ljust(20) + " " + (fmt % val).rjust(6) + " " + i(val)
+        self.uins = None
 
     defaults_doc = {
         "typ_a_adr": 0,             # R1000_SCHEMATIC_TYP p5
@@ -262,10 +273,11 @@ class Explain():
     # SEQ
     #######################################################################
 
-    def xxxseq_random(self, val):
+    def seq_random(self, val):
         ''' R1000_SCHEMATIC_SEQ p84 vs p102 '''
         return {
-        }.get(val)
+            0x01: "HALT",
+        }.get(val, "?")
 
     def seq_b_timing(self, val):
         '''
@@ -710,7 +722,7 @@ class Explain():
     # TYP&VAL
     #######################################################################
 
-    def typval_a_adr(self, val):
+    def typval_a_adr(self, val, frame):
         ''' R1000_SCHEMATIC_TYP p5,  R1000_SCHEMATIC_VAL p2 '''
         if val < 0x10:
             return "GP 0x%x" % val
@@ -728,9 +740,9 @@ class Explain():
             return "LOOP_COUNTER"
         if val < 0x20:
             return "TOP - %d" % (0x20 - val)
-        return "FRAME:REG:0x%x" % (val - 0x20)
+        return "(0x%x:0x%x)" % (frame, val - 0x20)
 
-    def typval_b_adr(self, val):
+    def typval_b_adr(self, val, frame):
         ''' R1000_SCHEMATIC_TYP p5,  R1000_SCHEMATIC_VAL p2 '''
         if val == 0x14:
             return "BOT - 1"
@@ -740,9 +752,9 @@ class Explain():
             return "CSA/VAL_BUS"
         if val == 0x17:
             return "SPARE_0x17"
-        return self.typval_a_adr(val)
+        return self.typval_a_adr(val, frame)
 
-    def typval_c_adr(self, val):
+    def typval_c_adr(self, val, frame):
         ''' R1000_SCHEMATIC_TYP p5,  R1000_SCHEMATIC_VAL p2 '''
         ival = val ^ 0x3f
         if ival < 0x10:
@@ -765,7 +777,7 @@ class Explain():
             return "LOOP_COUNTER"
         if ival <= 0x20:
             return "TOP - 0x%x" % (0x20 - ival)
-        return "FRAME:REG:0x%x" % (ival - 0x20)
+        return "(0x%x:0x%x)" % (frame, ival - 0x20)
 
     def typval_alu_func(self, val):
         return {
@@ -816,15 +828,15 @@ class Explain():
             return "SPARE_0x15"
         if val == 0x16:
             return "SPARE_0x16"
-        return self.typval_a_adr(val)
+        return self.typval_a_adr(val, self.uins.typ_frame)
 
     def typ_b_adr(self, val):
         ''' R1000_SCHEMATIC_TYP p5 '''
-        return self.typval_b_adr(val)
+        return self.typval_b_adr(val, self.uins.typ_frame)
 
     def typ_c_adr(self, val):
         ''' R1000_SCHEMATIC_TYP p5 '''
-        return self.typval_c_adr(val)
+        return self.typval_c_adr(val, self.uins.typ_frame)
 
     def typ_mar_cntl(self, val):
         return {
@@ -915,15 +927,15 @@ class Explain():
             return "ZERO_COUNTER"
         if val == 0x16:
             return "PRODUCT"
-        return self.typval_a_adr(val)
+        return self.typval_a_adr(val, self.uins.val_frame)
 
     def val_b_adr(self, val):
         ''' R1000_SCHEMATIC_VAL p2 '''
-        return self.typval_b_adr(val)
+        return self.typval_b_adr(val, self.uins.val_frame)
 
     def val_c_adr(self, val):
         ''' R1000_SCHEMATIC_VAL p2 '''
-        return self.typval_c_adr(val)
+        return self.typval_c_adr(val, self.uins.val_frame)
 
     def val_alu_func(self, val):
         return self.typval_alu_func(val)
@@ -1044,22 +1056,23 @@ class Explain():
         '''
             R1000_SCHEMATIC_IOC.PDF p5
             R1000_HARDWARE_FUNCTIONAL_SPECIFICATION p127
+            R1000_Micro_Arch_SysBus.pdf p18
         '''
         return {
-            0x0: "typ/val",
-            0x1: "typ/fiu",
-            0x2: "fiu/val",
-            0x3: "fiu/fiu",
-            0x4: "ioc/ioc",
-            0x5: "seq/seq",
-            0x6: "reserved 6",
-            0x7: "reserved 7",
-            0x8: "typ/mem",
-            0x9: "typ/mem",
-            0xa: "fiu/mem",
-            0xb: "fiu/mem",
-            0xc: "rdr",
-            0xd: "rdr",
-            0xe: "rdr",
-            0xf: "rdr",
+            0x0: "typ+val",
+            0x1: "typ+fiu",
+            0x2: "fiu+val",
+            0x3: "fiu+fiu",
+            0x4: "ioc+ioc",
+            0x5: "seq+seq",
+            0x6: "reserved=6",
+            0x7: "reserved=7",
+            0x8: "typ+mem",
+            0x9: "typ+mem",
+            0xa: "fiu+mem",
+            0xb: "fiu+mem",
+            0xc: "mem+mem+csa+dummy",
+            0xd: "mem+mem+csa+dummy",
+            0xe: "mem+mem+csa+dummy",
+            0xf: "mem+mem+csa+dummy",	
         }.get(val)

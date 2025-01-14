@@ -4,12 +4,17 @@
    =============================
 '''
 
+import hashlib
+
 class R1kM200UcodeFile():
 
     ''' A Rational 1000 .M200_UCODE file '''
 
     def __init__(self, source="FPTEST.M200_UCODE"):
         self.ucode = open(source, "rb").read()
+        self.timestamp = self.ucode[0x08:0x30].rstrip(b'\x00').decode("ascii")
+        self.ident = self.ucode[0x78:0xb0].rstrip(b'\x00').decode("ascii")
+        self.hash = hashlib.sha256(self.ucode).hexdigest()
 
     def __len__(self):
         return (len(self.ucode) - 0xa400) // 32

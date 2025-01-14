@@ -59,6 +59,9 @@ class Ucode():
         self.uins = [Uins(i) for i in range(1<<14)]
 
         ucode = m200_file.R1kM200UcodeFile(*args, **kwargs)
+        self.timestamp = ucode.timestamp
+        self.ident = ucode.ident
+        self.hash = ucode.hash
 
         for mult, ucodes in (
             (1, ucode.dispatch_ram_low()),

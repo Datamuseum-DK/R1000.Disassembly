@@ -37,6 +37,7 @@
 '''
 
 import os
+import importlib
 
 from pyreveng import mem, assy, data, listing
 
@@ -55,7 +56,13 @@ class R1kUcodeIns(assy.Instree_ins):
     def assy_a(self):
         self.mne = ""
         uins = self.lang.ucode[self.lo]
-        return "\n\t" + "\n\t".join(uins.explainer.decode_text(uins))
+        uins.dstadr = None
+        retval = list(uins.explainer.decode_text(uins))
+        if uins.dstadr is not None:
+            self.dstadr = uins.dstadr
+            retval += list("==> " + str(x) for x in self.lang.m.get_labels(self.dstadr))
+ 
+        return "\n\t" + "\n\t".join(retval)
 
 class R1kUcode(assy.Instree_disass):
     ''' Ucode "CPU" '''
@@ -77,6 +84,16 @@ def r1k_microcode(fn=None):
             break
     m = mem.WordMem(0x100, u.adr + 2, bits=14)
     cx.m = m
+
+    detail_module = "details_" + cx.ucode.hash[:6]
+    try:
+        details = importlib.import_module(detail_module)
+        details.Details(cx)
+    except ModuleNotFoundError as err:
+        cx.m.set_block_comment(cx.m.lo, "  no " + detail_module)
+
+    print("CX", cx, "CX.M", cx.m)
+
     for n, uins in enumerate(cx.ucode):
         adr = n + 0x100
         if adr >= m.hi:
