@@ -907,7 +907,7 @@ class Explain():
             0x8: "SPARE_0x08",
             0x9: "PASS_A_HIGH",
             0xa: "PASS_B_HIGH",
-            0xb: "ARRY IN = Q BIT FROM VAL",
+            0xb: "CARRY IN = Q BIT FROM VAL",
             0xc: "WRITE_OUTER_FRAME",
             0xd: "SET_PASS_PRIVACY_BIT",
             0xe: "CHECK_CLASS_SYSTEM_B",
